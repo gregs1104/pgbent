@@ -1,6 +1,7 @@
 DROP VIEW IF EXISTS write_internals;
 CREATE OR REPLACE VIEW write_internals AS
  SELECT
+  tests.server,
   tests.set AS batch_id,
   testset.info AS batch,
   tests.server || ' - ' || tests.set::text  || ' - ' || tests.test::text AS ref_info,
