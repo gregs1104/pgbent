@@ -1,0 +1,6 @@
+# osm2pgsql memory setup - 32GB of RAM
+effective_cache_size = 16GB
+shared_buffers = 2GB
+maintenance_work_mem = 4GB
+work_mem = 1GB
+
