@@ -55,8 +55,9 @@ elif [ "$OS" = "Darwin" ] ; then
 	# There doesn't seem to be a way to get at disk firmware on Darwin.
 	# Use the volume type, like "AppleAPFSMedia", instead.
 	DISKFW=`system_profiler SPStorageDataType | grep "Media Name:" | head -n 1 | cut -d":" -f 2`
-    DISTRIB=`sw_vers | cut -d":" -f 2 | xargs echo`
-
+    DISTRIB_ID=`sw_vers | cut -d":" -f 2 | xargs echo`
+    DISTRIB_REL=`uname -rs`
+    DISTRIB="$DISTRIB_ID $DISTRIB_REL"
 else
 	echo Unsupported OS:  $OS
 	exit 1
@@ -75,7 +76,7 @@ VALUES
 	TRIM('${CPU}'),
 	TRIM('${MEMPART}') || ' - ' || TRIM('${MEMVENDOR}') || ' - ' || TRIM('${MEMTYPE}') || '-' || TRIM('${MEMSPEED}'),
 	TRIM('${DISKMODEL}') || ' - ' || TRIM('${DISKFW}'),
-	${PROCS},${MEMGB},${DISKGB},'${DISTRIB}',TRIM('${OS_REL}')'
+	${PROCS},${MEMGB},${DISKGB},TRIM('${DISTRIB}')
 );
 "
 
