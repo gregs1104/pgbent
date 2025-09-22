@@ -75,7 +75,7 @@ VALUES
 	TRIM('${CPU}'),
 	TRIM('${MEMPART}') || ' - ' || TRIM('${MEMVENDOR}') || ' - ' || TRIM('${MEMTYPE}') || '-' || TRIM('${MEMSPEED}'),
 	TRIM('${DISKMODEL}') || ' - ' || TRIM('${DISKFW}'),
-	${PROCS},${MEMGB},${DISKGB},'${DISTRIB},TRIM('${OS_REL}')'
+	${PROCS},${MEMGB},${DISKGB},'${DISTRIB}',TRIM('${OS_REL}')'
 );
 "
 
