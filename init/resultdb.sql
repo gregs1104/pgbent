@@ -331,7 +331,7 @@ CREATE TABLE metrics_info (
   scale text
 );
 
-DROP VIEW test_metrics_decode;
+DROP VIEW IF EXISTS test_metrics_decode;
 CREATE OR REPLACE VIEW test_metrics_decode AS
 SELECT
   d.server,
