@@ -23,6 +23,19 @@ CREATE OR REPLACE VIEW write_internals AS
   CASE WHEN jsonb_exists(artifacts, 'node_count') AND jsonb_exists(artifacts, 'overall')
     THEN round((artifacts->'node_count')::numeric / (artifacts->'overall')::numeric / 1000,0)
     ELSE 0 END AS nodes_kips,
+  CASE WHEN
+      jsonb_exists(artifacts, 'node_count') AND
+      jsonb_exists(artifacts, 'planet_osm_polygon') AND
+      jsonb_exists(artifacts, 'planet_osm_line') AND
+      jsonb_exists(artifacts, 'planet_osm_point') AND
+      jsonb_exists(artifacts, 'planet_osm_roads')
+    THEN round((artifacts->'node_count')::numeric / 4 / 1000 / (
+              (artifacts->'planet_osm_polygon')::numeric +
+              (artifacts->'planet_osm_line')::numeric +
+              (artifacts->'planet_osm_point')::numeric +
+              (artifacts->'planet_osm_roads')::numeric)
+              ,0)
+    ELSE 0 END AS index_kips,
   (
   SELECT round(numeric_value / 1024 / 1024 / 1024,1) FROM test_settings WHERE
     test_settings.server=tests.server AND test_settings.test=tests.test AND
