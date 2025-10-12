@@ -40,7 +40,7 @@ SELECT
   round((artifacts->'way_count')::numeric/1000/(artifacts->'way_seconds')::numeric,0) AS way_kps,
   round((artifacts->'relation_count')::numeric/(artifacts->'relation_seconds')::numeric,0) AS rel_ps,
   round((artifacts->'node_count')::numeric / (artifacts->'overall')::numeric / 1000,0) AS nodes_kips,
-  round((artifacts->'node_count')::numeric / 1000 / (
+  round((artifacts->'node_count')::numeric / 4 / 1000 / (
                 (artifacts->'planet_osm_polygon')::numeric +
                  (artifacts->'planet_osm_line')::numeric +
                  (artifacts->'planet_osm_point')::numeric +
@@ -58,6 +58,7 @@ SELECT
   tests.server_mem_gb AS mem_gb,
   --script,
   set,
+  conn_method AS conn,
   substring(server_version,1,16) AS server_ver,
   --clients AS procs,
   --multi AS shift,
@@ -65,7 +66,7 @@ SELECT
   pg_size_pretty(dbsize) AS dbsize,
   round((artifacts->'overall')::numeric/60/60,2) AS hrs,
   round((artifacts->'node_count')::numeric / (artifacts->'overall')::numeric / 1000,0) AS nodes_kips,
-  round((artifacts->'node_count')::numeric / 1000 / (
+  round((artifacts->'node_count')::numeric / 4 / 1000 / (
               (artifacts->'planet_osm_polygon')::numeric +
               (artifacts->'planet_osm_line')::numeric +
               (artifacts->'planet_osm_point')::numeric +
