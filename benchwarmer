@@ -524,7 +524,14 @@ if [ -z "$trans" ] ; then
 fi
 $RESULTPSQL -q -c "UPDATE tests SET tps='$tps',trans='$trans', trans_latency='$trans' WHERE server='${SERVERNAME}' AND test=$TEST"
 
-$RESULTPSQL -q -c "UPDATE tests SET tps=round((artifacts->'node_count')::numeric / (artifacts->'overall')::numeric / 1000,0) WHERE server='${SERVERNAME}' AND test=$TEST" AND script like 'osm%' and tps=0;
+# Give OSM runs TPS numbers based on kNodes/second total load time
+$RESULTPSQL -q -c "UPDATE tests SET tps=round((artifacts->'node_count')::numeric / (artifacts->'overall')::numeric / 1000,0)
+  WHERE server='${SERVERNAME}' AND test=$TEST AND script like 'osm%' AND tps=0;"
+
+# Give pgbench init runs TPS numbers based on total MB/s of load time, only runs with all 5 steps
+$RESULTPSQL -q -c "UPDATE tests SET tps=round(dbsize / (1024*1024) / extract(epoch from (tests.end_time - tests.start_time))::bigint)
+  WHERE server='${SERVERNAME}' AND test=$TEST AND script like ':-i%' AND tps=0
+    AND (SELECT count(*) FROM jsonb_object_keys(artifacts))=6"
 
 cp $BASEDIR/config config
 cp $BASEDIR/params params
