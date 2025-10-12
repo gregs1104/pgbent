@@ -30,7 +30,7 @@ def parse_init_timing(filepath):
                     text=k.translate(str.maketrans('', '', string.punctuation)).lstrip()
                     try:
                         text=text.split(maxsplit=1)[0]
-                        out[text]=re.findall(r'\d+.\d+$', k)[0]
+                        out[text]=float(re.findall(r'\d+.\d+$', k)[0])
                     except:
                         pass
             line = f.readline()
