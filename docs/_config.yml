@@ -28,7 +28,8 @@ twitter_username: postgresperf
 github_username:  gregs1104
 
 # Build settings
-theme: minima
+#theme: minima
+theme: jekyll-theme-modernist 
 plugins:
   - jekyll-feed
 
