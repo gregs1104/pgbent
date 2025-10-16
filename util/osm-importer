@@ -11,16 +11,24 @@
 . ../../../config
 . ../../../params
 
+if [ -z "${NODES_FILE}" ] ; then
+  NODES_FILE="nodes.db"
+fi
+
+if [ -z "${PLANET_FILE}" ] ; then
+  PLANET_FILE="~/osm/planet-latest.osm.pbf"
+fi
+
+if [ -z "${OSMNODECACHE}" ] ; then
+  OSMNODECACHE=0
+fi
+
 TESTPSQL="psql -h $TESTHOST -U $TESTUSER -p $TESTPORT -d $TESTDB"
 
 $TESTPSQL -c 'CREATE EXTENSION postgis;'
 $TESTPSQL -c 'CREATE EXTENSION hstore;'
 $TESTPSQL -c 'CREATE EXTENSION pg_stat_statements;'
 $TESTPSQL -c 'CREATE EXTENSION pg_buffercache;'
-
-if [ -z "${OSMNODECACHE}" ] ; then
-  OSMNODECACHE=0
-fi
 
 # TODO SETCLIENTS is a list, assigning it to a single variable is risky.
 # Only the benchwarmer script knows the singular client count for a test.
@@ -31,13 +39,13 @@ if [ -z "${SETCLIENTS}" ] ; then
   SETCLIENTS=2
 fi
 
-rm -f nodes.db 
+rm -f $NODES_FILE 
 # When changing this, beware the usual style of commenting out any one line.
 # That doesn't work on this form of multi-line command.
 time osm2pgsql --create --slim -v \
     -H $TESTHOST -U $TESTUSER -P $TESTPORT -d $TESTDB \
     --cache ${OSMNODECACHE} --number-processes ${SETCLIENTS} \
-    --flat-nodes nodes.db \
+    --flat-nodes $NODES_FILE \
     --hstore --hstore-add-index \
-    ~/osm/planet-latest.osm.pbf
-rm -f nodes.db
+    $PLANET_FILE
+rm -f $NODES_FILE

@@ -23,6 +23,8 @@ TESTDB="gis"
 SKIPINIT=1
 MULTI=5
 RECOVERY=3600
+NODES_FILE=nodes.db
+PLANET_FILE="~/osm/planet-latest.osm.pbf"
 EOF
 
 # TODO Correct connection string
