@@ -38,7 +38,6 @@ time osm2pgsql --create --slim -v \
     -H $TESTHOST -U $TESTUSER -P $TESTPORT -d $TESTDB \
     --cache ${OSMNODECACHE} --number-processes ${SETCLIENTS} \
     --flat-nodes nodes.db \
-    --middle-way-node-index-id-shift=${MULTI} \
     --hstore --hstore-add-index \
     ~/osm/planet-latest.osm.pbf
 rm -f nodes.db
