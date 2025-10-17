@@ -12,6 +12,7 @@ CREATE OR REPLACE VIEW write_internals AS
   tests.server_os_release AS os_rel,
   substring(server_version,1,16) AS server_ver,
   tests.conn_method AS conn,
+  tests.client_info AS client,
   script,
   clients,
   scale,
