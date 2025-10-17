@@ -40,7 +40,8 @@ CREATE TABLE tests(
   server_os_release text,
   conn_method text,
   uname text,
-  server_disk text
+  server_disk text,
+  client_info text
   );
 
 DROP TABLE IF EXISTS timing;

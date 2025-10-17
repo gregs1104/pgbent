@@ -350,3 +350,5 @@ WHERE
   mi.scale='bytes'
 --ORDER BY t.server,t.test,d.metric,d.collected
 ;
+
+ALTER TABLE tests ADD COLUMN client_info text;
