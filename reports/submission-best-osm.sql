@@ -9,8 +9,12 @@ best AS
         ORDER BY nodes_kips DESC,index_kips DESC
     )  AS r
     FROM submission
-    WHERE max_write_mbps IS NOT NULL
-      AND script like 'osm2pgsql%'
+    WHERE
+      max_write_mbps IS NOT NULL AND
+      -- Old and study tests have a category to mark them obsolete.
+      -- Only want current ones with empty category
+      category IS NULL AND
+      script like 'osm2pgsql%'
   )
 SELECT
     cpu,
