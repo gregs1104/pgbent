@@ -3,7 +3,8 @@ SELECT
   tests.server_cpu AS cpu,
   tests.server_mem_gb AS mem_gb,
   --script,
-  set,
+  tests.set,
+  testset.category,
   --substring(server_version,1,16) AS server_ver,
   clients AS procs,
   scale AS ncache,
@@ -11,8 +12,9 @@ SELECT
   pg_size_pretty(dbsize) AS dbsize,
   round((artifacts->'overall')::numeric/60/60,2) AS hours,
   round((artifacts->'node_count')::numeric / (artifacts->'overall')::numeric / 1000,0) AS nodes_kips
-FROM tests,server
-WHERE script LIKE 'osm2pgsql%' AND tests.server=server.server
+FROM tests,server,testset
+WHERE script LIKE 'osm2pgsql%' AND tests.server=server.server AND
+  testset.server=tests.server AND testset.set=tests.set
 ORDER BY tests.server,tests.set,tests.server_cpu,tests.server_mem_gb,script,multi,scale,test;
 
 SELECT
@@ -20,7 +22,7 @@ SELECT
   tests.server_cpu AS cpu,
   tests.server_mem_gb AS mem_gb,
   substring(server_version,1,16) as server_ver,
-  set,
+  tests.set,
   --script,
   --test,
   clients AS procs,
@@ -46,8 +48,9 @@ SELECT
                  (artifacts->'planet_osm_point')::numeric +
                  (artifacts->'planet_osm_roads')::numeric)
                ,0) AS index_kips
-FROM tests,server
-WHERE script LIKE 'osm2pgsql%' AND tests.server=server.server
+FROM tests,server,testset
+WHERE script LIKE 'osm2pgsql%' AND tests.server=server.server AND
+  testset.server=tests.server AND testset.set=tests.set
 ORDER BY tests.server,tests.set,tests.server_cpu,tests.server_mem_gb,script,multi,scale,test;
 
 -- Report showing common tuned parameters for buffers and durability

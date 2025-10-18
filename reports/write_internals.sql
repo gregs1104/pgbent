@@ -4,6 +4,7 @@ CREATE OR REPLACE VIEW write_internals AS
   tests.server,
   tests.set AS batch_id,
   testset.info AS batch,
+  testset.category AS category,
   tests.server || ' - ' || tests.set::text  || ' - ' || tests.test::text AS ref_info,
   to_char(end_time,'YYYY/MM/DD') AS run,
   tests.server_cpu AS cpu,

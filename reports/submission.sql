@@ -26,8 +26,9 @@ ALTER SEQUENCE submission_seq OWNED BY submission.submit_id;
 INSERT INTO submission (
     submitter, affiliation,
     server,
-    batch_id,batch,ref_info, run,
-    cpu, mem_gb, disk, server_ver, os_rel, conn, client,
+    batch_id, batch, category, ref_info, run,
+    cpu, mem_gb, disk, server_ver, os_rel,
+    conn, client,
     script, clients, scale, nodes, db_gb,
     tps, avg_latency, percentile_90_latency, max_latency, rate_limit,
     hours, nodes_kips,index_kips,
