@@ -41,7 +41,8 @@ CREATE TABLE tests(
   conn_method text,
   uname text,
   server_disk text,
-  client_info text
+  client_info text,
+  category text
   );
 
 DROP TABLE IF EXISTS timing;

@@ -228,9 +228,13 @@ if [ "$?" -ne "0" ]; then
   echo ERROR:  Attempt to determine test set failed
   # TODO Create a fake first set if this happens?  Right now,
   # the likely case is that the test DDL was never added, which
-  # makes that sort of correction attempt unlikely to be useful
+  # makes that sort of correction attempt is unlikely to be useful
   exit
 fi
+
+# TODO Lookup the test set's category, set it here and save to test.  Not important
+# because current workflows for using this tool won't have set the category yet.
+# If that changes this will be necessary too.
 
 # Version of Server
 SERVER_VERSION=`$TESTPSQL -A -t -F" " -c "select current_setting('server_version_num')::numeric;"`

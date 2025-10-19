@@ -352,3 +352,4 @@ WHERE
 ;
 
 ALTER TABLE tests ADD COLUMN client_info text;
+ALTER TABLE tests ADD COLUMN category text;
