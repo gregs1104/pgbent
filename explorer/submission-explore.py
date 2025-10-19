@@ -3,11 +3,14 @@ import psycopg2
 import pandas as pd
 from configparser import ConfigParser
 
+# TODO Load production from the init file
+production = True
+
 def load_config(config_file='database.ini', section='postgresql'):
     """Load database connection parameters from config file"""
     parser = ConfigParser()
     parser.read(config_file)
-    
+
     db_config = {}
     if parser.has_section(section):
         params = parser.items(section)
@@ -15,7 +18,7 @@ def load_config(config_file='database.ini', section='postgresql'):
             db_config[param[0]] = param[1]
     else:
         raise Exception(f'Section {section} not found in the {config_file} file')
-    
+
     return db_config
 
 def connect_to_db():
@@ -48,36 +51,71 @@ def run_query(query):
             return None
     return None
 
+# Local development option to allow writing your own query
+def custom_query():
+    default_query = "SELECT * FROM submission;"
+
+    query = st.text_area("Enter SQL Query:", default_query, height=150)
+
+    if st.button("Run Query"):
+        fetch_with_download(query)
+
+def fetch_with_download(query):
+    with st.spinner('Fetching data...'):
+        result_df = run_query(query)
+
+        if result_df is not None and not result_df.empty:
+            st.success(f"Query returned {len(result_df)} rows")
+            st.dataframe(result_df)
+
+            # Option to download as CSV
+            csv = result_df.to_csv(index=False)
+            st.download_button(
+                label="Download data as CSV",
+                data=csv,
+                file_name="query_results.csv",
+                mime="text/csv"
+            )
+        elif result_df is not None and result_df.empty:
+            st.info("Query returned no results")
+
+def osm():
+    query = "SELECT * FROM submission WHERE script LIKE 'osm%'";
+    fetch_with_download(query)
+
+def pgbench_build():
+    query = "SELECT * FROM submission WHERE script LIKE ':-i%';"
+    fetch_with_download(query)
+
+def pgbench_select():
+    query = "SELECT * FROM submission WHERE script = 'select';"
+    fetch_with_download(query)
+
+def builtin_query():
+    option = st.radio(
+        "Set to explore:",
+        ["OSM", "pgbench Build Time", "pgbench SELECT"],
+        captions=[
+            "OSM",
+            "Build time",
+            "SELECT",
+        ],
+    )
+
+    if option == "OSM":
+        osm()
+    elif option == "pgbench Build Time":
+        pgbench_build()
+    elif option == "pgbench SELECT":
+        pgbench_select()
+
 # Streamlit app
 def main():
     st.title("PostgreSQL Benchmark Results Explorer")
-    
-    # Sample query - can be replaced with user input
-    default_query = "SELECT * FROM submission;"
-    
-    # Allow user to input custom SQL query
-    query = st.text_area("Enter SQL Query:", default_query, height=150)
-    
-    if st.button("Run Query"):
-        with st.spinner('Fetching data...'):
-            # Run the query
-            result_df = run_query(query)
-            
-            if result_df is not None and not result_df.empty:
-                # Display results
-                st.success(f"Query returned {len(result_df)} rows")
-                st.dataframe(result_df)
-                
-                # Option to download as CSV
-                csv = result_df.to_csv(index=False)
-                st.download_button(
-                    label="Download data as CSV",
-                    data=csv,
-                    file_name="query_results.csv",
-                    mime="text/csv"
-                )
-            elif result_df is not None and result_df.empty:
-                st.info("Query returned no results")
+    if production:
+        builtin_query()
+    else:
+        custom_query()
 
 if __name__ == "__main__":
     main()
