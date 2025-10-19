@@ -24,6 +24,8 @@ def load_config(config_file='database.ini', section='postgresql'):
 def connect_to_db():
     """Connect to PostgreSQL database and return connection"""
     try:
+        # TODO XXX Remove this dangerous debug note once code is working
+        st.info(st.secrets)
 
         conn=st.connection("postgresql", type="sql")
 
