@@ -24,13 +24,20 @@ def load_config(config_file='database.ini', section='postgresql'):
 def connect_to_db():
     """Connect to PostgreSQL database and return connection"""
     try:
-        # For this example, using direct connection parameters
-        # In production, use load_config() to load from a config file
-        conn = psycopg2.connect(
-            host="localhost",
-            database="results",
-            user="gsmith",
-            password=""
+
+        conn=st.connection("postgresql", type="sql")
+
+        if (False):  # SQL alchemy connection instead
+            from sqlalchemy import create_engine
+            db_details = st.secrets["connections"]["postgresql"]
+            engine = create_engine(f"postgresql://{db_details['username']}:{db_details['password']}@{db_details['host']}:{db_details['port']}/{db_details['database']}")
+
+        if (False):  # Non streamlit method
+                conn = psycopg2.connect(
+                host="localhost",
+                database="results",
+                user="gsmith",
+                password=""
         )
         return conn
     except (Exception, psycopg2.DatabaseError) as error:
@@ -42,12 +49,10 @@ def run_query(query):
     conn = connect_to_db()
     if conn is not None:
         try:
-            df = pd.read_sql_query(query, conn)
-            conn.close()
+            df = conn.query(sql=query)
             return df
         except (Exception, psycopg2.DatabaseError) as error:
             st.error(f"Error executing query: {error}")
-            conn.close()
             return None
     return None
 
