@@ -2,6 +2,7 @@ DROP VIEW IF EXISTS write_internals;
 CREATE OR REPLACE VIEW write_internals AS
  SELECT
   tests.server,
+  tests.test,
   tests.set AS batch_id,
   testset.info AS batch,
   testset.category AS category,
