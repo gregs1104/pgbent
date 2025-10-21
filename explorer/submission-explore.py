@@ -198,6 +198,46 @@ ORDER BY nodes_kips DESC,index_kips DESC,script,db_gb;
     """
     fetch_with_download(query)
 
+def osm_checkpoint():
+    query ="""
+WITH
+best AS
+  (SELECT
+    cpu,server_ver,mem_gb,disk,client,script,clients,conn,hours,nodes,nodes_kips,index_kips,fsync,wal_level,max_wal_gb,db_gb,
+	timeout,chkp_mins,timed_pct,chkp_mbph,clean_mbph,backend_mbph,cleaned_pct,
+	max_dirty,hit_pct,hit_mbps,read_mbps,
+    wal_mbps, avg_write_mbps, max_write_mbps, avg_read_mbps, max_read_mbps,avg_package_watts, max_package_watts,
+    ROW_NUMBER()
+    OVER(
+        PARTITION BY cpu,conn,client,timeout,max_wal_gb
+        ORDER BY nodes_kips DESC,index_kips DESC
+    )  AS r
+    FROM submission
+    WHERE
+      max_write_mbps IS NOT NULL AND
+      (category IS NULL) AND
+      script like 'osm2pgsql%'
+  )
+SELECT
+    cpu,
+    nodes_kips,index_kips,fsync,
+    wal_level,max_wal_gb,
+	timeout,chkp_mins,timed_pct,
+	chkp_mbph,
+	clean_mbph,
+	backend_mbph,
+	cleaned_pct,
+	max_dirty,hit_pct,hit_mbps,read_mbps AS miss_mbps,
+	wal_mbps AS wal, avg_write_mbps AS avg_write, max_write_mbps AS max_write, avg_read_mbps AS avg_read, max_read_mbps AS max_read
+FROM best WHERE r=1 AND
+  (server_ver IS NOT NULL) AND
+  (server_ver != '') AND
+  (server_ver NOT LIKE 'macOS%') AND
+  conn='host'
+ORDER BY cpu,timeout DESC,max_wal_gb DESC;
+    """
+    fetch_with_download(query)
+
 def pgbench_build():
     query = "SELECT * FROM submission WHERE script LIKE ':-i%';"
     fetch_with_download(query)
@@ -209,10 +249,11 @@ def pgbench_select():
 def builtin_query():
     option = st.radio(
         "Set to explore:",
-        ["OSM Network", "OSM Power","OSM Leaderboard", "pgbench Build Time", "pgbench SELECT"],
+        ["OSM Network", "OSM Power","OSM Checkpoint","OSM Leaderboard", "pgbench Build Time", "pgbench SELECT"],
         captions=[
             "OSM Network Speed Study",
             "OSM Power Use Study",
+            "OSM Checkpoint Study",
             "OSM Leaderboard",
             "Build time",
             "SELECT",
@@ -225,6 +266,8 @@ def builtin_query():
         osm_network()
     elif option == "OSM Power":
         osm_power()
+    elif option == "OSM Checkpoint":
+        osm_checkpoint()
     elif option == "pgbench Build Time":
         pgbench_build()
     elif option == "pgbench SELECT":
