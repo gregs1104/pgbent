@@ -1,7 +1,7 @@
 WITH
 best AS
   (SELECT
-    cpu,mem_gb,disk,client,script,clients,conn,hours,nodes,nodes_kips,index_kips,fsync,wal_level,max_wal_gb,db_gb,
+    cpu,mem_gb,disk,client,script,clients,conn,hours,nodes,nodes_kips,rel_kips,index_kips,fsync,wal_level,max_wal_gb,db_gb,
       wal_mbps, avg_write_mbps, max_write_mbps, avg_read_mbps, max_read_mbps,avg_package_watts, max_package_watts,
     ROW_NUMBER()
     OVER(
@@ -30,7 +30,7 @@ SELECT
     --tps,  
     hours AS hours,
     round(nodes/1000000000,1) AS nodes_m,
-    nodes_kips,index_kips,fsync,wal_level,max_wal_gb,
+    nodes_kips,rel_kips,index_kips,fsync,wal_level,max_wal_gb,
       wal_mbps AS wal, avg_write_mbps AS avg_write, max_write_mbps AS max_write, avg_read_mbps AS avg_read, max_read_mbps AS max_read,
       round(avg_package_watts) AS avg_pkg,
       round(max_package_watts) AS max_pkg

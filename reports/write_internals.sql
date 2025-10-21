@@ -26,6 +26,12 @@ CREATE OR REPLACE VIEW write_internals AS
     THEN round((artifacts->'node_count')::numeric / (artifacts->'overall')::numeric / 1000,0)
     ELSE 0 END AS nodes_kips,
   CASE WHEN
+      jsonb_exists(artifacts, 'relation_count') AND
+      jsonb_exists(artifacts, 'relation_seconds')
+    THEN round((artifacts->'relation_count')::numeric /
+           (artifacts->'relation_seconds')::numeric,0)
+    ELSE 0 END AS rel_kips,
+  CASE WHEN
       jsonb_exists(artifacts, 'node_count') AND
       jsonb_exists(artifacts, 'planet_osm_polygon') AND
       jsonb_exists(artifacts, 'planet_osm_line') AND
