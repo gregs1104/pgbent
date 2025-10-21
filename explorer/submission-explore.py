@@ -163,6 +163,41 @@ ORDER BY server,client,cpu,nodes_kips DESC;
     """
     fetch_with_download(query)
 
+def osm_power():
+    query ="""
+WITH
+best AS
+  (SELECT
+    cpu,mem_gb,disk,client,script,clients,conn,hours,nodes,nodes_kips,index_kips,fsync,wal_level,max_wal_gb,db_gb,
+      wal_mbps, avg_write_mbps, max_write_mbps, avg_read_mbps, max_read_mbps,avg_package_watts, max_package_watts,
+    ROW_NUMBER()
+    OVER(
+        PARTITION BY cpu,conn,client
+        ORDER BY nodes_kips DESC,index_kips DESC
+    )  AS r
+    FROM submission
+    WHERE
+      max_write_mbps IS NOT NULL AND
+      (category IS NULL OR category='2023') AND
+      script like 'osm2pgsql%'
+  )
+SELECT
+    cpu,
+    mem_gb,
+    nodes_kips,index_kips,
+      -- rel_kips
+      CASE WHEN (avg_package_watts IS NULL) AND (NOT max_package_watts IS NULL) THEN 'est' ELSE '' END as pwr_est,
+      round(max_package_watts) AS max_pkg,
+      round(avg_package_watts) AS avg_pkg,
+    fsync,
+      wal_mbps AS wal, avg_write_mbps AS avg_write, max_write_mbps AS max_write, avg_read_mbps AS avg_read, max_read_mbps AS max_read
+FROM best WHERE r=1
+  AND conn='host'
+  AND max_package_watts IS NOT null
+ORDER BY nodes_kips DESC,index_kips DESC,script,db_gb;
+    """
+    fetch_with_download(query)
+
 def pgbench_build():
     query = "SELECT * FROM submission WHERE script LIKE ':-i%';"
     fetch_with_download(query)
@@ -174,9 +209,10 @@ def pgbench_select():
 def builtin_query():
     option = st.radio(
         "Set to explore:",
-        ["OSM Network", "OSM Leaderboard", "pgbench Build Time", "pgbench SELECT"],
+        ["OSM Network", "OSM Power","OSM Leaderboard", "pgbench Build Time", "pgbench SELECT"],
         captions=[
             "OSM Network Speed Study",
+            "OSM Power Use Study",
             "OSM Leaderboard",
             "Build time",
             "SELECT",
@@ -187,6 +223,8 @@ def builtin_query():
         osm()
     elif option == "OSM Network":
         osm_network()
+    elif option == "OSM Power":
+        osm_power()
     elif option == "pgbench Build Time":
         pgbench_build()
     elif option == "pgbench SELECT":
