@@ -131,6 +131,38 @@ ORDER BY nodes_kips DESC,index_kips DESC,script,db_gb;
     """
     fetch_with_download(query)
 
+def osm_network():
+    query ="""
+WITH
+best AS
+  (SELECT
+    cpu,mem_gb,disk,client,script,clients,conn,hours,nodes,nodes_kips,index_kips,fsync,wal_level,max_wal_gb,db_gb,
+      wal_mbps, avg_write_mbps, max_write_mbps, avg_read_mbps, max_read_mbps,avg_package_watts, max_package_watts,
+    ROW_NUMBER()
+    OVER(
+        PARTITION BY cpu,conn,client
+        ORDER BY nodes_kips DESC,index_kips DESC
+    )  AS r
+    FROM submission
+    WHERE
+      max_write_mbps IS NOT NULL AND
+      (category IS NULL OR category='2023') AND
+      script like 'osm2pgsql%'
+  )
+SELECT
+    CASE WHEN client is NULL
+      THEN cpu || '  ' || mem_gb || 'GB ' || disk
+      ELSE client::text END AS client,
+    cpu AS server,
+    conn,
+    nodes_kips,index_kips,
+    wal_mbps AS wal_mbps
+FROM best WHERE r=1
+  AND (client IS NOT NULL OR cpu='R9 9950X' OR cpu='i5-13600K' OR cpu='Apple M4 Max')
+ORDER BY server,client,cpu,nodes_kips DESC;
+    """
+    fetch_with_download(query)
+
 def pgbench_build():
     query = "SELECT * FROM submission WHERE script LIKE ':-i%';"
     fetch_with_download(query)
@@ -142,16 +174,19 @@ def pgbench_select():
 def builtin_query():
     option = st.radio(
         "Set to explore:",
-        ["OSM", "pgbench Build Time", "pgbench SELECT"],
+        ["OSM Network", "OSM Leaderboard", "pgbench Build Time", "pgbench SELECT"],
         captions=[
-            "OSM",
+            "OSM Network Speed Study",
+            "OSM Leaderboard",
             "Build time",
             "SELECT",
         ],
     )
 
-    if option == "OSM":
+    if option == "OSM Leaderboard":
         osm()
+    elif option == "OSM Network":
+        osm_network()
     elif option == "pgbench Build Time":
         pgbench_build()
     elif option == "pgbench SELECT":
