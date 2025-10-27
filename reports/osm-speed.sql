@@ -54,6 +54,7 @@ WHERE script LIKE 'osm2pgsql%' AND tests.server=server.server AND
 ORDER BY tests.server,tests.set,tests.server_cpu,tests.server_mem_gb,script,multi,scale,test;
 
 -- Report showing common tuned parameters for buffers and durability
+
 SELECT
   to_char(end_time,'YYYY/MM/DD') AS run,
   --tests.test,
@@ -75,41 +76,12 @@ SELECT
               (artifacts->'planet_osm_point')::numeric +
               (artifacts->'planet_osm_roads')::numeric)
               ,0) AS index_kips,
-  (
-  SELECT value FROM test_settings WHERE
-    test_settings.server=tests.server AND test_settings.test=tests.test AND
-    test_settings.name='shared_buffers'
-    LIMIT 1
-  ) as shared,
-  (SELECT value FROM test_settings WHERE
-    test_settings.server=tests.server AND test_settings.test=tests.test AND
-    test_settings.name='maintenance_work_mem'
-    LIMIT 1
-  ) as maint,
-  (
-  SELECT test_settings.setting FROM test_settings WHERE
-    test_settings.server=tests.server AND test_settings.test=tests.test AND
-    test_settings.name='fsync'
-    LIMIT 1
-  ) as fsync,
-  (
-  SELECT pg_size_pretty(test_settings.setting::int8 * 1024 * 1024) FROM test_settings WHERE
-    test_settings.server=tests.server AND test_settings.test=tests.test AND
-    test_settings.name='max_wal_size'
-    LIMIT 1
-  ) as max_wal,
-  (
-  SELECT test_settings.setting::integer / 60 FROM test_settings WHERE
-    test_settings.server=tests.server AND test_settings.test=tests.test AND
-    test_settings.name='checkpoint_timeout'
-    LIMIT 1
-  ) as timeout,
-  (
-  SELECT test_settings.setting FROM test_settings WHERE
-    test_settings.server=tests.server AND test_settings.test=tests.test AND
-    test_settings.name='data_checksums'
-    LIMIT 1
-  ) as csum,
+  (SELECT value FROM test_settings WHERE name='shared_buffers' AND test_settings.server=tests.server AND test_settings.test=tests.test LIMIT 1) AS shared,
+  (SELECT value FROM test_settings WHERE name='maintenance_work_mem' AND test_settings.server=tests.server AND test_settings.test=tests.test LIMIT 1) AS maint,
+  (SELECT setting FROM test_settings WHERE name='fsync' AND test_settings.server=tests.server AND test_settings.test=tests.test LIMIT 1) AS fsync,
+  (SELECT pg_size_pretty(setting::int8 * 1024 * 1024) FROM test_settings WHERE name='max_wal_size' AND test_settings.server=tests.server AND test_settings.test=tests.test LIMIT 1) AS max_wal,
+  (SELECT setting::integer / 60 FROM test_settings WHERE name='checkpoint_timeout' AND test_settings.server=tests.server AND test_settings.test=tests.test LIMIT 1) as timeout,
+  (SELECT setting FROM test_settings WHERE name='data_checksums' AND test_settings.server=tests.server AND test_settings.test=tests.test LIMIT 1) as csum,
   round(extract(epoch from (tests.end_time - tests.start_time)) / (test_bgwriter.checkpoints_timed + test_bgwriter.checkpoints_req) / 60,1) as chkp_mins,
   pg_size_pretty(round(60*60*buffers_checkpoint * 8192 / extract(epoch from (tests.end_time - tests.start_time)))::bigint) as chkp_bph,
 --  pg_size_pretty(round(buffers_checkpoint * 8192 / extract(epoch from (tests.end_time - tests.start_time)))::bigint) as chkp_bytes_per_sec,
@@ -123,12 +95,13 @@ SELECT
     100
   END AS timed_pct,
   pg_size_pretty(round(wal_written / extract(epoch from (tests.end_time - tests.start_time)))::bigint) AS wal_bps
-FROM tests,server,test_bgwriter
+FROM tests,server,test_bgwriter,test_settings
 WHERE
   script LIKE 'osm2pgsql%' AND tests.server=server.server AND
   tests.test=test_bgwriter.test AND tests.server=test_bgwriter.server AND
   extract(epoch from (tests.end_time - tests.start_time))::bigint > 0 AND
-  (test_bgwriter.checkpoints_timed + test_bgwriter.checkpoints_req) > 0
+  (test_bgwriter.checkpoints_timed + test_bgwriter.checkpoints_req) > 0 AND
+  test_settings.server=tests.server AND test_settings.test=tests.test
 ORDER BY tests.server,tests.server_cpu,tests.server_mem_gb,
 -- script removed because OSM numbering doesn't sort correctly in alphanumeric
   server_version,tests.set,
