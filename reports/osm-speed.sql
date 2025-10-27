@@ -104,6 +104,12 @@ SELECT
     test_settings.name='checkpoint_timeout'
     LIMIT 1
   ) as timeout,
+  (
+  SELECT test_settings.setting FROM test_settings WHERE
+    test_settings.server=tests.server AND test_settings.test=tests.test AND
+    test_settings.name='data_checksums'
+    LIMIT 1
+  ) as csum,
   round(extract(epoch from (tests.end_time - tests.start_time)) / (test_bgwriter.checkpoints_timed + test_bgwriter.checkpoints_req) / 60,1) as chkp_mins,
   pg_size_pretty(round(60*60*buffers_checkpoint * 8192 / extract(epoch from (tests.end_time - tests.start_time)))::bigint) as chkp_bph,
 --  pg_size_pretty(round(buffers_checkpoint * 8192 / extract(epoch from (tests.end_time - tests.start_time)))::bigint) as chkp_bytes_per_sec,

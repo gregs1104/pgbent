@@ -62,6 +62,11 @@ CREATE OR REPLACE VIEW write_internals AS
     test_settings.name='max_wal_size'
     LIMIT 1
   ) as max_wal_gb,
+  (SELECT test_settings.setting FROM test_settings WHERE
+    test_settings.server=tests.server AND test_settings.test=tests.test AND
+    test_settings.name='data_checksums'
+    LIMIT 1
+  ) as csum,
   (
   SELECT test_settings.setting FROM test_settings WHERE
     test_settings.server=tests.server AND test_settings.test=tests.test AND
