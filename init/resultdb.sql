@@ -220,7 +220,9 @@ ALTER TABLE test_bgwriter ADD UNIQUE USING INDEX idx_server_test_2;
 CREATE UNIQUE INDEX idx_server_test_3 on test_stat_database(server,test);
 ALTER TABLE test_stat_database ADD UNIQUE USING INDEX idx_server_test_3;
 
-CREATE INDEX idx_server_test_4 ON test_settings (server,test);
+CREATE UNIQUE INDEX idx_server_test_setting ON test_settings (server,test,name);
+ALTER TABLE test_settings ADD UNIQUE USING INDEX idx_server_test_setting;
+
 CREATE INDEX idx_test_statio on test_statio(server,test);
 CREATE INDEX idx_buffercache on test_buffercache(server,test);
 

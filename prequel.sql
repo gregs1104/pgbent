@@ -353,5 +353,5 @@ WHERE
 
 ALTER TABLE tests ADD COLUMN client_info text;
 ALTER TABLE tests ADD COLUMN category text;
-CREATE INDEX idx_server_test_4 ON test_settings (server,test);
+CREATE UNIQUE INDEX idx_server_test_setting ON test_settings (server,test,name);
 
