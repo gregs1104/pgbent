@@ -166,13 +166,14 @@ CREATE OR REPLACE VIEW write_internals AS
     (d.metric='PkgWatt' OR d.metric='Combined_Power_mW')
   GROUP BY mi.multi,d.metric
   ) AS max_package_watts
-FROM tests,server,test_bgwriter,test_stat_database,testset
+FROM tests,server,test_bgwriter,test_stat_database,testset,test_settings
 WHERE
 --    script LIKE ':-i%' AND
   tests.server=server.server AND
   tests.test=test_bgwriter.test AND tests.server=test_bgwriter.server AND
   tests.test=test_stat_database.test AND tests.server=test_stat_database.server AND
   testset.set=tests.set AND testset.server=tests.server AND
+  test_settings.server=tests.server AND test_settings.test=tests.test AND
   extract(epoch from (tests.end_time - tests.start_time))::bigint > 0
 ORDER BY tests.server,tests.server_cpu,tests.server_mem_gb,
   script,
