@@ -95,13 +95,12 @@ SELECT
     100
   END AS timed_pct,
   pg_size_pretty(round(wal_written / extract(epoch from (tests.end_time - tests.start_time)))::bigint) AS wal_bps
-FROM tests,server,test_bgwriter,test_settings
+FROM tests,server,test_bgwriter
 WHERE
   script LIKE 'osm2pgsql%' AND tests.server=server.server AND
   tests.test=test_bgwriter.test AND tests.server=test_bgwriter.server AND
   extract(epoch from (tests.end_time - tests.start_time))::bigint > 0 AND
-  (test_bgwriter.checkpoints_timed + test_bgwriter.checkpoints_req) > 0 AND
-  test_settings.server=tests.server AND test_settings.test=tests.test
+  (test_bgwriter.checkpoints_timed + test_bgwriter.checkpoints_req) > 0
 ORDER BY tests.server,tests.server_cpu,tests.server_mem_gb,
 -- script removed because OSM numbering doesn't sort correctly in alphanumeric
   server_version,tests.set,
