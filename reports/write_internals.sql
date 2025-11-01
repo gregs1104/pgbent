@@ -49,42 +49,35 @@ CREATE OR REPLACE VIEW write_internals AS
   SELECT round(numeric_value / 1024 / 1024 / 1024,1) FROM test_settings WHERE
     test_settings.server=tests.server AND test_settings.test=tests.test AND
     test_settings.name='shared_buffers'
-    LIMIT 1
-  ) as shared_gb,
+  ) AS shared_gb,
   (SELECT round(numeric_value / 1024 / 1024 / 1024,1) FROM test_settings WHERE
     test_settings.server=tests.server AND test_settings.test=tests.test AND
     test_settings.name='maintenance_work_mem'
-    LIMIT 1
-  ) as maint_gb,
+  ) AS maint_gb,
   (
   SELECT round(test_settings.numeric_value / 1024 / 1024 / 1024,1) FROM test_settings WHERE
     test_settings.server=tests.server AND test_settings.test=tests.test AND
     test_settings.name='max_wal_size'
-    LIMIT 1
-  ) as max_wal_gb,
+  ) AS max_wal_gb,
   (SELECT test_settings.setting FROM test_settings WHERE
     test_settings.server=tests.server AND test_settings.test=tests.test AND
     test_settings.name='data_checksums'
-    LIMIT 1
-  ) as csum,
+  ) AS csum,
   (
   SELECT test_settings.setting FROM test_settings WHERE
     test_settings.server=tests.server AND test_settings.test=tests.test AND
     test_settings.name='fsync'
-    LIMIT 1
-  ) as fsync,
+  ) AS fsync,
   (
   SELECT test_settings.setting FROM test_settings WHERE
     test_settings.server=tests.server AND test_settings.test=tests.test AND
     test_settings.name='wal_level'
-    LIMIT 1
-  ) as wal_level,
+  ) AS wal_level,
   (
   SELECT test_settings.setting::integer / 60 FROM test_settings WHERE
     test_settings.server=tests.server AND test_settings.test=tests.test AND
     test_settings.name='checkpoint_timeout'
-    LIMIT 1
-  ) as timeout,
+  ) AS timeout,
   CASE WHEN
     (test_bgwriter.checkpoints_timed + test_bgwriter.checkpoints_req) > 0
     THEN round(100::numeric * test_bgwriter.checkpoints_timed/(test_bgwriter.checkpoints_timed + test_bgwriter.checkpoints_req))
@@ -166,14 +159,13 @@ CREATE OR REPLACE VIEW write_internals AS
     (d.metric='PkgWatt' OR d.metric='Combined_Power_mW')
   GROUP BY mi.multi,d.metric
   ) AS max_package_watts
-FROM tests,server,test_bgwriter,test_stat_database,testset,test_settings
+FROM tests,server,test_bgwriter,test_stat_database,testset
 WHERE
 --    script LIKE ':-i%' AND
   tests.server=server.server AND
   tests.test=test_bgwriter.test AND tests.server=test_bgwriter.server AND
   tests.test=test_stat_database.test AND tests.server=test_stat_database.server AND
   testset.set=tests.set AND testset.server=tests.server AND
-  test_settings.server=tests.server AND test_settings.test=tests.test AND
   extract(epoch from (tests.end_time - tests.start_time))::bigint > 0
 ORDER BY tests.server,tests.server_cpu,tests.server_mem_gb,
   script,
