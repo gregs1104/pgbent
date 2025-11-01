@@ -259,16 +259,12 @@ def draw_perf_watt(df):
 
     df=df.set_index('cpu')
 
-    st.info("Plotting")
+    st.info("PostgreSQL Open Street Map Loading: CPU Speed vs. Power")
+    st.info("Loading speed in kNodes/sec")
     st.bar_chart(horizontal=True,data=df,y=('nodes_kips'))
+    st.info("CPU Maximum Watts")
     st.bar_chart(horizontal=True,data=df,y=('max_pkg'))
-
     return
-    # TODO Use some of these better labels from standard Pandas version
-    if False:
-        plt.title("PostgreSQL 17 Open Street Map Loading: CPU Speed vs. Power")
-        ax1.set_xlabel("Loading speed in kNodes/sec", color='orange')
-        ax2.set_xlabel("CPU Maximum Watts", color='red')
 
 def builtin_query():
     option = st.radio(
