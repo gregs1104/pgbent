@@ -1,11 +1,11 @@
 WITH
 best AS
   (SELECT
-    cpu,mem_gb,disk,client,script,clients,conn,hours,nodes,nodes_kips,rel_kips,index_kips,fsync,wal_level,max_wal_gb,db_gb,
+    cpu,mem_gb,disk,client,script,clients,conn,hours,nodes,nodes_kips,rel_kips,index_kips,fsync,wal_level,csum,max_wal_gb,db_gb,
       wal_mbps, avg_write_mbps, max_write_mbps, avg_read_mbps, max_read_mbps,avg_package_watts, max_package_watts,
     ROW_NUMBER()
     OVER(
-        PARTITION BY cpu,mem_gb,server_ver,script,conn,clients,nodes,csum,fsync,wal_level,max_wal_gb
+        PARTITION BY cpu,mem_gb,server_ver,script,conn,clients,nodes,csum,fsync,wal_level,csum,max_wal_gb
         ORDER BY nodes_kips DESC,index_kips DESC
     )  AS r
     FROM submission
