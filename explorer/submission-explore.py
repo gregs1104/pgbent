@@ -87,19 +87,21 @@ def fetch_with_download(query):
                 file_name="query_results.csv",
                 mime="text/csv"
             )
+            return result_df
         elif result_df is not None and result_df.empty:
             st.info("Query returned no results")
+            return None
 
 def osm():
     query ="""
 WITH
 best AS
   (SELECT
-    cpu,mem_gb,disk,client,script,clients,conn,hours,nodes,nodes_kips,index_kips,fsync,wal_level,max_wal_gb,db_gb,
+    cpu,mem_gb,disk,server_ver,client,script,clients,conn,hours,nodes,nodes_kips,index_kips,csum,fsync,wal_level,max_wal_gb,db_gb,
       wal_mbps, avg_write_mbps, max_write_mbps, avg_read_mbps, max_read_mbps,avg_package_watts, max_package_watts,
     ROW_NUMBER()
     OVER(
-        PARTITION BY cpu,mem_gb,server_ver,script,conn,clients,nodes,fsync,wal_level,max_wal_gb
+        PARTITION BY cpu,mem_gb,server_ver,script,conn,clients,nodes,csum,fsync,wal_level,max_wal_gb
         ORDER BY nodes_kips DESC,index_kips DESC
     )  AS r
     FROM submission
@@ -112,7 +114,7 @@ SELECT
     cpu,
     mem_gb,
     substr(disk,1,12) AS disk,
-    --substring(server_ver,1,16) AS server_version,
+    server_ver,
     conn,
     --CASE WHEN client is NULL
     --  THEN cpu || ' ' || mem_gb || 'GB ' || disk
@@ -120,16 +122,17 @@ SELECT
     --script,
     --clients,
     --tps,
-    --hours AS hours,
+    hours AS hours,
     --round(nodes/1000000000,1) AS nodes_m,
-    nodes_kips,index_kips,fsync,wal_level,max_wal_gb,
+    nodes_kips,index_kips,csum,fsync,wal_level,max_wal_gb,
       wal_mbps AS wal, avg_write_mbps AS avg_write, max_write_mbps AS max_write, avg_read_mbps AS avg_read, max_read_mbps AS max_read,
       round(avg_package_watts) AS avg_pkg,
       round(max_package_watts) AS max_pkg
 FROM best WHERE r=1
 ORDER BY nodes_kips DESC,index_kips DESC,script,db_gb;
     """
-    fetch_with_download(query)
+    df=fetch_with_download(query)
+    return df
 
 def osm_network():
     query ="""
@@ -147,7 +150,8 @@ best AS
     WHERE
       max_write_mbps IS NOT NULL AND
       (category IS NULL OR category='2023') AND
-      script like 'osm2pgsql%'
+      script like 'osm2pgsql%' AND
+      (client IS NOT NULL OR cpu='R9 9950X' OR cpu='i5-13600K' OR cpu='Apple M4 Max')
   )
 SELECT
     CASE WHEN client is NULL
@@ -158,10 +162,10 @@ SELECT
     nodes_kips,index_kips,
     wal_mbps AS wal_mbps
 FROM best WHERE r=1
-  AND (client IS NOT NULL OR cpu='R9 9950X' OR cpu='i5-13600K' OR cpu='Apple M4 Max')
 ORDER BY server,client,cpu,nodes_kips DESC;
     """
-    fetch_with_download(query)
+    df=fetch_with_download(query)
+    return df
 
 def osm_power():
     query ="""
@@ -179,11 +183,13 @@ best AS
     WHERE
       max_write_mbps IS NOT NULL AND
       (category IS NULL OR category='2023') AND
-      script like 'osm2pgsql%'
+      script like 'osm2pgsql%' AND
+      conn='host' AND client is NULL
   )
 SELECT
     cpu,
     mem_gb,
+    --conn,client,
     nodes_kips,index_kips,
       -- rel_kips
       CASE WHEN (avg_package_watts IS NULL) AND (NOT max_package_watts IS NULL) THEN 'est' ELSE '' END as pwr_est,
@@ -192,11 +198,11 @@ SELECT
     fsync,
       wal_mbps AS wal, avg_write_mbps AS avg_write, max_write_mbps AS max_write, avg_read_mbps AS avg_read, max_read_mbps AS max_read
 FROM best WHERE r=1
-  AND conn='host'
   AND max_package_watts IS NOT null
 ORDER BY nodes_kips DESC,index_kips DESC,script,db_gb;
     """
-    fetch_with_download(query)
+    df=fetch_with_download(query)
+    return df
 
 def osm_checkpoint():
     query ="""
@@ -246,6 +252,24 @@ def pgbench_select():
     query = "SELECT * FROM submission WHERE script = 'select';"
     fetch_with_download(query)
 
+def draw_perf_watt(df):
+    if df is None:
+        st.info("Exiting draw_perf_watt, data frame undefined")
+        return
+
+    df=df.set_index('cpu')
+
+    st.info("Plotting")
+    st.bar_chart(horizontal=True,data=df,y=('nodes_kips'))
+    st.bar_chart(horizontal=True,data=df,y=('max_pkg'))
+
+    return
+    # TODO Use some of these better labels from standard Pandas version
+    if False:
+        plt.title("PostgreSQL 17 Open Street Map Loading: CPU Speed vs. Power")
+        ax1.set_xlabel("Loading speed in kNodes/sec", color='orange')
+        ax2.set_xlabel("CPU Maximum Watts", color='red')
+
 def builtin_query():
     option = st.radio(
         "Set to explore:",
@@ -265,7 +289,7 @@ def builtin_query():
     elif option == "OSM Network":
         osm_network()
     elif option == "OSM Power":
-        osm_power()
+        draw_perf_watt(osm_power())
     elif option == "OSM Checkpoint":
         osm_checkpoint()
     elif option == "pgbench Build Time":
