@@ -1,7 +1,7 @@
 WITH
 best AS
   (SELECT
-    cpu,mem_gb,disk,client,script,clients,conn,hours,nodes,nodes_kips,rel_kips,index_kips,fsync,wal_level,csum,max_wal_gb,db_gb,
+    cpu,mem_gb,disk,server_ver,client,script,clients,conn,hours,nodes,nodes_kips,rel_kips,index_kips,fsync,wal_level,csum,max_wal_gb,db_gb,
       wal_mbps, avg_write_mbps, max_write_mbps, avg_read_mbps, max_read_mbps,avg_package_watts, max_package_watts,
     ROW_NUMBER()
     OVER(
@@ -20,7 +20,7 @@ SELECT
     cpu,
     mem_gb,
     substr(disk,1,12) AS disk,
-    --substring(server_ver,1,16) AS server_version,
+    server_ver,
     conn,
     CASE WHEN client is NULL
       THEN cpu || ' ' || mem_gb || 'GB ' || disk
