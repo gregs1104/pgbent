@@ -23,11 +23,12 @@ ALTER TABLE submission ALTER COLUMN submit_id SET DEFAULT nextval('submission_se
 ALTER TABLE submission ALTER COLUMN submit_id SET NOT NULL;
 ALTER SEQUENCE submission_seq OWNED BY submission.submit_id;
 
+\timing
 INSERT INTO submission (
     submitter, affiliation,
     server, test,
     batch_id, batch, category, ref_info, run,
-    cpu, mem_gb, disk, server_ver, os_rel,
+    cpu, mem_gb, disk, os_rel, server_ver,
     conn, client,
     script, clients, scale, nodes, db_gb,
     tps, avg_latency, percentile_90_latency, max_latency, rate_limit,
