@@ -269,12 +269,12 @@ def draw_perf_watt(df):
 def builtin_query():
     option = st.radio(
         "Set to explore:",
-        ["OSM Network", "OSM Power","OSM Checkpoint","OSM Leaderboard", "pgbench Build Time", "pgbench SELECT"],
+        ["OSM Power", "OSM Leaderboard", "OSM Network", "OSM Checkpoint", "pgbench Build Time", "pgbench SELECT"],
         captions=[
-            "OSM Network Speed Study",
             "OSM Power Use Study",
-            "OSM Checkpoint Study",
             "OSM Leaderboard",
+            "OSM Network Speed Study",
+            "OSM Checkpoint Study",
             "Build time",
             "SELECT",
         ],
