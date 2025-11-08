@@ -59,6 +59,16 @@ CREATE OR REPLACE VIEW write_internals AS
     test_settings.server=tests.server AND test_settings.test=tests.test AND
     test_settings.name='max_wal_size'
   ) AS max_wal_gb,
+  (
+  SELECT test_settings.numeric_value FROM test_settings WHERE
+    test_settings.server=tests.server AND test_settings.test=tests.test AND
+    test_settings.name='max_parallel_workers_per_gather'
+  ) AS w_p_g,
+  (
+  SELECT test_settings.numeric_value FROM test_settings WHERE
+    test_settings.server=tests.server AND test_settings.test=tests.test AND
+    test_settings.name='max_parallel_maintenance_workers'
+  ) AS p_m_w,
   (SELECT test_settings.setting FROM test_settings WHERE
     test_settings.server=tests.server AND test_settings.test=tests.test AND
     test_settings.name='data_checksums'

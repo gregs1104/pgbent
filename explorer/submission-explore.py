@@ -97,11 +97,13 @@ def osm():
 WITH
 best AS
   (SELECT
-    cpu,mem_gb,disk,server_ver,client,script,clients,conn,hours,nodes,nodes_kips,index_kips,csum,fsync,wal_level,max_wal_gb,db_gb,
-      wal_mbps, avg_write_mbps, max_write_mbps, avg_read_mbps, max_read_mbps,avg_package_watts, max_package_watts,
+    cpu,mem_gb,disk,server_ver,client,script,clients,conn,hours,nodes,nodes_kips,index_kips,csum,
+--        w_p_g,p_m_w,
+        fsync,wal_level,max_wal_gb,db_gb,
+        wal_mbps, avg_write_mbps, max_write_mbps, avg_read_mbps, max_read_mbps,avg_package_watts, max_package_watts,
     ROW_NUMBER()
     OVER(
-        PARTITION BY cpu,mem_gb,server_ver,script,conn,clients,nodes,csum,fsync,wal_level,max_wal_gb
+        PARTITION BY cpu,mem_gb,server_ver,script,conn,clients,nodes,csum,fsync,wal_level,max_wal_gb -- ,w_p_g,p_m_w
         ORDER BY nodes_kips DESC,index_kips DESC
     )  AS r
     FROM submission
@@ -124,10 +126,13 @@ SELECT
     --tps,
     hours AS hours,
     --round(nodes/1000000000,1) AS nodes_m,
-    nodes_kips,index_kips,csum,fsync,wal_level,max_wal_gb,
-      wal_mbps AS wal, avg_write_mbps AS avg_write, max_write_mbps AS max_write, avg_read_mbps AS avg_read, max_read_mbps AS max_read,
-      round(avg_package_watts) AS avg_pkg,
-      round(max_package_watts) AS max_pkg
+    nodes_kips,index_kips,csum,
+--    w_p_g,p_m_w,
+    fsync,wal_level,max_wal_gb,
+    wal_mbps AS wal, avg_write_mbps AS avg_write, max_write_mbps AS max_write,
+    avg_read_mbps AS avg_read, max_read_mbps AS max_read,
+    round(avg_package_watts) AS avg_pkg,
+    round(max_package_watts) AS max_pkg
 FROM best WHERE r=1
 ORDER BY nodes_kips DESC,index_kips DESC,script,db_gb;
     """
