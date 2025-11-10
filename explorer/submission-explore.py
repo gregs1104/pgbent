@@ -98,12 +98,12 @@ WITH
 best AS
   (SELECT
     cpu,mem_gb,disk,server_ver,client,script,clients,conn,hours,nodes,nodes_kips,index_kips,csum,
---        w_p_g,p_m_w,
+        w_p_g,p_m_w,
         fsync,wal_level,max_wal_gb,db_gb,
         wal_mbps, avg_write_mbps, max_write_mbps, avg_read_mbps, max_read_mbps,avg_package_watts, max_package_watts,
     ROW_NUMBER()
     OVER(
-        PARTITION BY cpu,mem_gb,server_ver,script,conn,clients,nodes,csum,fsync,wal_level,max_wal_gb -- ,w_p_g,p_m_w
+        PARTITION BY cpu,mem_gb,server_ver,script,conn,clients,nodes,csum,fsync,wal_level,max_wal_gb,w_p_g,p_m_w
         ORDER BY nodes_kips DESC,index_kips DESC
     )  AS r
     FROM submission
@@ -116,7 +116,7 @@ SELECT
     cpu,
     mem_gb,
     substr(disk,1,12) AS disk,
-    server_ver,
+    substring(server_ver FROM 'PostgreSQL ([0-9]+)') AS ver,
     conn,
     --CASE WHEN client is NULL
     --  THEN cpu || ' ' || mem_gb || 'GB ' || disk
@@ -127,7 +127,7 @@ SELECT
     hours AS hours,
     --round(nodes/1000000000,1) AS nodes_m,
     nodes_kips,index_kips,csum,
---    w_p_g,p_m_w,
+    w_p_g,p_m_w,
     fsync,wal_level,max_wal_gb,
     wal_mbps AS wal, avg_write_mbps AS avg_write, max_write_mbps AS max_write,
     avg_read_mbps AS avg_read, max_read_mbps AS max_read,
