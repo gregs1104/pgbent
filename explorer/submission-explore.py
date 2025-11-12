@@ -201,7 +201,12 @@ SELECT
       round(max_package_watts) AS max_pkg,
       round(avg_package_watts) AS avg_pkg,
     fsync,
-      wal_mbps AS wal, avg_write_mbps AS avg_write, max_write_mbps AS max_write, avg_read_mbps AS avg_read, max_read_mbps AS max_read
+      wal_mbps AS wal, avg_write_mbps AS avg_write, max_write_mbps AS max_write, avg_read_mbps AS avg_read, max_read_mbps AS max_read,
+    CASE
+      WHEN SUBSTRING(cpu FROM 1 FOR 1)='A' then '#555555' -- Apple Grey
+      WHEN SUBSTRING(cpu FROM 1 FOR 1)='i' then '#0071C5' -- Intel blue
+      WHEN SUBSTRING(cpu FROM 1 FOR 1)='R' then '#ED1C24' -- AMD Red
+    END AS cpu_c
 FROM best WHERE r=1
   AND max_package_watts IS NOT null
 ORDER BY nodes_kips DESC,index_kips DESC,script,db_gb;
@@ -269,6 +274,9 @@ def draw_perf_watt(df):
     st.bar_chart(horizontal=True,data=df,y=('nodes_kips'))
     st.info("CPU Maximum Watts")
     st.bar_chart(horizontal=True,data=df,y=('max_pkg'))
+    st.info("Loading speed vs Power Consumption")
+    st.scatter_chart(data=df,x='max_pkg',y='nodes_kips',color='cpu_c')
+
     return
 
 def builtin_query():
