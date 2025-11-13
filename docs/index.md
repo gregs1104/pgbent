@@ -7,12 +7,3 @@ layout: home
 
 pgbent is a benchmarking toolkit for testing PostgreSQL databases.
 
-* [Introduction](Introduction)
-* [Setup](Setup)
-* [Running](Running)
-* [Results](Results)
-* [Reports](Reports)
-* [Troubleshooting](Troubleshooting)
-* [Workloads](Workloads)
-* [Versions](Versions)
-* [Sponsors](Sponsors)
