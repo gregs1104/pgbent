@@ -32,7 +32,7 @@ github_username:  gregs1104
 #theme: jekyll-theme-modernist
 
 #theme: just-the-docs
-remote_theme: "pmarsceill/just-the-docs"
+remote_theme: "just-the-docs/just-the-docs"
 
 plugins:
   - jekyll-feed
