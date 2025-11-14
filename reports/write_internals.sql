@@ -23,6 +23,7 @@ CREATE OR REPLACE VIEW write_internals AS
   round(dbsize / 1024 / 1024 / 1024,1) AS db_gb,
   tps,  avg_latency, percentile_90_latency, max_latency, rate_limit,
   round(extract(epoch from (tests.end_time - tests.start_time))/60/60,2) as hours,
+
   CASE WHEN jsonb_exists(artifacts, 'node_count') AND jsonb_exists(artifacts, 'overall')
     THEN round((artifacts->'node_count')::numeric / (artifacts->'overall')::numeric / 1000,0)
     ELSE 0 END AS nodes_kips,
@@ -45,49 +46,34 @@ CREATE OR REPLACE VIEW write_internals AS
               (artifacts->'planet_osm_roads')::numeric)
               ,0)
     ELSE 0 END AS index_kips,
-  (
-  SELECT round(numeric_value / 1024 / 1024 / 1024,1) FROM test_settings WHERE
-    test_settings.server=tests.server AND test_settings.test=tests.test AND
-    test_settings.name='shared_buffers'
-  ) AS shared_gb,
+
   (SELECT round(numeric_value / 1024 / 1024 / 1024,1) FROM test_settings WHERE
     test_settings.server=tests.server AND test_settings.test=tests.test AND
-    test_settings.name='maintenance_work_mem'
-  ) AS maint_gb,
-  (
-  SELECT round(test_settings.numeric_value / 1024 / 1024 / 1024,1) FROM test_settings WHERE
+    test_settings.name='shared_buffers') AS shared_gb,
+  (SELECT round(numeric_value / 1024 / 1024 / 1024,1) FROM test_settings WHERE
     test_settings.server=tests.server AND test_settings.test=tests.test AND
-    test_settings.name='max_wal_size'
-  ) AS max_wal_gb,
-  (
-  SELECT test_settings.numeric_value FROM test_settings WHERE
+    test_settings.name='maintenance_work_mem') AS maint_gb,
+  (SELECT round(test_settings.numeric_value / 1024 / 1024 / 1024,1) FROM test_settings WHERE
     test_settings.server=tests.server AND test_settings.test=tests.test AND
-    test_settings.name='max_parallel_workers_per_gather'
-  ) AS w_p_g,
-  (
-  SELECT test_settings.numeric_value FROM test_settings WHERE
+    test_settings.name='max_wal_size') AS max_wal_gb,
+  (SELECT test_settings.numeric_value FROM test_settings WHERE
     test_settings.server=tests.server AND test_settings.test=tests.test AND
-    test_settings.name='max_parallel_maintenance_workers'
-  ) AS p_m_w,
+    test_settings.name='max_parallel_workers_per_gather') AS w_p_g,
+  (SELECT test_settings.numeric_value FROM test_settings WHERE
+    test_settings.server=tests.server AND test_settings.test=tests.test AND
+    test_settings.name='max_parallel_maintenance_workers') AS p_m_w,
   (SELECT test_settings.setting FROM test_settings WHERE
     test_settings.server=tests.server AND test_settings.test=tests.test AND
-    test_settings.name='data_checksums'
-  ) AS csum,
-  (
-  SELECT test_settings.setting FROM test_settings WHERE
+    test_settings.name='data_checksums') AS csum,
+  (SELECT test_settings.setting FROM test_settings WHERE
     test_settings.server=tests.server AND test_settings.test=tests.test AND
-    test_settings.name='fsync'
-  ) AS fsync,
-  (
-  SELECT test_settings.setting FROM test_settings WHERE
+    test_settings.name='fsync') AS fsync,
+  (SELECT test_settings.setting FROM test_settings WHERE
     test_settings.server=tests.server AND test_settings.test=tests.test AND
-    test_settings.name='wal_level'
-  ) AS wal_level,
-  (
-  SELECT test_settings.setting::integer / 60 FROM test_settings WHERE
+    test_settings.name='wal_level') AS wal_level,
+  (SELECT test_settings.setting::integer / 60 FROM test_settings WHERE
     test_settings.server=tests.server AND test_settings.test=tests.test AND
-    test_settings.name='checkpoint_timeout'
-  ) AS timeout,
+    test_settings.name='checkpoint_timeout') AS timeout,
   CASE WHEN
     (test_bgwriter.checkpoints_timed + test_bgwriter.checkpoints_req) > 0
     THEN round(100::numeric * test_bgwriter.checkpoints_timed/(test_bgwriter.checkpoints_timed + test_bgwriter.checkpoints_req))
@@ -147,7 +133,8 @@ CREATE OR REPLACE VIEW write_internals AS
     -- TODO Support secondary Mac disks
     (test_metrics_data.metric='disk0_MB/s' OR test_metrics_data.metric LIKE '%rMB/s')
   ) AS max_read_MBps,
-  (SELECT
+  (
+  SELECT
       CASE WHEN mi.multi IS null THEN avg(d.value) ELSE avg(d.value * mi.multi) END
   FROM test_metrics_data d
       LEFT OUTER JOIN metrics_info mi ON
@@ -171,7 +158,6 @@ CREATE OR REPLACE VIEW write_internals AS
   ) AS max_package_watts
 FROM tests,server,test_bgwriter,test_stat_database,testset
 WHERE
---    script LIKE ':-i%' AND
   tests.server=server.server AND
   tests.test=test_bgwriter.test AND tests.server=test_bgwriter.server AND
   tests.test=test_stat_database.test AND tests.server=test_stat_database.server AND
@@ -181,5 +167,3 @@ ORDER BY tests.server,tests.server_cpu,tests.server_mem_gb,
   script,
   server_version,tests.set,
   multi,scale,fsync,shared_gb,maint_gb,max_wal_gb,timeout,extract(epoch from (tests.end_time - tests.start_time)) desc;
-
---SELECT * FROM write_internals;
