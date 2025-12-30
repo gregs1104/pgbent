@@ -7,3 +7,5 @@ layout: home
 
 pgbent is a benchmarking toolkit for testing PostgreSQL databases.
 
+- TOC
+{:toc}
