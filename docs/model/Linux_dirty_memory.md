@@ -3,7 +3,6 @@ layout: home
 title: Linux_dirty_memory
 permalink: /model/Linux_dirty_memory
 nav_order: 23
-has_children: true
 ---
 
 # Linux Dirty Memory

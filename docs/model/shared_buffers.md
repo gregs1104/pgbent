@@ -3,7 +3,6 @@ layout: home
 title: shared_buffers
 permalink: /model/shared_buffers
 nav_order: 21
-has_children: true
 ---
 
 # shared_buffers

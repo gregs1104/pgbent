@@ -2,8 +2,7 @@
 layout: home
 title: Linux_pdflush
 permalink: /model/Linux_pdflush
-nav_order: 24
-has_children: true
+nav_order: 23
 ---
 
 # The Linux Page Cache and pdflush
@@ -12,14 +11,16 @@ _Theory of Operation and Tuning for Write-Heavy Loads_
 
 pdflush is the Linux daemon that flushes cached writes to disk.
 
+* Disclaimer:  this article was originally written about Linux in 2007-2008 with a related blog entry [A Linux write cache mystery ](https://notemagnet.blogspot.com/2008/08/linux-write-cache-mystery.html).  At its original URL of https://www.westnet.com/~gsmith/content/linux-pdflush.htm the article was modestly popular, but after losing that hosting site the information has been unavailable.  It's being restored as part of the documentation to the PostgreSQL pgbent tool.  An upcoming update will jump to modern versions where these settings can now be managed at byte size increments.
+
+# Intro
+
 As you write out data ultimately intended for disk, Linux caches this information in an 
 area of memory called the page cache.  You can find out basic info about the page cache 
 using tools like free, vmstat or top.  See 
 [http://gentoo-wiki.com/FAQ_Linux_Memory_Management](http://gentoo-wiki.com/FAQ_Linux_Memory_Management)
 to learn how to interpret top's memory 
 information, or [http://www.atconsultancy.nl/atop/]atop) to get an improved version.
-
-* Disclaimer:  this article was originally written about Linux in 2007-2008 with a related blog entry [A Linux write cache mystery ](https://notemagnet.blogspot.com/2008/08/linux-write-cache-mystery.html).  At its original URL of https://www.westnet.com/~gsmith/content/linux-pdflush.htm the article was modestly popular, but after losing that hosting site the information has been unavailable.  It's being restored as part of the documentation to the PostgreSQL pgbent tool.  An upcoming update will jump to modern versions where these settings can now be managed at byte size increments.
 
 # Sample
 
@@ -235,7 +236,7 @@ can have issues when overcommit is turned on is PostgreSQL; see "Linux Memory Ov
 [http://www.postgresql.org/docs/current/static/kernel-resources.html](http://www.postgresql.org/docs/current/static/kernel-resources.html) for
 their warnings on this subject.
 
-#References:  page cache
+# References:  page cache
 
 Neil Horman, "Understanding Virtual Memory in Red Hat Enterprise Linux 4" 
 [http://people.redhat.com/nhorman/papers/rhel4_vm.pdf](http://people.redhat.com/nhorman/papers/rhel4_vm.pdf)
