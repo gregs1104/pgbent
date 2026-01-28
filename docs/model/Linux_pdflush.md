@@ -2,7 +2,7 @@
 layout: home
 title: Linux_pdflush
 permalink: /model/Linux_pdflush
-nav_order: 4
+nav_order: 24
 has_children: true
 ---
 

@@ -2,7 +2,7 @@
 layout: home
 title: Model
 permalink: /model/
-nav_order: 1
+nav_order: 20
 has_children: true
 ---
 
