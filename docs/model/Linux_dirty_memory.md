@@ -23,7 +23,7 @@ The standard Linux settings allow 10 to 20% of RAM to fill with Dirty data befor
 
 Much of the testing of the osm2pgsql loader was done with 128GB of RAM, and as expected that tries to keep dirty memory under 12GB but allows bursts up to 20GB:
 
-[osm2pgsql workload](/images/siren-Dirty-20G-annotated.png)
+![osm2pgsql workload](/images/siren-Dirty-20G-annotated.png)
 
 # Reducing percentages
 
