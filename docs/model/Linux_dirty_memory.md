@@ -36,7 +36,7 @@ There is a mild performance regression limiting Dirty memory to under 1GB.  Sinc
 
 # Settings change walkthrough
 
-To show how this study was done
+This section documents exactly how that study was performed, to show how the settings changes work out in practice.
 
 ## Default 10/20 settings
 
