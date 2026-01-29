@@ -12,7 +12,7 @@ _Theory of Operation and Tuning for Write-Heavy Loads_
 
 pdflush is the Linux daemon that flushes cached writes to disk.
 
-* Disclaimer:  this article was originally written about Linux in 2007-2008 with a related blog entry [A Linux write cache mystery ](https://notemagnet.blogspot.com/2008/08/linux-write-cache-mystery.html).  At its original URL of https://www.westnet.com/~gsmith/content/linux-pdflush.htm the article was modestly popular, but after losing that hosting site the information has been unavailable.  It's being restored as part of the documentation to the PostgreSQL pgbent tool.  An upcoming update will jump to modern versions where these settings can now be managed at byte size increments.
+* Disclaimer:  this article was originally written about Linux in 2007-2008 with a related blog entry [A Linux write cache mystery](https://notemagnet.blogspot.com/2008/08/linux-write-cache-mystery.html).  At its original URL of https://www.westnet.com/~gsmith/content/linux-pdflush.htm the article was modestly popular, but after losing that hosting site the information has been unavailable.  It's being restored as part of the documentation to the PostgreSQL pgbent tool.  An upcoming update will jump to modern versions where these settings can now be managed at byte size increments.
 
 # Intro
 
