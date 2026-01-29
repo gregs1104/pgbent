@@ -1,6 +1,6 @@
 ---
 layout: home
-title: Linux_pdflush
+title: Linux pdflush
 permalink: /model/Linux_pdflush
 parent: Model
 nav_order: 23
