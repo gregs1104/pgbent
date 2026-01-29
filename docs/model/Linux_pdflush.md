@@ -1,8 +1,7 @@
 ---
 layout: home
-title: Linux Page Cache and pdflush
+title: Linux_pdflush
 permalink: /model/Linux_pdflush
-parent: Model
 nav_order: 23
 ---
 
