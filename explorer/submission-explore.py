@@ -254,13 +254,31 @@ ORDER BY cpu,timeout DESC,max_wal_gb DESC;
     """
     fetch_with_download(query)
 
+def osm_dirty_mem():
+    query ="""
+SELECT
+    batch,
+    hours,
+    nodes,
+    nodes_kips,index_kips,
+	max_dirty,
+    wal_mbps, avg_write_mbps, max_write_mbps
+    FROM submission
+    WHERE
+      server='siren' AND batch_id>=36 AND batch_id<=41 AND
+      script like 'osm2pgsql%'
+ORDER BY batch_id
+;
+    """
+    fetch_with_download(query)
+
 def pgbench_build():
     query = "SELECT * FROM submission WHERE script LIKE ':-i%';"
-    fetch_with_download(query)
+    df=fetch_with_download(query)
 
 def pgbench_select():
     query = "SELECT * FROM submission WHERE script = 'select';"
-    fetch_with_download(query)
+    df=fetch_with_download(query)
 
 def draw_perf_watt(df):
     if df is None:
@@ -282,12 +300,13 @@ def draw_perf_watt(df):
 def builtin_query():
     option = st.radio(
         "Set to explore:",
-        ["OSM Power", "OSM Leaderboard", "OSM Network", "OSM Checkpoint", "pgbench Build Time", "pgbench SELECT"],
+        ["OSM Power", "OSM Leaderboard", "OSM Network", "OSM Checkpoint", "OSM Dirty Memory", "pgbench Build Time", "pgbench SELECT"],
         captions=[
             "OSM Power Use Study",
             "OSM Leaderboard",
             "OSM Network Speed Study",
             "OSM Checkpoint Study",
+            "OSM Dirty Memory Study",
             "Build time",
             "SELECT",
         ],
@@ -299,6 +318,8 @@ def builtin_query():
         osm_network()
     elif option == "OSM Power":
         draw_perf_watt(osm_power())
+    elif option == "OSM Dirty Memory":
+        osm_dirty_mem()
     elif option == "OSM Checkpoint":
         osm_checkpoint()
     elif option == "pgbench Build Time":
