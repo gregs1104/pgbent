@@ -2,7 +2,8 @@
 layout: home
 title: Linux_dirty_memory
 permalink: /model/Linux_dirty_memory
-nav_order: 23
+parent: Model
+nav_order: 22
 ---
 
 # Linux Dirty Memory
