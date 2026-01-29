@@ -1,6 +1,6 @@
 ---
 layout: home
-title: Tuning Model
+title: Model
 permalink: /model/
 nav_order: 20
 has_children: true
