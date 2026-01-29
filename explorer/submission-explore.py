@@ -265,7 +265,7 @@ SELECT
     wal_mbps, avg_write_mbps, max_write_mbps
     FROM submission
     WHERE
-      server='siren' AND batch_id>=36 AND batch_id<=41 AND
+      server='siren' AND batch_id>=35 AND batch_id<=41 AND
       script like 'osm2pgsql%'
 ORDER BY batch_id
 ;
