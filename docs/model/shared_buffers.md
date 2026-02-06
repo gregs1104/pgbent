@@ -2,7 +2,7 @@
 layout: home
 title: shared_buffers
 permalink: /model/shared_buffers
-parent: Model
+parent: Tuning Model
 nav_order: 21
 ---
 

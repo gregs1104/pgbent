@@ -2,7 +2,7 @@
 layout: home
 title: Linux dirty memory
 permalink: /model/Linux_dirty_memory
-parent: Model
+parent: Tuning Model
 nav_order: 22
 ---
 

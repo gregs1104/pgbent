@@ -1,8 +1,8 @@
----
+	---
 layout: home
 title: Linux pdflush
 permalink: /model/Linux_pdflush
-parent: Model
+parent: Tuning Model
 nav_order: 23
 ---
 
