@@ -1,4 +1,4 @@
-	---
+---
 layout: home
 title: Linux pdflush
 permalink: /model/Linux_pdflush
