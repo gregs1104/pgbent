@@ -8,11 +8,11 @@ nav_order: 21
 
 # shared_buffers
 
-Postgres nails down a dedicated chunk of shared memory at startup time to hold its `shared_buffers` page cache.  Standard tuning practice makes this 1/4 of total memory in mid sized (1GB - 128GB of RAM) servers
+Postgres nails down a dedicated chunk of shared memory at startup time to hold its `shared_buffers` page cache.  Standard tuning practice makes this 1/4 of total memory in mid sized (1GB - 128GB of RAM) servers.
 
 New pages are created in the buffer cache then written.  Reads of pages already there are counted as hits.  Misses go to the OS page cache, which will either return the page from its memory or send a read to storage.
 
-PG servers work best when their working set all fits in RAM.  That means servers running in the optimal zone will not be reading that much from actual storage.  They'll be doing a lots of page transfers from the OS Cache to Postgres, then writing changes.  Modern processors accelerate memory moves.  With that hardware acceleration, the code doesn't have to be expert in loop unrolling for the read and write path to deliver.
+PG servers work best when their working set all fits in RAM.  That means servers running in the optimal zone will not be reading that much from actual storage.  They'll be doing a lots of page transfers from the OS Cache to Postgres, then writing changes.  Modern processors usually have hard acceleration for memory moves, which make that style of read and write path performant.
 
 ## 1/4 RAM size recommendation
 
@@ -38,8 +38,8 @@ Also, Postgres is aiming at the broadest possible user base.  That platform appr
 
 If `shared_buffers` isn't always the fastest read path, what is it good for then?  The main OLTP job `shared_buffers` handles is absorbing writes to commonly used pages.  Everything from catalog changes to popular table index and data, they are assumed to be there already in the most common cases.  You can write a short note to WAL describing the change, amortize that write to the sequential WAL stream, and your transaction avoided a long random write to the backing page heap.
 
-We know that large shared_buffers values (>48GB) struggle to deliver read gains.  But if you have a write workload that dirties 64GB per batch, you may still want to increase `shared_buffers` anyway.  You may pay some read overhead compared to Linux.  Absorbing those writes to only happen once per checkpoint is the more important job.
+We know that large `shared_buffers` values (>48GB) struggle to deliver read gains.  But if you have a write workload that dirties 64GB per batch, you may still want to increase `shared_buffers` anyway.  You may pay some read overhead compared to Linux.  Absorbing those writes so they only happen once per checkpoint is the more important job.
 
-## Eviction history
+## Eviction developent history
 
-Running the clock sweep method that evicts pages from the cache was never a great solution.  It was a [triage commit](https://www.postgresql.org/message-id/9533.1105991326%40sss.pgh.pa.us) to avoid foundational patents limiting what the PG community could do.  For some time now PG development has been waiting for the most obstructive of the relevant intellectual property to clear.
+Databases need a robust Cache Replacement Policy deep in their core.  The current one in PG, a [Clock Sweep](https://en.wikipedia.org/wiki/Cache_replacement_policies#Clock_with_adaptive_replacement_(CAR)) method, wasn't built to be the best solution.  It was a [triage commit](https://www.postgresql.org/message-id/9533.1105991326%40sss.pgh.pa.us) to avoid foundational patents limiting what the PG community could do.
