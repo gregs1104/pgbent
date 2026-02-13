@@ -8,14 +8,14 @@ nav_order: 24
 
 # checkpoint_timeout
 
-Checkpoints are the background heartbeat of every PostgreSQL database.  When a checkpoint finishes, you have a consistent snapshot of the database's internal state at a point in time.  While always running, they only make note of themselves only via a cryptic summary every 5 minutes that one of then finished.  Periods without activity don't get trigger checkpoints.
+Checkpoints are the background heartbeat of every PostgreSQL database.  When a checkpoint finishes, you have a consistent snapshot of the database's internal state at a point in time.  While always running, they only make note of themselves only via a cryptic summary every 5 minutes that one of then finished.  Periods without activity don't trigger checkpoints.
 
-The standard tuning practice for checkpoint_timeout follows this workflow:
+The standard tuning practice for `checkpoint_timeout` follows this workflow:
 
-* Increase checkpoint_timeout from 5 minutes to 10 minutes.
-* If the time between checkpoints doesn't actually change much, you probably need to increase max_wal_size as well or instead of the timeout.
+* Increase `checkpoint_timeout` from 5 minutes to 10 minutes.
+* If the time between checkpoints doesn't actually change much, you probably need to increase `max_wal_size` as well or instead of the timeout.
 * As volume increases continue stepping the timeout up to 15 and then 30 minutes.
-* Consider even higher settings during bulk-loading stages.  You can tune the value easily without restarting the server, you just need to write a new setting and reload the configuration.
+* Consider even higher settings during bulk-loading stages.  You can tune the value easily without restarting the server.  You just need to write a new setting and reload the configuration.
 
 Older PG versions limited the timeout to 60 minutes.  Current ones let you postpone checkpoints up to once per day.
 
@@ -148,12 +148,12 @@ After making any change to the checkpoint tuning, the long-term history shown in
 
 The standard approach is to save a copy of the raw data:
 
-  SELECT now(),* FROM pg_stat_bgwriter')
+    SELECT now(),* FROM pg_stat_bgwriter')
 
 And then reset the internal counters, eliminating all the old checkpoint data
 so that doesn't pull down the averages:
 
-  SELECT pg_stat_reset_shared ('bgwriter');
+    SELECT pg_stat_reset_shared ('bgwriter');
 
 The main risk that may make this unavailable is when there's a monitoring tool
 looking at background writer/checkpoint activity.  Resetting the values
