@@ -21,7 +21,7 @@ Older PG versions limited the timeout to 60 minutes.  Current ones let you postp
 
 # Timeout theory
 
-When checkpoints happen too often, the whole process of writing out data becomes less efficient.  The busiest blocks in your database, they're written to all the time.  The optimal strategy is to only write those blocks during the checkpoint.  Then you only do that write once per checkpoint cycle.  The database has stategies it uses to preserve functional space in the database's internal cache, to try and delay writes as long as possible.  If you make it to another checkpoint without having a block of data leave shared_buffers, you only have to write it once per cycle.
+When checkpoints happen too often, the whole process of writing out data becomes less efficient.  The busiest blocks in your database, they're written to all the time.  The optimal strategy is to only write those blocks during the checkpoint.  Then you only do that write once per checkpoint cycle.  The database has stategies it uses to preserve functional space in the database's internal cache, to try and delay writes as long as possible.  If you make it to another checkpoint without having a block of data leave `shared_buffers`, you only have to write it once per cycle.
 
 In many write-heavy benchmarks, the optimal strategy then is to delay checkpoints as long as possible.  To keep that from going too wild, benchmark fairness specifications will lock the upper limit to something reasonable.  Decades ago the TPC-C benchmark used 30 minutes as that number, and a lot of Postgres tuning guides still mirror that guideline.
 
@@ -29,7 +29,7 @@ That's for benchmarking though.  In the real world, recover time after a system 
 
 # OSM Results
 
-The Open Street Map loading workload is a good fixed size test of checkpoint write volume.  A study of different values is available at https://pgbent.streamlit.app/ under the "OSM Checkpoint" section.
+The Open Street Map loading workload is a good fixed size test of checkpoint write volume.  A study of different values is available at [https://pgbent.streamlit.app/](https://pgbent.streamlit.app/) under the "OSM Checkpoint" section.
 
 Like the TPC-C, loading always gets faster with more space between checkpoints.  Accordingly the checkpoint_timeout has been set to the old maximum of 60 minutes on the test servers.
 
@@ -148,7 +148,7 @@ After making any change to the checkpoint tuning, the long-term history shown in
 
 The standard approach is to save a copy of the raw data:
 
-    SELECT now(),* FROM pg_stat_bgwriter')
+    SELECT now(),* FROM pg_stat_bgwriter();
 
 And then reset the internal counters, eliminating all the old checkpoint data
 so that doesn't pull down the averages:
