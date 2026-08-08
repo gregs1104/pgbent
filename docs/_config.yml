@@ -28,8 +28,9 @@ twitter_username: postgresperf
 github_username:  gregs1104
 
 # Build settings
-theme: just-the-docs
-#remote_theme: "just-the-docs/just-the-docs"
+
+#theme: just-the-docs
+remote_theme: just-the-docs/just-the-docs
 
 plugins:
   - jekyll-feed
