@@ -1,29 +1,171 @@
 ---
 layout: home
-title: Linux pdflush
+title: Linux pdflush / writeback
 permalink: /model/Linux_pdflush
 parent: Tuning Model
 nav_order: 23
 ---
 
-# The Linux Page Cache and pdflush
+# Linux page cache writeback
 
-_Theory of Operation and Tuning for Write-Heavy Loads_
+_Theory of operation and tuning for write-heavy loads_
+
+Linux caches filesystem writes in the page cache. Dirty pages sit in memory until the kernel writeback path pushes them to storage. 
+
+For measured impact of these settings for PostgreSQL batch loading, see [Linux dirty memory](/model/Linux_dirty_memory).
+
+This documentation has been around long enough to cover two implementations of this under Linux.  The same `/proc/meminfo` fields and most of the same `/proc/sys/vm/dirty_*` knobs still apply.  But the pdflush daemon that once did the work is gone, and large-memory systems now have better controls than percentage ratios alone.
+
+# Current Linux: flusher threads, not pdflush
+
+Through early 2.6 kernels, a small pool of **pdflush** threads flushed dirty pages system-wide. You could watch them with `/proc/sys/vm/nr_pdflush_threads`. That model had well-known limits: a global flusher had to avoid blocking on any one congested device, which led to request starvation and lumpy writeback.
+
+Starting in **Linux 2.6.32**, writeback moved to **per-backing-device (BDI) flusher threads**—one flusher focused on each active block device (`flush-*` kernel threads). pdflush itself was reduced and later removed entirely (the last leftover, `sync_supers`, went away in **3.6**). See LWN: [Flushing out pdflush](https://lwn.net/Articles/326552/), [In defense of per-BDI writeback](https://lwn.net/Articles/354851/), and [R.I.P. pdflush](https://lwn.net/Articles/508212/).
+
+What did *not* change is the user-visible policy: age-based writeback, background dirty limits, and hard dirty limits that force writers to help clean pages. Kernel docs now say “flusher threads” where older docs said “pdflush.”
+
+The I/O scheduling algorithms in Linux actually handle the 
+writes themselves.  People looking into this class of problem gravitate toward the I/O schedulers because it seems relevant and the terminology is familiar.  These Dirty settings are *far* more important.  Some knowledge or tuning of scheduling may be synergistic with adjusting 
+the parameters here.  Adjusting the scheduler only makes sense in the context where you've 
+*already* configured the gross page cache flushing correctly for your workload.  
+
+# Watching Dirty and Writeback
+
+`/proc/meminfo` still exposes the important counters:
+
+* **Cached** — page cache size
+* **Dirty** — modified pages not yet queued for write
+* **Writeback** — pages queued to the block layer (usually brief)
+
+On a busy writer you mainly watch **Dirty**. Writeback spikes are easy to miss because they are short-lived.
+
+## Observing flusher threads
+
+There is no modern replacement for `/proc/sys/vm/nr_pdflush_threads`. Per-device flushers show up as kernel threads named `flush-*` (device major:minor). List them with:
+
+	ps -e | grep flush
+
+Example output while a disk is active:
+
+	  412 ?        00:00:01 flush-253:0
+	  891 ?        00:00:00 flush-8:0
+
+Idle devices may have no flusher thread; one is created when that backing device has dirty inodes again, and exits after a period of inactivity. Watching Dirty in `/proc/meminfo` (or `sar -B`, `vmstat`) remains the better way to see writeback *pressure*; the `flush-*` threads mostly confirm which devices have an active flusher.
+
+# Writeback tunables (modern)
+
+These live under `/proc/sys/vm/`. Official descriptions: [Documentation for /proc/sys/vm/](https://docs.kernel.org/admin-guide/sysctl/vm.html).
+
+## Timing
+
+`dirty_writeback_centisecs` (default 500): how often flusher threads wake to write old data, in hundredths of a second (5s default). Setting `0` disables periodic writeback.
+
+`dirty_expire_centisecs` (default 3000): how long a page may stay dirty before it is eligible for writeout at the next flusher wakeup (30s default).
+
+As in the original article, lowering these aggressively often fights congestion and efficiency logic inside the kernel. Prefer adjusting dirty *volume* limits first.
+
+## Volume: ratios
+
+`dirty_background_ratio` (commonly 10): percentage of **dirtyable** memory at which background flushers start writing. Dirtyable memory is free pages plus reclaimable file pages (not total RAM). The kernel docs stress that this base is not equal to total system memory.
+
+`dirty_ratio` (commonly 20): percentage of dirtyable memory at which writing processes must start cleaning dirty pages themselves during their time slice. When this trips, write throttling is system-wide—not only for the process that filled the cache.
+
+Default history: **2.6.22** lowered the stock defaults (`dirty_background_ratio` 10→5, `dirty_ratio` 40→10) for some time before distributions moved again to **10 / 20**. Always check the live values on your host.
+
+## Volume: bytes (preferred on large RAM)
+
+On systems with tens or hundreds of gigabytes of RAM, even 1% of dirtyable memory can be far more dirty cache than you want—especially before `fsync`/checkpoint storms. Modern kernels allow absolute limits:
+
+* `dirty_background_bytes` — counterpart of `dirty_background_ratio`
+* `dirty_bytes` — counterpart of `dirty_ratio` (minimum two pages)
+
+Only one of each pair is active. Writing a bytes value makes the matching ratio read as `0`, and vice versa:
+
+	echo 1000000000 > /proc/sys/vm/dirty_bytes
+	echo  500000000 > /proc/sys/vm/dirty_background_bytes
+
+The same values can be set with `sysctl` without writing `/proc` by hand:
+
+	sysctl -w vm.dirty_bytes=1000000000
+	sysctl -w vm.dirty_background_bytes=500000000
+
+pgbent’s OSM dirty-memory study walks through ratio and byte settings on a 128GB server: [Linux dirty memory](/model/Linux_dirty_memory).
+
+## Persisting with sysctl
+
+Changes via `echo` or `sysctl -w` last only until reboot. To keep them across boots, add a drop-in under `/etc/sysctl.d/`, for example `/etc/sysctl.d/99-dirty-writeback.conf`:
+
+	vm.dirty_bytes = 1000000000
+	vm.dirty_background_bytes = 500000000
+
+Apply immediately without rebooting:
+
+	sysctl --system
+
+Or load just that file:
+
+	sysctl -p /etc/sysctl.d/99-dirty-writeback.conf
+
+Use either the bytes pair or the ratio pair in the drop-in—not both. Whichever you write last wins for that limit, and the unused counterpart reads as `0`.
+
+# When does writeback run?
+
+In the usual configuration, dirty data is written when:
+
+1. It is older than `dirty_expire_centisecs`, and a flusher wakes (`dirty_writeback_centisecs`), or
+2. Dirty pages exceed the background threshold (`dirty_background_ratio` or `dirty_background_bytes`), or
+3. Dirty pages hit the hard threshold (`dirty_ratio` or `dirty_bytes`), forcing writers to participate.
+
+Under heavy write load, (2) often dominates: pages are cleaned by the background limit long before they expire by age. That is the same shape of behavior the pdflush-era article described; only the thread model and the byte-sized knobs are new.
+
+# Tuning for write-heavy / PostgreSQL workloads
+
+The usual problem is still too much dirty cache: long quiet periods while the page cache fills, then bursts at device speed; and painful stalls when something calls `fsync` (PostgreSQL checkpoints are the classic case).
+
+* **`dirty_background_ratio` / `dirty_background_bytes`**: primary knob. Lower it (or set a modest byte target) so writeback is steadier instead of batched. Most important on large-memory hosts and/or slower storage.
+* **`dirty_ratio` / `dirty_bytes`**: secondary. Keep headroom above the background limit. Applications that cannot tolerate write throttling should avoid driving Dirty near this ceiling.
+* **`dirty_expire_centisecs`**: optional; test modest reductions. Very low values tend to hurt throughput.
+* **`dirty_writeback_centisecs`**: leave at default unless you have a specific reason.
+
+On fast SSDs, pgbent measurements show only small gains from large Dirty caches; a few GB of Dirty can still help keep the device fed, while multi-tens-of-GB Dirty mainly adds `fsync` risk. On slow disks, a larger write cache still amortizes I/O more usefully. Details: [Linux dirty memory](/model/Linux_dirty_memory).
+
+# Swappiness (still related)
+
+`/proc/sys/vm/swappiness` still trades anonymous memory vs. file cache. High values favor a larger page cache (and thus more room for Dirty); low values favor keeping application pages resident. It is not a writeback tunable, but it changes how much cache the dirty limits apply against. Workload-dependent: throughput-oriented servers often tolerate higher swappiness; latency-sensitive hosts often prefer lower.
+
+# Warnings (updated)
+
+* Lowering `dirty_ratio` / `dirty_bytes` makes write throttling easier to hit. That is sometimes desirable (smoother Dirty), sometimes not (latency spikes for all writers).
+* Linux overcommit (`vm.overcommit_memory`) can still surprise databases. PostgreSQL’s guidance remains in [Kernel Resources](https://www.postgresql.org/docs/current/kernel-resources.html).
+* Old lkml reports about rare bugs when lowering `dirty_ratio` on mid-2000s kernels are historical; do not treat them as current kernel caveats.
+
+# References (current)
+
+* [Documentation for /proc/sys/vm/](https://docs.kernel.org/admin-guide/sysctl/vm.html) — `dirty_*` sysctls
+* Linux `mm/page-writeback.c` — dirtyable memory and limit logic
+* LWN: [Flushing out pdflush](https://lwn.net/Articles/326552/), [R.I.P. pdflush](https://lwn.net/Articles/508212/)
+* pgbent: [Linux dirty memory](/model/Linux_dirty_memory)
+
+---
+
+# Historical article: The Linux Page Cache and pdflush (2007-2008)
+
+* This section restores the modestly referenced [westnet.com linux-pdflush.htm](https://www.westnet.com/~gsmith/content/linux-pdflush.htm) article (Linux 2.6 era), with a related blog post [A Linux write cache mystery](https://notemagnet.blogspot.com/2008/08/linux-write-cache-mystery.html).
+
+_The following is the original article text, restored for history. It describes Linux 2.6 pdflush behavior and defaults of that era. Prefer the modern section above for current kernels._
 
 pdflush is the Linux daemon that flushes cached writes to disk.
 
-* Disclaimer:  this article was originally written about Linux in 2007-2008 with a related blog entry [A Linux write cache mystery](https://notemagnet.blogspot.com/2008/08/linux-write-cache-mystery.html).  At its original URL of https://www.westnet.com/~gsmith/content/linux-pdflush.htm the article was modestly popular, but after losing that hosting site the information has been unavailable.  It's being restored as part of the documentation to the PostgreSQL pgbent tool.  An upcoming update will jump to modern versions where these settings can now be managed at byte size increments.
-
-# Intro
+## Intro
 
 As you write out data ultimately intended for disk, Linux caches this information in an 
 area of memory called the page cache.  You can find out basic info about the page cache 
 using tools like free, vmstat or top.  See 
 [http://gentoo-wiki.com/FAQ_Linux_Memory_Management](http://gentoo-wiki.com/FAQ_Linux_Memory_Management)
 to learn how to interpret top's memory 
-information, or [http://www.atconsultancy.nl/atop/]atop) to get an improved version.
+information, or [http://www.atconsultancy.nl/atop/](http://www.atconsultancy.nl/atop/) to get an improved version.
 
-# Sample
+## Sample
 
 Full information about the page cache only shows up by looking at `/proc/meminfo`.  Here is a 
 sample from a system with 4GB of RAM:
@@ -70,7 +212,7 @@ second has passed without any pdflush activity, one of the threads is removed.  
 tunables for adjusting the minimum and maximum number of pdflush processes, but it's very 
 rare they need to be adjusted.
 
-# pdflush tunables
+## pdflush tunables
 
 Exactly what each pdflush thread does is controlled by a series of parameters in 
 /proc/sys/vm:
@@ -92,7 +234,7 @@ run themselves as often as is practical to try and meet the other requirements.
 The first thing pdflush works on is writing pages that have been dirty for longer than it 
 deems acceptable.  This is controlled by:
 
-`/proc/sys/vm/dirty_expire_centiseconds`(default 3000):  In hundredths of a second, how long 
+`/proc/sys/vm/dirty_expire_centisecs` (default 3000):  In hundredths of a second, how long 
 data can be in the page cache before it's considered expired and must be written at the 
 next opportunity.  Note that this default is very long:  a full 30 seconds.  That means 
 that under normal circumstances, unless you write enough to trigger the other pdflush 
@@ -116,7 +258,7 @@ So on the system above, where this figure gives 2.5GB, with the default of 10% t
 actually begins writing when the total for Dirty pages is slightly less than 250MB--not the 
 400MB you'd expect based on the total memory figure.
 
-# Summary:  when does pdflush write?
+## Summary:  when does pdflush write?
 
 In the default configuration, then, data written to disk will sit in memory until either a) 
 they're more than 30 seconds old, or b) the dirty pages have consumed more than 10% of the 
@@ -124,16 +266,16 @@ active, working memory.  If you are writing heavily, once you reach
 the dirty_background_ratio driven figure worth of dirty memory, you may
 find that all your writes are driven by that limit.  It's fairly easy to
 get in a situation where pages are always being written out by that mechanism
-well before they are considered expired by the dirty_expire_centiseconds
+well before they are considered expired by the dirty_expire_centisecs
 mechanism.
 
 Other than laptop_mode, which changes several parameters to optimize for keeping the hard 
 drive spinning as infrequently as possible (see
-[http://www.samwel.tk/laptop_mode/]
-http://www.samwel.tk/laptop_mode/) for more 
+[http://www.samwel.tk/laptop_mode/](http://www.samwel.tk/laptop_mode/)
+for more 
 information) those are all the important kernel tunables that control the pdflush threads.
 
-# Process page writes
+## Process page writes
 
 There is another parameter involved though that can spill over into management of user 
 processes:
@@ -145,10 +287,10 @@ filled the write buffers.  This can cause what is perceived as an unfair behavio
 "write-hog" process can block all I/O on the system.  The classic way to trigger this 
 behavior is to execute a script that does "dd if=/dev/zero of=hog" and watch what happens.  
 See
-[http://www.linuxjournal.com/article/6931](Kernel Korner:  I/O Schedulers)
+[Kernel Korner:  I/O Schedulers](http://www.linuxjournal.com/article/6931)
 for examples showing this behavior.
 
-# Tuning Recommendations for write-heavy operations
+## Tuning Recommendations for write-heavy operations
 
 The usual issue that people who are writing heavily encouter is that Linux buffers
 too much information at once, in its attempt to improve efficiency.  This is particularly
@@ -184,7 +326,7 @@ that adjusting this tunable is unlikely to cause any real effect.  It's generall
 to keep it at the default so that this internal timing tuning matches the frequency at 
 which pdflush runs.
 
-# Swapping
+## Swapping
 
 By default, Linux will aggressively swap processes out of physical memory onto disk in 
 order to keep the disk cache as large as possible.  This means that pages that haven't been 
@@ -216,7 +358,7 @@ Since the size of the disk cache directly determines things like how much dirty 
 will allow in memory, adjusting swappiness can greatly influence that behavior even though 
 it's not directly tied to that.
 
-# Warnings
+## Warnings
 
 * There is a currently outstanding Linux kernel bug that is rare and difficult to trigger 
 even intentionally on most kernel versions.  However, it is easier to encounter when 
@@ -237,7 +379,7 @@ can have issues when overcommit is turned on is PostgreSQL; see "Linux Memory Ov
 [http://www.postgresql.org/docs/current/static/kernel-resources.html](http://www.postgresql.org/docs/current/static/kernel-resources.html) for
 their warnings on this subject.
 
-# References:  page cache
+## References:  page cache
 
 Neil Horman, "Understanding Virtual Memory in Red Hat Enterprise Linux 4" 
 [http://people.redhat.com/nhorman/papers/rhel4_vm.pdf](http://people.redhat.com/nhorman/papers/rhel4_vm.pdf)
@@ -265,7 +407,7 @@ From the Linux kernel tree:
 * Documentation/sysctl/vm.txt
 * Mm/page-writeback.c
 
-# References:  I/O scheduling
+## References:  I/O scheduling
 
 While not directly addressed here, the I/O scheduling algorithms in Linux actually handle the 
 writes themselves, and some knowledge or tuning of them may be synergistic with adjusting 
@@ -286,7 +428,7 @@ Heger, D., Pratt, S., "Workload Dependent Performance Evaluation of the Linux 2.
 Schedulers", 
 [http://linux.inet.hr/files/ols2004/pratt-reprint.pdf](http://linux.inet.hr/files/ols2004/pratt-reprint.pdf)
 
-# Upcoming Linux work in progress - 2008 update
+## 2008 era work in progress samples
 
 * There is a patch in testing from SuSE that adds a parameter called dirty_ratio_centisecs 
 to the kernel tuning which fine-tunes the write-throttling behavior.  See "Patch:  
@@ -304,6 +446,6 @@ dirty_ratio settings below the current useful range, aimed at systems with very 
 memory capacity.  The commentary on this patch also has some helpful comments on improving 
 dirty buffer writing, although it is fairly specific to ext3 filesystems.
 
-* The stock [http://kernelnewbies.org/Linux_2_6_22](2.6.22 Linux kernel) has substantially reduced the default values for the dirty memory parameters.  dirty_background_ratio defaulted to 10, now it defaults to 5. vm_dirty_ratio defaulted to 40, now it's 10 
+* The stock [2.6.22 Linux kernel](http://kernelnewbies.org/Linux_2_6_22) has substantially reduced the default values for the dirty memory parameters.  dirty_background_ratio defaulted to 10, now it defaults to 5. vm_dirty_ratio defaulted to 40, now it's 10 
 
-* A recent [http://kerneltrap.org/node/14148](lively discussion) on the Linux kernel mailing list discusses some of the limitations of the fsync mechanism when using ext3.
+* A [lively discussion](http://kerneltrap.org/node/14148) on the Linux kernel mailing list discusses some of the limitations of the fsync mechanism when using ext3.

@@ -8,6 +8,8 @@ nav_order: 22
 
 # Linux Dirty Memory:  testing
 
+Background on the kernel writeback path (historical pdflush and current flusher threads) is in [Linux pdflush / writeback](/model/Linux_pdflush).
+
 The primary write cache on a Linux PostgreSQL server is labeled Dirty memory.  Operations that can dirty a lot of memory include index building, vacuuming, CLUSTER, and heavy random UPDATE statements.  Dirty data eventually turns into Write-Back for a brief period, but the important metric to watch is the Dirty amount.
 
 Much of the testing of the osm2pgsql loader was done with 128GB of RAM, and as expected that tries to keep dirty memory under 10% ~= 12GB while allowing bursts up to 20% ~= 24GB:
