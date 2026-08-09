@@ -1,0 +1,2 @@
+# Live Streamlit snapshot (optional; main explorer uses Streamlit Cloud secrets)
+playwright>=1.40.0

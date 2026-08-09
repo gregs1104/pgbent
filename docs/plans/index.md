@@ -6,7 +6,7 @@ Living roadmaps for in-progress work. Aimed at maintainers and coding agents; no
 
 | Type | File | Purpose |
 |------|------|---------|
-| Implementation | [plotting.md](plotting.md), [metview.md](metview.md) | Code to build or migrate |
+| Implementation | [plotting.md](plotting.md), [metview.md](metview.md), [results-snapshot.md](results-snapshot.md) | Code to build or migrate |
 | Documentation | [documentation.md](documentation.md) | Topics to write for the docs site when time allows |
 | Long-term goals | [goals.md](goals.md) | Directional ambitions; not active work by default |
 
@@ -18,6 +18,7 @@ Agent entry point: [AGENTS.md](../../AGENTS.md) at the repository root.
 |------|---------|
 | [plotting.md](plotting.md) | gnuplot → Python migration (project-wide) |
 | [metview.md](metview.md) | Per-run metrics grapher |
+| [results-snapshot.md](results-snapshot.md) | Export Streamlit studies to static docs snapshots (PG18, …) |
 
 ## Documentation plans
 

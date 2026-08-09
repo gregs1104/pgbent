@@ -1,7 +1,13 @@
+import os
+import sys
+
 import streamlit as st
 import psycopg2
 import pandas as pd
 from configparser import ConfigParser
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from submission_studies import study_sql
 
 # TODO Load production from the init file
 production = True
@@ -93,192 +99,44 @@ def fetch_with_download(query):
             return None
 
 def osm():
-    query ="""
-WITH
-best AS
-  (SELECT
-    cpu,mem_gb,disk,server_ver,client,script,clients,conn,hours,nodes,nodes_kips,index_kips,csum,
-        w_p_g,p_m_w,
-        fsync,wal_level,max_wal_gb,db_gb,
-        wal_mbps, avg_write_mbps, max_write_mbps, avg_read_mbps, max_read_mbps,avg_package_watts, max_package_watts,
-    ROW_NUMBER()
-    OVER(
-        PARTITION BY cpu,mem_gb,server_ver,script,conn,clients,nodes,csum,fsync,wal_level,max_wal_gb,w_p_g,p_m_w
-        ORDER BY nodes_kips DESC,index_kips DESC
-    )  AS r
-    FROM submission
-    WHERE
-      max_write_mbps IS NOT NULL AND
-      category IS NULL AND
-      script like 'osm2pgsql%'
-  )
-SELECT
-    cpu,
-    mem_gb,
-    substr(disk,1,12) AS disk,
-    substring(server_ver FROM 'PostgreSQL ([0-9]+)') AS ver,
-    conn,
-    --CASE WHEN client is NULL
-    --  THEN cpu || ' ' || mem_gb || 'GB ' || disk
-    --  ELSE client::text END AS client,
-    --script,
-    --clients,
-    --tps,
-    hours AS hours,
-    --round(nodes/1000000000,1) AS nodes_m,
-    nodes_kips,index_kips,csum,
-    w_p_g,p_m_w,
-    fsync,wal_level,max_wal_gb,
-    wal_mbps AS wal, avg_write_mbps AS avg_write, max_write_mbps AS max_write,
-    avg_read_mbps AS avg_read, max_read_mbps AS max_read,
-    round(avg_package_watts) AS avg_pkg,
-    round(max_package_watts) AS max_pkg
-FROM best WHERE r=1
-ORDER BY nodes_kips DESC,index_kips DESC,script,db_gb;
-    """
-    df=fetch_with_download(query)
-    return df
+    return fetch_with_download(study_sql("osm-leaderboard"))
 
 def osm_network():
-    query ="""
-WITH
-best AS
-  (SELECT
-    cpu,mem_gb,disk,client,script,clients,conn,hours,nodes,nodes_kips,index_kips,fsync,wal_level,max_wal_gb,db_gb,
-      wal_mbps, avg_write_mbps, max_write_mbps, avg_read_mbps, max_read_mbps,avg_package_watts, max_package_watts,
-    ROW_NUMBER()
-    OVER(
-        PARTITION BY cpu,conn,client
-        ORDER BY nodes_kips DESC,index_kips DESC
-    )  AS r
-    FROM submission
-    WHERE
-      max_write_mbps IS NOT NULL AND
-      (category IS NULL OR category='2023') AND
-      script like 'osm2pgsql%' AND
-      (client IS NOT NULL OR cpu='R9 9950X' OR cpu='i5-13600K' OR cpu='Apple M4 Max')
-  )
-SELECT
-    CASE WHEN client is NULL
-      THEN cpu || '  ' || mem_gb || 'GB ' || disk
-      ELSE client::text END AS client,
-    cpu AS server,
-    conn,
-    nodes_kips,index_kips,
-    wal_mbps AS wal_mbps
-FROM best WHERE r=1
-ORDER BY server,client,cpu,nodes_kips DESC;
-    """
-    df=fetch_with_download(query)
-    return df
+    return fetch_with_download(study_sql("osm-network"))
 
 def osm_power():
-    query ="""
-WITH
-best AS
-  (SELECT
-    cpu,mem_gb,disk,client,script,clients,conn,hours,nodes,nodes_kips,index_kips,fsync,wal_level,max_wal_gb,db_gb,
-      wal_mbps, avg_write_mbps, max_write_mbps, avg_read_mbps, max_read_mbps,avg_package_watts, max_package_watts,
-    ROW_NUMBER()
-    OVER(
-        PARTITION BY cpu,conn,client
-        ORDER BY nodes_kips DESC,index_kips DESC
-    )  AS r
-    FROM submission
-    WHERE
-      max_write_mbps IS NOT NULL AND
-      (category IS NULL OR category='2023') AND
-      script like 'osm2pgsql%' AND
-      conn='host' AND client is NULL
-  )
-SELECT
-    cpu,
-    mem_gb,
-    --conn,client,
-    nodes_kips,index_kips,
-      -- rel_kips
-      CASE WHEN (avg_package_watts IS NULL) AND (NOT max_package_watts IS NULL) THEN 'est' ELSE '' END as pwr_est,
-      round(max_package_watts) AS max_pkg,
-      round(avg_package_watts) AS avg_pkg,
-    fsync,
-      wal_mbps AS wal, avg_write_mbps AS avg_write, max_write_mbps AS max_write, avg_read_mbps AS avg_read, max_read_mbps AS max_read,
-    CASE
-      WHEN SUBSTRING(cpu FROM 1 FOR 1)='A' then '#555555' -- Apple Grey
-      WHEN SUBSTRING(cpu FROM 1 FOR 1)='i' then '#0071C5' -- Intel blue
-      WHEN SUBSTRING(cpu FROM 1 FOR 1)='R' then '#ED1C24' -- AMD Red
-    END AS cpu_c
-FROM best WHERE r=1
-  AND max_package_watts IS NOT null
-ORDER BY nodes_kips DESC,index_kips DESC,script,db_gb;
-    """
-    df=fetch_with_download(query)
-    return df
+    return fetch_with_download(study_sql("osm-power"))
 
 def osm_checkpoint():
-    query ="""
-WITH
-best AS
-  (SELECT
-    cpu,server_ver,mem_gb,disk,client,script,clients,conn,hours,nodes,nodes_kips,index_kips,fsync,wal_level,max_wal_gb,db_gb,
-	timeout,chkp_mins,timed_pct,chkp_mbph,clean_mbph,backend_mbph,cleaned_pct,
-	max_dirty,hit_pct,hit_mbps,read_mbps,
-    wal_mbps, avg_write_mbps, max_write_mbps, avg_read_mbps, max_read_mbps,avg_package_watts, max_package_watts,
-    ROW_NUMBER()
-    OVER(
-        PARTITION BY cpu,conn,client,timeout,max_wal_gb
-        ORDER BY nodes_kips DESC,index_kips DESC
-    )  AS r
-    FROM submission
-    WHERE
-      max_write_mbps IS NOT NULL AND
-      (category IS NULL) AND
-      script like 'osm2pgsql%'
-  )
-SELECT
-    cpu,
-    nodes_kips,index_kips,fsync,
-    wal_level,max_wal_gb,
-	timeout,chkp_mins,timed_pct,
-	chkp_mbph,
-	clean_mbph,
-	backend_mbph,
-	cleaned_pct,
-	max_dirty,hit_pct,hit_mbps,read_mbps AS miss_mbps,
-	wal_mbps AS wal, avg_write_mbps AS avg_write, max_write_mbps AS max_write, avg_read_mbps AS avg_read, max_read_mbps AS max_read
-FROM best WHERE r=1 AND
-  (server_ver IS NOT NULL) AND
-  (server_ver != '') AND
-  (server_ver NOT LIKE 'macOS%') AND
-  conn='host'
-ORDER BY cpu,timeout DESC,max_wal_gb DESC;
-    """
-    fetch_with_download(query)
+    fetch_with_download(study_sql("osm-checkpoint"))
 
 def osm_dirty_mem():
-    query ="""
-SELECT
-    batch,
-    hours,
-    nodes,
-    nodes_kips,index_kips,
-	max_dirty,
-    wal_mbps, avg_write_mbps, max_write_mbps
-    FROM submission
-    WHERE
-      server='siren' AND batch_id>=35 AND batch_id<=41 AND
-      script like 'osm2pgsql%'
-ORDER BY batch_id
-;
-    """
-    fetch_with_download(query)
+    fetch_with_download(study_sql("osm-dirty-memory"))
 
 def pgbench_build():
-    query = "SELECT * FROM submission WHERE script LIKE ':-i%';"
-    df=fetch_with_download(query)
+    df=fetch_with_download(study_sql("pgbench-build"))
+
+    selection = st.dataframe(
+        df,
+        selection_mode=["single-row"],
+        use_container_width=True)
+
+    print(selection)
+
+    if (False):
+    # Process the selection
+        if selection["selection"]:
+            selected_indices = selection["selection"]["rows"]
+            if selected_indices:
+                st.write("Selected Rows:")
+                # Use pandas .iloc[] to retrieve the actual row data
+                selected_rows_df = df.iloc[selected_indices]
+                st.dataframe(selected_rows_df)
+            else:
+                st.write("No rows selected.")
 
 def pgbench_select():
-    query = "SELECT * FROM submission WHERE script = 'select';"
-    df=fetch_with_download(query)
+    fetch_with_download(study_sql("pgbench-select"))
 
 def draw_perf_watt(df):
     if df is None:
