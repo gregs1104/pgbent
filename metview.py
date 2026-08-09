@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 metview.py generates metrics graphs out of a pgbent benchmark results
@@ -14,9 +14,20 @@ import os
 import matplotlib.pyplot as plt
 import matplotlib.image as image
 from matplotlib.offsetbox import (OffsetImage, AnnotationBbox)
+from matplotlib.ticker import ScalarFormatter
 import pandas as pd
 import psycopg2
 import psycopg2.extras
+
+# Expand to avoid error:
+#   "OverflowError: In draw_path: Exceeded cell block limit"
+plt.rcParams['agg.path.chunksize'] = 10000
+
+def format_yaxis_plain(ax):
+    """Always show plain decimal Y tick labels (never scientific notation)."""
+    formatter = ScalarFormatter(useOffset=False)
+    formatter.set_scientific(False)
+    ax.yaxis.set_major_formatter(formatter)
 
 def connect(options):
     # TODO Put database connection parameters into options
@@ -34,7 +45,7 @@ def images_dir(options):
     server=options['server']
     test=str(options['test'])
     # TODO Deal with output to server/test directory given some are missing
-    base=os.path.join("results",server,test,"images")
+    base=os.path.join("results","images")
     try:
         os.mkdir(base)
     except:
@@ -50,10 +61,7 @@ def gen_label(options,df):
     cpu=df.iloc[0]['server_cpu']
     clients=df.iloc[0]['clients']
     db_gb=round(df.iloc[0]['db_gb'])
-    script=df.iloc[0]['script']
-
-    # TODO Only need to uppercase the basic operations tests like select
-    if (False):  script=script.upper()
+    script=df.iloc[0]['script'].upper()
 
     try:
         rate_limit=round(df.iloc[0]['rate_limit'])
@@ -61,7 +69,7 @@ def gen_label(options,df):
         rate_limit=round(df.iloc[0]['tps'])
 
     if rate_limit>0:
-        view_label=cpu+" "+script+" "+str(db_gb)+"GB "+str(clients)+" clients "+str(rate_limit)+" TPS"
+        view_label=cpu+" "+script+" "+str(db_gb)+"GB "+str(clients)+" clients @ "+str(rate_limit)+" TPS"
     else:
         view_label=cpu+" "+script+" "+str(db_gb)+"GB "+str(clients)+" clients"
 
@@ -75,7 +83,6 @@ def gen_file_name(base,view,server,test):
 def gen_sql(options,dbagg):
     server=options['server']
     test=options['test']
-    scale='megabytes'
 
     # TODO Use SQL injection proof parameter substitution here instead of Python's?
     sql="""
@@ -106,11 +113,10 @@ def gen_sql(options,dbagg):
         d.test=t.test AND
         (mi.uname=t.uname OR mi.uname IS null OR mi.uname='Database') AND
         d.test=%s AND
-        d.server='%s' AND
-        mi.scale='%s'
+        d.server='%s'
     GROUP BY d.server,t.server_cpu,script,t.scale,clients,rate_limit,tps,round(dbsize / (1024*1024*1024)),d.metric,mi.prefix,mi.metric_label,mi.units,mi.category,mi.multi,mi.visibility,date_trunc('%s',collected)
     ORDER BY d.server,t.server_cpu,script,t.scale,clients,rate_limit,round(dbsize / (1024*1024*1024)),d.metric,mi.prefix,mi.metric_label,mi.units,mi.category,mi.multi,mi.visibility,date_trunc('%s',collected)
-    ;""" % (dbagg,test,server,scale,dbagg,dbagg,)
+    ;""" % (dbagg,test,server,dbagg,dbagg)
 
     return sql
 
@@ -119,7 +125,7 @@ def query_multi_met(options):
     dbagg='second'
 
     sql=gen_sql(options, dbagg)
-    if (False):  print ("sql=",sql)
+    print ("sql=",sql)
     return sql
 
 def query_single_met(options):
@@ -127,16 +133,21 @@ def query_single_met(options):
     dbagg='second'
 
     sql=gen_sql(options, dbagg)
-    if (False):  print ("sql=",sql)
+    print ("sql=",sql)
     return sql
 
 def graph_single(options,df):
     server=options['server']
     test=options['test']
+
     metrics={}
+    rendered=0
+
     base=images_dir(options)
 
     plt.rcParams.update({'font.size':'18'})
+    colors=('green','blue','purple')
+
     logo_file="reports/Color Horizontal.jpg"
     logo=image.imread(logo_file)
     logo_im = OffsetImage(logo, zoom=.03)
@@ -153,8 +164,9 @@ def graph_single(options,df):
 
         view_label=gen_label(options,df)
 
-        units=v['units'].iloc[0]
-        ylabel=k[0]+" - "+units
+        # TODO put k into generated label
+        units=v['units'][0]
+        ylabel=units
 
         metrics[k]=metrics[k].drop(columns=['avg','metric'])
         metrics[k].rename(columns={'max': k}, inplace=True)
@@ -167,8 +179,9 @@ def graph_single(options,df):
 
         ax.set_ylabel(ylabel)
         ax.grid(True,which='both')
+        format_yaxis_plain(ax)
 
-        fn=gen_file_name(base,k[0],server,test)
+        fn=gen_file_name(base,k,server,test)
         # TODO Bottom part of graph is strangely cut off?  Rotation issue?
         plt.savefig(fn,dpi=600)  # 80 for =640x480 figures
         print("saved to '%s.png'" % fn)
