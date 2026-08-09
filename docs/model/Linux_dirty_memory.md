@@ -20,7 +20,7 @@ Having a bigger write cache allows speedups like combining, sorting, and reducin
 
 # Performance Impact
 
-The performance study is available on the [pgbent Streamlit app](https://pgbent.streamlit.app/) under the option "OSM Dirty Memory".
+The performance study is in the [OSM Dirty Memory results]({{ '/results-summary/pg18/osm-dirty-memory/' | relative_url }}) ([Streamlit explorer — down between releases](https://pgbent.streamlit.app/)).
 
 Since this test server is using a fast SSD, there is only a small performance win to caching large amounts of Dirty memory:
 

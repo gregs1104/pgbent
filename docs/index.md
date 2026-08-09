@@ -24,7 +24,7 @@ Shell scripts (`benchwarmer`, `runset`) orchestrate each run. Scale and client c
 - **Deep metrics collection** — One-second resolution sampling into a PostgreSQL results database, without monitor averaging that hides peak GB/s behavior.
 - **Human-readable internals** — Metrics grade how effectively each test stresses CPU and storage, useful for tuning training and regression diagnosis.
 - **Configuration capture** — Server hardware, OS details, and PostgreSQL settings recorded with every run.
-- **SQL and visual analysis** — Reports in the `reports/` directory; the [Streamlit results explorer](https://pgbent.streamlit.app/) browses published results from Postgres 14–18 testing.
+- **SQL and visual analysis** — Reports in the `reports/` directory; [PostgreSQL 18 results]({{ '/results-summary/pg18/' | relative_url }}) publish benchmark tables from Postgres 14–18 testing ([Streamlit explorer — down between releases](https://pgbent.streamlit.app/)).
 - **Easy to extend and audit** — Workloads are plain scripts; the metrics system is transparent shell and SQL.
 
 ## Workloads
@@ -67,7 +67,7 @@ pgbent workloads aim to reflect that reality. Databases have a broad set of use 
 ## Links
 
 - [GitHub repository](https://github.com/gregs1104/pgbent)
-- [Results explorer](https://pgbent.streamlit.app/) — interactive browse of published benchmark data
+- [PostgreSQL 18 results]({{ '/results-summary/pg18/' | relative_url }}) — published benchmark study tables ([Streamlit explorer — down between releases](https://pgbent.streamlit.app/))
 
 - TOC
 {:toc}

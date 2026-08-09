@@ -8,7 +8,7 @@ has_children: true
 
 # Tuning Model
 
-Sample results from `pgbent` have been [published](https://pgbent.streamlit.app/) as a reference to good PostgreSQL tuning practice, validating some parts of the standard PG [tuning guide](https://wiki.postgresql.org/wiki/Tuning_Your_PostgreSQL_Server).  pgbent has primarily published benchmark results optimizing the Open Street Map loading process.  That provides way to validate whether the way that database is [tuned](https://github.com/gregs1104/pgbent/tree/main/conf) for checkpoints and buffer cache is optimal.
+Sample results from `pgbent` have been [published]({{ '/results-summary/pg18/' | relative_url }}) as a reference to good PostgreSQL tuning practice, validating some parts of the standard PG [tuning guide](https://wiki.postgresql.org/wiki/Tuning_Your_PostgreSQL_Server).  pgbent has primarily published benchmark results optimizing the Open Street Map loading process.  That provides way to validate whether the way that database is [tuned](https://github.com/gregs1104/pgbent/tree/main/conf) for checkpoints and buffer cache is optimal.  The PG 18 release cycle is retired here as static tables; the [Streamlit explorer — down between releases](https://pgbent.streamlit.app/) will host the next cycle.
 
 There's already a [osm2pgsql tuning guide](https://osm2pgsql.org/doc/manual.html#tuning-the-postgresql-server) that accurately covers related information about this workload.  The [OSM workload](https://getbent.io/workloads/osm) page here covers similar ground.  Outside of the loading stages bounded by the OSM's node cache, the rest of the loading work benefits from classic OLTP checkpoint tuning work.
 

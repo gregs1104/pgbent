@@ -9,7 +9,7 @@ has_children: true
 
 # PostgreSQL 18 results
 
-Snapshots captured from the live [Streamlit results explorer](https://pgbent.streamlit.app/).
+PostgreSQL 18 benchmark study tables—retired release cycle, snapshotted here on 2026-08-09. Originally from the [Streamlit explorer — down between releases](https://pgbent.streamlit.app/).
 
 ## Studies
 

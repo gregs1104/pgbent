@@ -3,7 +3,7 @@
 Benchmarking toolkit for PostgreSQL: repeatable workloads, one-second system and database metrics, and a results database for regression testing and tuning studies.
 
 - **[Documentation](https://getbent.io)** — setup, workloads, tuning research, troubleshooting
-- **[Results explorer](https://pgbent.streamlit.app/)** — browse published Postgres 14–18 benchmark data
+- **[PostgreSQL 18 results](https://getbent.io/results-summary/pg18/)** — published benchmark study tables ([Streamlit explorer — down between releases](https://pgbent.streamlit.app/))
 - **[AGENTS.md](AGENTS.md)** — architecture, workflows, and development plans (for contributors and coding agents)
 
 ![osm2pgsql workload](reports/images/samples/twilight-1494-read-write.png)

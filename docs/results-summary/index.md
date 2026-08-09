@@ -8,9 +8,9 @@ has_children: true
 
 # Results summary
 
-Static snapshots of published benchmark studies—the same tables as the [Streamlit results explorer](https://pgbent.streamlit.app/).
+Static snapshots of published benchmark studies—tables previously browsed on the [Streamlit explorer — down between releases](https://pgbent.streamlit.app/).
 
-Streamlit is the **live** explorer for current work (PG 19 will publish there first). Each major release gets a **snapshot** here: captured by clicking through every study on the live site (or from the results database when available).
+Each major release gets a snapshot here when its cycle ends. PG 19 will publish on Streamlit first when the next round begins.
 
 ## By PostgreSQL version
 

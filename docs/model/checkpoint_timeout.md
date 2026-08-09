@@ -29,7 +29,7 @@ That's for benchmarking though.  In the real world, recover time after a system 
 
 # OSM Results
 
-The Open Street Map loading workload is a good fixed size test of checkpoint write volume.  A study of different values is available at [https://pgbent.streamlit.app/](https://pgbent.streamlit.app/) under the "OSM Checkpoint" section.
+The Open Street Map loading workload is a good fixed size test of checkpoint write volume.  A study of different values is in the [OSM Checkpoint results]({{ '/results-summary/pg18/osm-checkpoint/' | relative_url }}) ([Streamlit explorer — down between releases](https://pgbent.streamlit.app/)).
 
 Like the TPC-C, loading always gets faster with more space between checkpoints.  Accordingly the checkpoint_timeout has been set to the old maximum of 60 minutes on the test servers.
 
@@ -40,15 +40,15 @@ If you compare the chkp_mins column there, that shows how fast checkpoints actua
 
 At that rate, you need to buffer a lot of WAL files into max_wal_size to postpone checkpoints very long.  Here's a high level summary of typical samples there:
 
-wal_level | max_wal_size | chkp_mins
-----------|--------------|----------
-minimal   | 16G          | 9.3
-minimal   | 100GB        | 37.5
-minimal   | 256GB        | 68.4
-----------|--------------|----------
-replica   | 16G          | 2.9
-replica   | 100GB        | 16.6
-replica   | 256GB        | 42.5
+wal_level | max_wal_size | chkp_mins | Checkpoint GB/hour
+----------|--------------|-------------------------------
+minimal   | 16G          | 9.3       | 7.6
+minimal   | 100GB        | 37.9      | 6.4
+minimal   | 256GB        | 68.4      | 3.5
+----------|--------------|-----------|-------------------
+replica   | 16G          | 2.9       | 34.4
+replica   | 100GB        | 16.6      | 27.6
+replica   | 256GB        | 42.5      | 12.0
 
 # Rate estimation and tuning process
 
