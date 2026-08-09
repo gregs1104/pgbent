@@ -12,6 +12,7 @@ One plotting stack reading from the results database, without time-averaging awa
 - [ ] `metview.py` — default minimal metric set (TPS, latency, dirty memory); `--verbose` for all
 - [ ] Latency plots with per-outlier markers (gnuplot cross-symbol equivalent in `plots/latency.plot`)
 - [ ] Replace `webreport` gnuplot output with Python (test-set comparison grids)
+- [ ] **Parameter-space explorer** — pivot UI over the five benchmark dimensions ([goals.md](goals.md)); successor to crosstab gnuplot + manual `GROUP BY` reports
 - [ ] Deprecate `plots/*.plot` once parity is reached
 
 ## Backlog (older ideas)

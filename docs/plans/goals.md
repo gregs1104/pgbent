@@ -14,6 +14,10 @@ Directional ambitions for pgbent—not near-term implementation tasks ([plotting
 
 Product and tooling directions beyond current gnuplot/SQL reporting.
 
+- [ ] **Parameter-space explorer** — post-gnuplot UI to navigate the five-dimensional benchmark space (client, scale, script, read/write blend, locality): pick a **pivot axis**, fix filters on the others, show ranges/partitions/spectrum on the remaining face(s). Replaces ad-hoc `GROUP BY` in reports and static gnuplot crosstabs.
+  - v1 likely: pivot axis + filters + metric (TPS, P90 latency)—not literal 5D rotation
+  - Related: [TPS / metric heat map](#features) (2D face), [Confidence UI](#confidence-ui) (bands per cell), [plotting.md](plotting.md) (successor to `webreport`), overlay builder in [documentation.md](documentation.md), `explorer/submission-explore.py` (partial browse UI)
+  - Concept write-up: [documentation.md](documentation.md) § Benchmark parameter space
 - [ ] **TPS / metric heat map** — client × scale (or time × metric) grid colored by throughput or a chosen metric; quick visual scan of where a configuration wins or loses
   - Existing: gnuplot crosstabs in `plots/`; `reports/compare.py`, `reports/bars.py` (not heat maps)
 - [ ] **Server-side Python for system info** — collect hardware/OS details as part of pgbent instead of shell-only probes (`dmirow`, inline benchwarmer capture)

@@ -38,6 +38,22 @@ Document the results-database hierarchy: how **server → test set → script �
   - Existing: `init/resultdb.sql` (`server`, `testset`, `tests`); `docs/intro.md` § Test sets; `docs/results.md` § Test sets comparison
   - Include: serial numbers, `testset.info`, multi-server `server` column, relationship to `test_wrap` / summary views
 
+### Benchmark parameter space
+
+Document how pgbent thinks about tests as a **five-dimensional space**, with **test set** holding configuration constant while exploring the grid. Defer a standalone docs page until there is UI to demonstrate; capture the model here for now.
+
+Dimensions:
+
+1. **Client** — `tests.clients`
+2. **Scale** — `tests.scale`, `dbsize`
+3. **Workload script** — `tests.script` (SELECT, INSERT, OSM, …)
+4. **Read vs write blend** — script mix, `rate_limit`, workload phase
+5. **Locality** — cache warmth, working-set fit, connection path, OSM node cache, etc. (define explicitly when writing)
+
+- [ ] **Parameter space and pivots** — test set as comparison slice; default 2D face (client × scale) in `webreport`; SQL `GROUP BY` as manual pivot around one axis; ranges/partitions across a dimension
+  - Existing: `docs/intro.md` (client × scale only); `limited_webreport`, `reports/compromise_params.sql`; implementation direction in [goals.md](goals.md) § Parameter-space explorer
+  - Future home: section under Results internals or extension of intro/results (not `docs/benchmark-space.md` until warranted)
+
 ### Basic log format
 
 Document what pgbent writes during a run and how it lands in the results DB.
@@ -116,6 +132,7 @@ These topics likely become one or more pages under a new **Results internals** o
 
 0. Database-first design (framing essay)
 1. Schema and hierarchy (Sample schema)
+1b. Benchmark parameter space (five dimensions, pivots, test set as slice)
 2. Capture pipeline (Basic log format + Database metrics suggestions)
 3. Storage formats (Intermediate storage)
 4. Query cookbook (Sample processing queries + Query aggregation)

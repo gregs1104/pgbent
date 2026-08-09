@@ -7,7 +7,7 @@ Keep changes short and actionable. Preserve shell-script-first orchestration and
 ## Architecture
 
 - **Shell orchestration** — `benchwarmer`, `runset`, `webreport`, `rates_webreport`, and `limited_webreport` call `pgbench`, `psql`, and OS measurement helpers.
-- **Results database** — `init/resultdb.sql` defines the schema (`tests`, `testset`, `timing`, `test_metrics_data`, `metrics_info`, …). Reporting and graphing read from here; do not invent columns.
+- **Results database** — `init/resultdb.sql` defines the schema (`tests`, `testset`, `timing`, `test_metrics_data`, `metrics_info`, …). Reporting and graphing read from here; do not invent columns. Tests are points in a five-dimensional parameter space (client, scale, script, read/write blend, locality); see [documentation.md](docs/plans/documentation.md) § Benchmark parameter space.
 - **Reporting** — SQL in `reports/`; legacy graphs via gnuplot in `plots/`. New work uses Python/Matplotlib/Pandas (`metview.py`, `reports/*.py`). See [docs/plans/plotting.md](docs/plans/plotting.md).
 - **Workloads** — under `wl/` and `tests/`; executed by `runset` / `benchwarmer`.
 
