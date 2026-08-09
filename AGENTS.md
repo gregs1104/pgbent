@@ -45,10 +45,16 @@ Streamlit explorer: `explorer/submission-explore.py` (`st.connection` example).
 
 ## Active plans
 
-Component roadmaps live under `docs/plans/`:
+Plans live under `docs/plans/` in two categories:
+
+**Implementation** — code to build or migrate:
 
 - [plotting.md](docs/plans/plotting.md) — gnuplot → Python (project-wide)
 - [metview.md](docs/plans/metview.md) — per-run metrics grapher
+
+**Documentation** — topics to write for getbent.io when time allows:
+
+- [documentation.md](docs/plans/documentation.md) — documentation backlog
 
 Prioritize **Python/Matplotlib** for new graphing work unless the task is explicitly fixing legacy gnuplot output.
 
