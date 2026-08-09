@@ -8,6 +8,7 @@ Living roadmaps for in-progress work. Aimed at maintainers and coding agents; no
 |------|------|---------|
 | Implementation | [plotting.md](plotting.md), [metview.md](metview.md) | Code to build or migrate |
 | Documentation | [documentation.md](documentation.md) | Topics to write for the docs site when time allows |
+| Long-term goals | [goals.md](goals.md) | Directional ambitions; not active work by default |
 
 Agent entry point: [AGENTS.md](../../AGENTS.md) at the repository root.
 
@@ -23,3 +24,9 @@ Agent entry point: [AGENTS.md](../../AGENTS.md) at the repository root.
 | Plan | Summary |
 |------|---------|
 | [documentation.md](documentation.md) | Backlog of pgbent areas worth documenting |
+
+## Long-term goals
+
+| Plan | Summary |
+|------|---------|
+| [goals.md](goals.md) | Multi-year project direction (not active by default) |

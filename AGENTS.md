@@ -56,6 +56,10 @@ Plans live under `docs/plans/` in two categories:
 
 - [documentation.md](docs/plans/documentation.md) — documentation backlog
 
+**Long-term goals** — directional ambitions; do not treat as active work unless asked:
+
+- [goals.md](docs/plans/goals.md) — multi-year project direction
+
 Prioritize **Python/Matplotlib** for new graphing work unless the task is explicitly fixing legacy gnuplot output.
 
 ## Non-goals
