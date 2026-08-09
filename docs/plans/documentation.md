@@ -1,3 +1,11 @@
+---
+layout: home
+title: Documentation backlog
+permalink: /plans/documentation/
+parent: Development plans
+nav_order: 1
+---
+
 # Documentation backlog
 
 Topics worth writing for [getbent.io](https://getbent.io) when there is time and focus. These are **documentation plans**, not code tasks—unlike [plotting.md](plotting.md) and [metview.md](metview.md).

@@ -1,3 +1,11 @@
+---
+layout: home
+title: Long-term project goals
+permalink: /plans/goals/
+parent: Development plans
+nav_order: 2
+---
+
 # Long-term project goals
 
 Directional ambitions for pgbent—not near-term implementation tasks ([plotting.md](plotting.md), [metview.md](metview.md)) and not documentation to write ([documentation.md](documentation.md)). These are ideas that may take years or may never ship; they inform architecture choices but should not drive day-to-day agent work unless explicitly requested.

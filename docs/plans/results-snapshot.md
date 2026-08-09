@@ -1,3 +1,11 @@
+---
+layout: home
+title: Published results snapshots
+permalink: /plans/results-snapshot/
+parent: Development plans
+nav_order: 5
+---
+
 # Published results snapshots
 
 Freeze what the [Streamlit results explorer](https://pgbent.streamlit.app/) shows into static Markdown tables on getbent.io—one subdirectory per PostgreSQL major version (starting with **pg18/**).

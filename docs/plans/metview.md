@@ -1,3 +1,11 @@
+---
+layout: home
+title: metview.py roadmap
+permalink: /plans/metview/
+parent: Development plans
+nav_order: 4
+---
+
 # metview.py roadmap
 
 Per-run metrics grapher. Successor to `osm-metrics.py`. Reads the results database and writes one time-series PNG per metric under `results/images/`.

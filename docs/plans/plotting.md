@@ -1,3 +1,11 @@
+---
+layout: home
+title: Plotting migration (gnuplot → Python)
+permalink: /plans/plotting/
+parent: Development plans
+nav_order: 3
+---
+
 # Plotting migration (gnuplot → Python)
 
 Replace legacy gnuplot scripts with database-driven Python graphs. Pandas/Matplotlib is already used for recent slides and social posts; gnuplot remains in `webreport` and `plots/*.plot`.
