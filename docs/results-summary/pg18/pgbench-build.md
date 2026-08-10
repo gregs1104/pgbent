@@ -10,7 +10,7 @@ nav_order: 6
 
 pgbench initialization (:-i) submissions.
 
-_Snapshot of the [Streamlit results explorer](https://pgbent.streamlit.app/) (pgbench Build Time) on 2026-08-09._
+_Snapshot of the [Streamlit explorer — down between releases](https://pgbent.streamlit.app/) (pgbench Build Time) on 2026-08-09._
 _Captured by `explorer/snapshot-streamlit.py` from the live site._
 
 
