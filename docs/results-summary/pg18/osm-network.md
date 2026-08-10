@@ -10,7 +10,15 @@ nav_order: 3
 
 OSM load speed: server vs remote client.
 
-_Snapshot of the [Streamlit results explorer](https://pgbent.streamlit.app/) (OSM Network) on 2026-08-09._
+![OSM load throughput vs client–server link rate]({{ '/images/pg18-osm-network-speed.png' | relative_url }})
+
+The network study uses an R9 9950X client loading onto an i5-13600K server while throttling the link from 100Mb/s through 10Gb/s. Dotted reference lines show the same server with a host-local client (646 kNodes/s nodes, 274 kNodes/s index). Even at **10Gb/s**, index build on the remote client (**208 kNodes/s**) stays below that i5 host-local baseline; node loading reaches **666 kNodes/s**, in line with the on-server client. Below **2.5Gb/s**, both phases degrade—the 100Mb/s case drops to **90 kNodes/s**.
+
+Comparing host-local results across different CPUs (for example R9 vs i5) is not apples-to-apples here; a fair cross-system claim would need matched client/server hardware or bidirectional remote tests in both directions.
+
+Regenerate: `python3 reports/osm-network-speed.py` (reads `docs/results-summary/pg18/osm-network.md`).
+
+_Snapshot of the [Streamlit explorer — down between releases](https://pgbent.streamlit.app/) (OSM Network) on 2026-08-09._
 _Captured by `explorer/snapshot-streamlit.py` from the live site._
 
 
