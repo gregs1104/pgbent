@@ -4,11 +4,11 @@ layout: home
 
 # pgbent
 
-**pgbent** is a benchmarking toolkit for PostgreSQL. It runs repeatable workloads, collects system and database metrics at one-second resolution, and stores everything in a results database for regression testing, tuning studies, and long-term performance history.
+**pgbent** is a benchmarking toolkit for PostgreSQL hosted at **[github.com/gregs1104/pgbent](https://github.com/gregs1104/pgbent)**. It runs repeatable workloads, collects system and database metrics at one-second resolution, and stores everything in a results database for regression testing, tuning studies, and long-term performance history.
 
 As a performance regression tool, pgbent has helped catch packaging and integration issues across PostgreSQL releases 16–18. Years of trace history document how Postgres—and the hardware it runs on—has progressed in both software and storage performance.
 
-![osm2pgsql workload: combined read+write throughput during an OpenStreetMap planet load]({{ '/images/twilight-1494-read-write.png' | relative_url }})
+![PostgreSQL 18 OSM load: throughput per watt by CPU]({{ '/images/pg18-osm-power-efficiency.png' | relative_url }})
 
 ## How it works
 
@@ -52,9 +52,10 @@ Reference tuning configurations for OSM workloads live in the [`conf/`](https://
 
 ## Getting started
 
-1. [Set up]({{ '/setup/' \| relative_url }}) the test and results databases.
-2. [Run tests]({{ '/running/' \| relative_url }}) with `./runset` or `./benchwarmer`.
-3. [Review results]({{ '/results/' \| relative_url }}) with SQL reports or `./webreport`.
+1. Clone [pgbent from GitHub](https://github.com/gregs1104/pgbent).
+2. [Set up]({{ '/setup/' \| relative_url }}) the test and results databases.
+3. [Run tests]({{ '/running/' \| relative_url }}) with `./runset` or `./benchwarmer`.
+4. [Review results]({{ '/results/' \| relative_url }}) with SQL reports or `./webreport`.
 
 See also: [Reports]({{ '/reports/' \| relative_url }}), [Version compatibility]({{ '/versions/' \| relative_url }}), and [Troubleshooting]({{ '/troubleshooting/' \| relative_url }}).
 
@@ -66,7 +67,6 @@ pgbent workloads aim to reflect that reality. Databases have a broad set of use 
 
 ## Links
 
-- [GitHub repository](https://github.com/gregs1104/pgbent)
 - [PostgreSQL 18 results]({{ '/results-summary/pg18/' | relative_url }}) — published benchmark study tables ([Streamlit explorer — down between releases](https://pgbent.streamlit.app/))
 
 - TOC
