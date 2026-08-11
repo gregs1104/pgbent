@@ -25,7 +25,7 @@ See [Setup](https://getbent.io/setup/) and [Running tests](https://getbent.io/ru
 |----------|----------|
 | pgbench client × size grids | [Workloads](https://getbent.io/workloads/) |
 | OpenStreetMap import (osm2pgsql) | [OSM workload](https://getbent.io/workloads/osm) |
-| Complete Block Check | [tests/cbc/README.md](tests/cbc/README.md) |
+| Complete Block Check | [CBC workload](https://getbent.io/workloads/cbc/) |
 
 ## Contact
 
