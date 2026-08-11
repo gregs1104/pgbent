@@ -8,7 +8,15 @@ has_children: true
 
 # Workloads
 
-The workloads included so far:
+pgbent includes fixed-size and scaling workloads. Each run records one-second metrics into the results database for comparison across test sets.
+
+| Workload | What it exercises |
+|----------|-------------------|
+| **pgbench grids** (below) | SELECT, UPDATE, and `:-i` init across client × database-size grids |
+| [OpenStreetMap import]({{ '/workloads/osm' \| relative_url }}) | Planet load via osm2pgsql—COPY, index builds, checkpoint and buffer-cache pressure |
+| [Complete Block Check (CBC)]({{ '/workloads/cbc' \| relative_url }}) | Short synthetic storage stress test (CTAS, VACUUM, CLUSTER, index scans); see also the [CBC Tutorial]({{ '/workloads/cbc/tutorial/' \| relative_url }}) |
+
+## pgbench grids and tests
 
 * PostgreSQL pgbench program running SELECT statements at a grid of client X size examples.  You can reach a modest fraction of random I/O SSD speed this way on local runs.  2X-4X RAM is the recommended range to make caching of the whole data set impossible, while allowing indexes to fit easily in memory on tests that use them.  A SELECT variation (`select-pages`) uses index range scans instead of single row lookups, and that one is much better at fetching enough blocks at a time to saturate SSD.  
 
@@ -19,4 +27,3 @@ The workloads included so far:
 * Database population:  the init steps of building one of the pgbench test databases at some size.  That workload is particularly useful for cloud benchmarking work.  With the right command flags all the work to build a pgbench test database can run fully server side, which lets you test things while eliminating client latency from being a factor in the results.
 
 * Fixed per-client rate UPDATE latency analysis.  UPDATE tests without some sort of limit, either a rate limiter or a simple think time, they do more testing of caching filling behavior than anything else.  Effectively using update tests for benchmarks deserves a full paper to do it justice.
-
