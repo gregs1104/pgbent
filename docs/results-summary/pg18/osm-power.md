@@ -12,11 +12,11 @@ OSM load throughput vs package power draw.
 
 ![OSM throughput vs maximum package power]({{ '/images/pg18-osm-power.png' | relative_url }})
 
-Each CPU is positioned by **maximum package watts** during the load. Grey vertical bars connect index and total throughput at the same power envelope. Faster AMD parts (R9 9950X, R5 9600X) lead on raw **kNodes/s**; Apple M4 Max draws far less power (**23 W** peak) while giving up top-end speed.
+Each CPU is positioned by **maximum package watts** during the load. Grey vertical bars connect index and total throughput at the same power envelope. Desktop AMD (**R9 9950X**, **R5 9600X**) leads on raw **kNodes/s**; **NVIDIA Spark (P4242)** sits mid-chart at **425** kNodes/s and **64 W** peak; **Apple M4 Max** reaches **463** kNodes/s at only **23 W**.
 
 ![OSM throughput per watt]({{ '/images/pg18-osm-power-efficiency.png' | relative_url }})
 
-Throughput per peak watt favors efficiency cores—**Apple M4 Max** leads on both total and index load, while high-TDP desktop chips move more data overall but at lower kNodes/s per watt. Rows marked `est` in the table lacked average-power samples; charts use **max_pkg** because every CPU has it.
+Throughput per peak watt favors efficiency cores—**Apple M4 Max** leads on both total and index load. **NVIDIA Spark** lands between **R5 9600X** and the high-TDP Intel/AMD parts on kNodes/s per watt; desktop chips that move more data overall often draw far more power for it. Rows marked `est` in the table lacked average-power samples; charts use **max_pkg** because every CPU has it.
 
 Regenerate: `python3 reports/osm-power.py` (reads `docs/results-summary/pg18/osm-power.md`).
 
