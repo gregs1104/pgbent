@@ -88,7 +88,7 @@ def plot_leaderboard(df: pd.DataFrame, output: Path, show: bool = False) -> None
         df["nodes_kips"],
         height=bar_height,
         color=NODES_COLOR,
-        label="Nodes (kNodes/s)",
+        label="Total (kNodes/s)",
     )
     ax.barh(
         [i + bar_height / 2 for i in y],

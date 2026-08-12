@@ -3,7 +3,7 @@
 Graph OSM power study results from the PG18 static snapshot.
 
 Generates:
-  - Throughput (nodes and index) vs maximum package watts
+  - Throughput (total and index) vs maximum package watts
   - Throughput per watt (efficiency) by CPU
 
 Usage:
@@ -84,7 +84,7 @@ def plot_throughput_vs_power(df: pd.DataFrame, output: Path, show: bool = False)
         marker="o",
         s=70,
         color=NODES_COLOR,
-        label="Nodes (kNodes/s)",
+        label="Total (kNodes/s)",
         zorder=3,
     )
     ax.scatter(
@@ -112,7 +112,7 @@ def plot_throughput_vs_power(df: pd.DataFrame, output: Path, show: bool = False)
     ax.set_ylabel("OSM load throughput (kNodes/s)")
     ax.set_title(
         "PostgreSQL 18 OSM load: throughput vs package power\n"
-        "Vertical bars connect index and node speed at each CPU"
+        "Vertical bars connect index and total speed at each CPU"
     )
     ax.grid(True, linestyle="--", alpha=0.4)
     ax.legend(loc="upper left")
@@ -133,7 +133,7 @@ def plot_efficiency(df: pd.DataFrame, output: Path, show: bool = False) -> None:
     height = 0.35
 
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.barh([i - height / 2 for i in y], plot_df["nodes_per_watt"], height=height, color=NODES_COLOR, label="Nodes / W")
+    ax.barh([i - height / 2 for i in y], plot_df["nodes_per_watt"], height=height, color=NODES_COLOR, label="Total / W")
     ax.barh([i + height / 2 for i in y], plot_df["index_per_watt"], height=height, color=INDEX_COLOR, label="Index / W")
     ax.set_yticks(list(y))
     ax.set_yticklabels(plot_df["cpu"])

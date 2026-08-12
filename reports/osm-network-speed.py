@@ -67,7 +67,7 @@ def plot_connection_speed(df: pd.DataFrame, output: Path, show: bool = False) ->
         marker="o",
         linewidth=2,
         color="#e4572e",
-        label="Nodes (kNodes/s)",
+        label="Total (kNodes/s)",
     )
     ax.plot(
         remote["conn_mbps"],
@@ -82,7 +82,7 @@ def plot_connection_speed(df: pd.DataFrame, output: Path, show: bool = False) ->
     ax.axhline(i5_host["index_kips"], color="#4c78a8", linestyle=":", alpha=0.5)
 
     ax.annotate(
-        f"i5 host-local nodes ({int(i5_host['nodes_kips'])} kNodes/s)",
+        f"i5 host-local total ({int(i5_host['nodes_kips'])} kNodes/s)",
         xy=(remote["conn_mbps"].max(), i5_host["nodes_kips"]),
         xytext=(8, -14),
         textcoords="offset points",
@@ -98,7 +98,7 @@ def plot_connection_speed(df: pd.DataFrame, output: Path, show: bool = False) ->
         color="#4c78a8",
     )
     ax.annotate(
-        f"10Gb/s remote nodes ({int(at_10g['nodes_kips'])} kNodes/s)",
+        f"10Gb/s remote total ({int(at_10g['nodes_kips'])} kNodes/s)",
         xy=(10000, at_10g["nodes_kips"]),
         xytext=(-120, -18),
         textcoords="offset points",

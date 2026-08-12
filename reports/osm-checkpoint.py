@@ -111,7 +111,7 @@ def plot_checkpoint(df: pd.DataFrame, output: Path, show: bool = False) -> None:
             marker="o",
             s=70,
             color=WAL_COLORS[wal_level],
-            label=f"{wal_level} nodes (kNodes/s)",
+            label=f"{wal_level} total (kNodes/s)",
             zorder=3,
         )
         ax.scatter(

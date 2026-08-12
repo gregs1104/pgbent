@@ -78,7 +78,7 @@ def plot_dirty_memory(df: pd.DataFrame, output: Path, show: bool = False) -> Non
         marker="o",
         linewidth=2,
         color="#e4572e",
-        label="Nodes (kNodes/s)",
+        label="Total (kNodes/s)",
     )
     ax.plot(
         df["max_dirty"],
@@ -90,7 +90,7 @@ def plot_dirty_memory(df: pd.DataFrame, output: Path, show: bool = False) -> Non
     )
 
     ax.annotate(
-        f"Default ({default['dirty_label']}) nodes {default['nodes_kips']:.0f}",
+        f"Default ({default['dirty_label']}) total {default['nodes_kips']:.0f}",
         xy=(default["max_dirty"], default["nodes_kips"]),
         xytext=(12, -16),
         textcoords="offset points",
@@ -106,7 +106,7 @@ def plot_dirty_memory(df: pd.DataFrame, output: Path, show: bool = False) -> Non
         color="#4c78a8",
     )
     ax.annotate(
-        f"Smallest limit ({smallest['dirty_label']}) nodes {smallest['nodes_kips']:.0f}",
+        f"Smallest limit ({smallest['dirty_label']}) total {smallest['nodes_kips']:.0f}",
         xy=(smallest["max_dirty"], smallest["nodes_kips"]),
         xytext=(12, -16),
         textcoords="offset points",

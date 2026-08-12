@@ -12,7 +12,7 @@ OSM load speed: server vs remote client.
 
 ![OSM load throughput vs client–server link rate]({{ '/images/pg18-osm-network-speed.png' | relative_url }})
 
-The network study uses an R9 9950X client loading onto an i5-13600K server while throttling the link from 100Mb/s through 10Gb/s. Dotted reference lines show the same server with a host-local client (646 kNodes/s nodes, 274 kNodes/s index). Even at **10Gb/s**, index build on the remote client (**208 kNodes/s**) stays below that i5 host-local baseline; node loading reaches **666 kNodes/s**, in line with the on-server client. Below **2.5Gb/s**, both phases degrade—the 100Mb/s case drops to **90 kNodes/s**.
+The network study uses an R9 9950X client loading onto an i5-13600K server while throttling the link from 100Mb/s through 10Gb/s. Dotted reference lines show the same server with a host-local client (646 kNodes/s total, 274 kNodes/s index). Even at **10Gb/s**, index build on the remote client (**208 kNodes/s**) stays below that i5 host-local baseline; total load reaches **666 kNodes/s**, in line with the on-server client. Below **2.5Gb/s**, both phases degrade—the 100Mb/s case drops to **90 kNodes/s**.
 
 Comparing host-local results across different CPUs (for example R9 vs i5) is not apples-to-apples here; a fair cross-system claim would need matched client/server hardware or bidirectional remote tests in both directions.
 

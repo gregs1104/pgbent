@@ -12,7 +12,7 @@ Best OSM planet load per CPU/configuration.
 
 ![OSM load leaderboard — best run per server configuration]({{ '/images/pg18-osm-leaderboard.png' | relative_url }})
 
-Each bar pair is the fastest **nodes** and **index** throughput on that server with a **host-local** client (**conn=host** only). The chart deduplicates tuning variants—WAL level, **max_wal_size**, PostgreSQL version—and keeps the best **kNodes/s** per **cpu** / **disk** / memory. **R9 9950X** on SK51 leads at **758** kNodes/s nodes (**PG 18**); **R5 9600X** and **i5-13600K** follow on the same planet load.
+Each bar pair is the fastest **total** and **index** throughput on that server with a **host-local** client (**conn=host** only). The chart deduplicates tuning variants—WAL level, **max_wal_size**, PostgreSQL version—and keeps the best **kNodes/s** per **cpu** / **disk** / memory. **R9 9950X** on SK51 leads at **758** kNodes/s total load (**PG 18**); **R5 9600X** and **i5-13600K** follow on the same planet load.
 
 Regenerate: `python3 reports/osm-leaderboard.py` (reads `docs/results-summary/pg18/osm-leaderboard.md`).
 
