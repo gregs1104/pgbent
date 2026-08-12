@@ -20,7 +20,7 @@ _Snapshot of the [Streamlit explorer — down between releases](https://pgbent.s
 _Captured by `explorer/snapshot-streamlit.py` from the live site._
 
 
-_Query returned 12 rows._
+_Query returned 13 rows._
 
 | cpu | nodes_kips | index_kips | fsync | wal_level | max_wal_gb | timeout | chkp_mins | timed_pct | chkp_mbph | clean_mbph | backend_mbph | cleaned_pct | max_dirty | hit_pct | hit_mbps | miss_mbps | wal | avg_write | max_write | avg_read | max_read |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -36,4 +36,4 @@ _Query returned 12 rows._
 | i5-13600K | 646.0 | 274.0 | off | minimal | 256.0 | 60 | 60.2 | 75.0 | 961.0 | 126700.0 | 175937.0 | 99.0 | 18488303616 | 91.0 | 1260.9 | 126.1 | 17.8 | 52.0 | 8230.0 | 41.0 | 5848.0 |
 | i5-13600K | 618.0 | 251.0 | off | minimal | 100.0 | 60 | 42.0 | 33.0 | 4959.0 | 117137.0 | 169389.0 | 96.0 | 14454235136 | 91.0 | 1274.7 | 120.9 | 17.1 | 67.0 | 3955.0 | 55.0 | 5406.0 |
 | i5-13600K | 603.0 | 198.0 | on | replica | 100.0 | 5 | 5.0 | 88.0 | 45431.0 | 94277.0 | 165636.0 | 67.0 | 11625320448 | 91.0 | 1254.1 | 118.0 | 49.2 | 79.0 | 3908.0 | 54.0 | 5306.0 |
-| NVIDIA P4242 | 16 | 425.0 | 252.0 | off | minimal | 256.0 | 60 | 61.0 | 100.0 | 4532.0 | 83199.0 | 279614.0 | 95.0 | 13693992960 | 92.0 | 919.4 | 82.6 | 11.7 | 137.0 | 6597.0 | 112.0 | 6625.0 |
+| NVIDIA P4242 | 425.0 | 252.0 | off | minimal | 256.0 | 60 | 61.0 | 100.0 | 4532.0 | 83199.0 | 279614.0 | 95.0 | 13693992960 | 92.0 | 919.4 | 82.6 | 11.7 | 137.0 | 6597.0 | 112.0 | 6625.0 |

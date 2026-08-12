@@ -24,7 +24,7 @@ _Snapshot of the [Streamlit explorer — down between releases](https://pgbent.s
 _Captured by `explorer/snapshot-streamlit.py` from the live site._
 
 
-_Query returned 6 rows._
+_Query returned 7 rows._
 
 | cpu | mem_gb | nodes_kips | index_kips | pwr_est | max_pkg | avg_pkg | fsync | wal | avg_write | max_write | avg_read | max_read | cpu_c |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -34,4 +34,4 @@ _Query returned 6 rows._
 | i5-13600K | 188 | 646.0 | 274.0 |  | 129.0 | 47.0 | off | 17.8 | 52.0 | 8230.0 | 41.0 | 5848.0 | #0071C5 |
 | i3-13100 | 125 | 536.0 | 193.0 | est | 75.0 |  | on | 43.0 | 67.0 | 4141.0 | 47.0 | 4329.0 | #0071C5 |
 | Apple M4 Max | 128 | 463.0 | 273.0 |  | 23.0 | 8.0 | off | 12.8 | 348.0 | 4763.0 | 348.0 | 4763.0 | #555555 |
-| NVIDIA P4242 | 119 | 16 | 425.0 | 252.0 |  | 64.0 | 25.0 | off | 11.7 | 137.0 | 6597.0 | 112.0 | 6625.0 |  |
+| NVIDIA P4242 | 119 | 425.0 | 252.0 |  | 64.0 | 25.0 | off | 11.7 | 137.0 | 6597.0 | 112.0 | 6625.0 |  |
