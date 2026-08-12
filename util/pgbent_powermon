@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Collect server power info you can only grab as root.
-# Supports Linux and MacOS Darwin.
+# Supports Linux (x86_64, some aarch64) and MacOS Darwin.
 #
 # Suggested install directory is /usr/local/bin
 #
@@ -19,16 +19,82 @@
 # Use 'sudo visudo' and add a line like this for the user you are running as:
 #    postgres ALL = (ALL) NOPASSWD: ALL
 #
+
 OS=`uname`
+ARCH=`uname -m`
 
 if [ "$OS" = "Linux" ] ; then
-	# Manual runs of this command may want to add "--enable Time_Of_Day_Seconds".
-	sudo turbostat -S --quiet  --interval 1 --hide "IRQ,POLL,POLL%,IPC,C1,C2,C1%,C2%,SMI,C1ACPI,C2ACPI,C3ACPI,C1ACPI%,C2ACPI%,C3ACPI%,CPU%c1,CPU%c6,CPU%c7,CoreThr,Totl%C0,Any%C0,GFX%C0,CPUGFX%,Pkg%pc2,Pkg%pc3,Pkg%pc6,Pkg%pc8,Pk%pc10,CPU%LPI,SYS%LPI,PKG_%,RAM_%,TSC_MHz"
-elif [ "$OS" = "Darwin" ] ; then
-	# Manual runs might want to reduce the output with "| egrep -v "residency|online"
-	sudo /usr/bin/powermetrics -i 1000 --samplers cpu_power -a1 --hide-cpu-duty-cycle
-else
-	echo Unsupported OS:  $OS
-	exit 1
-fi
+    # NVIDIA Grace telemetry via spark_hwmon (spbm)
+    if [[ "$ARCH" == "aarch64" ]]; then
+        if lsmod | grep -q "spbm"; then
+            while true; do
+                # -u provides raw key-value output for easier script parsing
+                sensors -u "spbm-*"
+                sleep 1
+            done
+        else
+            # Future ARM64 telemetry methods can be added here
+            echo "aarch64 detected, but no supported power driver (e.g., spbm) found."
+            exit 1
+        fi
 
+    # Intel / AMD x86_64 telemetry via turbostat
+    elif [[ "$ARCH" == "x86_64" ]]; then
+        IGNORE_LIST="IRQ,POLL,POLL%,IPC,C1,C2,C1%,C2%,SMI,C1ACPI,C2ACPI,C3ACPI,C1ACPI%,C2ACPI%,C3ACPI%,CPU%c1,CPU%c6,CPU%c7,CoreThr,Totl%C0,Any%C0,GFX%C0,CPUGFX%,Pkg%pc2,Pkg%pc3,Pkg%pc6,Pkg%pc8,Pk%pc10,CPU%LPI,SYS%LPI,PKG_%,RAM_%,TSC_MHz"
+
+        # This used to have turbostat hide columns to cut down on the log file size.
+        # Newer turbostat versions (2025+) refuse to hide mandatory counters like this:
+        #
+        #   turbostat: Counter 'POLL' can not be skipped.
+        #
+        # The way they are labeled in "--list" doesn't give enough
+        # information to tell which the mandatory columns are either.
+        # That makes the --hide feature impossible to use safely
+        # from a program that doesn't know exactly which processor it's
+        # running on.
+        #
+        # Column filtering in general is broken in the version of
+        # turbostat on Debian unstable right now too, see:
+        # https://github.com/torvalds/linux/commit/b6398bc2ef3a78f1be37ba01ae0a5eedaee47803
+        #
+        # Instead run turbostat with no hide/show flags to ensure it never exits with an error.
+
+        # Start turbostat and pipe to a while loop to handle the first line specifically.
+        # This ensures our column mapping matches the runtime output.
+        sudo turbostat -S --quiet --interval 1 2>&1 | while read -r line; do
+            # Normalize whitespace to single spaces for array loading
+            read -ra fields <<< "$(echo "$line" | xargs)"
+
+            if [[ -z "${KEEP_POS}" ]]; then
+                # We are on the header line
+                I=1
+                CSV_HEADER=""
+                for field in "${fields[@]}"; do
+                    if [[ ! ",$IGNORE_LIST," =~ ",$field," ]]; then
+                        KEEP_POS="${KEEP_POS}${I},"
+                        CSV_HEADER="${CSV_HEADER}${field},"
+                    fi
+                    ((I++))
+                done
+                KEEP_POS=${KEEP_POS%,}
+                echo "${CSV_HEADER%,}"
+            else
+                # On a data line; use cut with the pre-calculated indices.
+                # echo the line through tr to keep it in the same pipe context.
+                echo "$line" | tr -s '[:blank:]' ',' | sed 's/^,//' | cut -d',' -f"$KEEP_POS"
+            fi
+        done
+
+    else
+        echo "Unsupported Linux architecture: $ARCH"
+        exit 1
+    fi
+
+elif [ "$OS" = "Darwin" ] ; then
+    # MacOS Apple Silicon
+    sudo /usr/bin/powermetrics -i 1000 --samplers cpu_power -a1 --hide-cpu-duty-cycle
+
+else
+    echo "Unsupported OS: $OS"
+    exit 1
+fi

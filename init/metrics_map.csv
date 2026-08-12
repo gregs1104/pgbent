@@ -261,19 +261,21 @@ Darwin,swapins,Mac Mem,0.00391,swapins,megabytes,gauge,5,,megabytes
 Darwin,swapouts,Mac Mem,0.00391,swapouts,megabytes,gauge,5,,megabytes
 Darwin,throttle,Mac Mem,0.00391,throttle,megabytes,gauge,5,,megabytes
 Darwin,wired,Mac Mem,0.00391,wired,megabytes,gauge,1,,megabytes
-Database,pg_clients_active,Database,1,clients_active,integer,gauge,7,,megabytes
-Database,pg_clients_idle,Database,1,clients_idle,integer,gauge,7,,megabytes
+Database,pg_clients_active,Database,1,clients_active,integer,gauge,7,,clients
+Database,pg_clients_idle,Database,1,clients_idle,integer,gauge,7,,clients
 Database,pg_db_size,Database,0.00000095,db_size,megabytes,gauge,9,,megabytes
-Database,pg_max_query_runtime_sec,Database,1,max_runtime,seconds,gauge,7,,megabytes
-Database,min_latency,Database,1,pg_min_latency,ms,gauge,9,,megabytes
-Database,avg_latency,Database,1,pg_avg_latency,ms,gauge,9,,megabytes
-Database,max_latency,Database,1,pg_max_latency,ms,gauge,9,,megabytes
-Linux,Avg_MHz,Power,1,CPU Average Freq,mhz,gauge,5,,megabytes
-Linux,Bzy_MHz,Power,1,CPU Busy Freq,mhz,gauge,5,,megabytes
-Linux,Busy%,Power,1,CPU Busy,percent,gauge,5,,megabytes
-Linux,C3,Power,1,C3,integer,gauge,1,,megabytes
-Linux,C3%,Power,1,C3,percent,gauge,5,,megabytes
-Linux,CorWatt,Power,1,core,watts,gauge,5,,megabytes
-Linux,PkgWatt,Power,1,package,watts,gauge,5,,megabytes
-Darwin,CPU_Power_mW,Power,0.001,core,watts,gauge,5,,megabytes
-Darwin,Combined_Power_mW,Power,0.001,package,watts,gauge,5,,megabytes
+Database,pg_max_query_runtime_sec,Database,1,max_runtime,seconds,gauge,7,,seconds
+Database,min_latency,Database,1,pg_min_latency,ms,gauge,9,,milliseconds
+Database,avg_latency,Database,1,pg_avg_latency,ms,gauge,9,,milliseconds
+Database,max_latency,Database,1,pg_max_latency,ms,gauge,9,,milliseconds
+Linux,Avg_MHz,Power,1,CPU Average Freq,mhz,gauge,5,,megahertz
+Linux,Bzy_MHz,Power,1,CPU Busy Freq,mhz,gauge,5,,megahertz
+Linux,Busy%,Power,1,CPU Busy,percent,gauge,5,,percent
+Linux,C3,Power,1,C3,integer,gauge,1,,count
+Linux,C3%,Power,1,C3%,percent,gauge,5,,percent
+Linux,CorWatt,Power,1,core,watts,gauge,5,,watts
+Linux,PkgWatt,Power,1,package,watts,gauge,5,,watts
+Linux,soc_pkg_power2_input,Power,1,package,watts,gauge,9,,watts
+Linux,sys_total_power1_input,Power,1,package,watts,gauge,9,,watts
+Darwin,CPU_Power_mW,Power,0.001,core,watts,gauge,5,,watts
+Darwin,Combined_Power_mW,Power,0.001,package,watts,gauge,5,,watts
