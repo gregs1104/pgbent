@@ -20,7 +20,7 @@ _Snapshot of the [Streamlit explorer — down between releases](https://pgbent.s
 _Captured by `explorer/snapshot-streamlit.py` from the live site._
 
 
-_Query returned 52 rows._
+_Query returned 53 rows._
 
 | cpu | mem_gb | disk | ver | conn | hours | nodes_kips | index_kips | csum | w_p_g | p_m_w | fsync | wal_level | max_wal_gb | wal | avg_write | max_write | avg_read | max_read | avg_pkg | max_pkg |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -69,6 +69,7 @@ _Query returned 52 rows._
 | i3-13100 | 125 | SK41 2TB | 17 | host | 5.06 | 513.0 | 167.0 | off | 2.0 | 2.0 | on | minimal | 100.0 | 14.9 | 58.0 | 3473.0 | 45.0 | 4499.0 |  | 75.0 |
 | i5-13600K | 124 | Remote SK41  | 17 | 2500 | 5.14 | 505.0 | 204.0 | off | 2.0 | 2.0 | on | minimal | 100.0 | 14.7 | 2.0 | 5222.0 | 1.0 | 356.0 |  |  |
 | Apple M4 Max | 128 | Apple AP2048 | 17 | host | 5.6 | 463.0 | 273.0 | off | 2.0 | 2.0 | off | minimal | 256.0 | 12.8 | 348.0 | 4763.0 | 348.0 | 4763.0 | 8.0 | 23.0 |
+| Apple M4 Max Studio | 128 | Apple AP2048 | 17 | host | 5.77 | 450.0 | 282.0 | off | 2.0 | 2.0 | off | minimal | 256.0 | 12.4 | 196.0 | 5148.0 | 196.0 | 5148.0 | 5.0 | 25.0 |
 | Apple M4 Max | 128 | Apple AP2048 | 17 | host | 5.96 | 435.0 | 274.0 | off | 2.0 | 2.0 | off | minimal | 256.0 | 12.0 | 326.0 | 5449.0 | 326.0 | 5449.0 |  |  |
 | i5-13600K | 124 | Remote SK41  | 17 | 1000 | 6.06 | 428.0 | 204.0 | off | 2.0 | 2.0 | on | minimal | 100.0 | 12.4 | 1.0 | 4242.0 | 1.0 | 324.0 |  |  |
 | NVIDIA P4242 | 119 | Samsung MZAL | 16 | host | 6.1 | 425.0 | 252.0 | off | 8.0 | 2.0 | off | minimal | 256.0 | 11.7 | 137.0 | 6597.0 | 112.0 | 6625.0 | 25.0 | 64.0 |

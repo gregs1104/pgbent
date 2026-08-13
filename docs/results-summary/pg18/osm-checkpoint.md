@@ -20,12 +20,13 @@ _Snapshot of the [Streamlit explorer — down between releases](https://pgbent.s
 _Captured by `explorer/snapshot-streamlit.py` from the live site._
 
 
-_Query returned 13 rows._
+_Query returned 14 rows._
 
 | cpu | nodes_kips | index_kips | fsync | wal_level | max_wal_gb | timeout | chkp_mins | timed_pct | chkp_mbph | clean_mbph | backend_mbph | cleaned_pct | max_dirty | hit_pct | hit_mbps | miss_mbps | wal | avg_write | max_write | avg_read | max_read |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Apple M1 Pro | 161.0 | 114.0 | off | minimal | 16.0 | 60 | 26.2 | 21.0 | 58.0 | 11134.0 | 193010.0 | 99.0 | 0 | 87.0 | 404.2 | 61.2 | 4.5 | 123.0 | 2576.0 | 123.0 | 2576.0 |
 | Apple M4 Max | 463.0 | 273.0 | off | minimal | 256.0 | 60 | 67.2 | 100.0 | 4023.0 | 87548.0 | 127731.0 | 96.0 | 0 | 91.0 | 947.8 | 90.8 | 12.8 | 348.0 | 4763.0 | 348.0 | 4763.0 |
+| Apple M4 Max Studio | 450.0 | 282.0 | off | minimal | 256.0 | 60 | 69.2 | 100.0 | 3797.0 | 85324.0 | 123978.0 | 96.0 | 0 | 91.0 | 915.9 | 88.1 | 12.4 | 196.0 | 5148.0 | 196.0 | 5148.0 |
 | R5 9600X | 733.0 | 295.0 | off | minimal | 256.0 | 60 | 70.8 | 67.0 | 3622.0 | 143075.0 | 200049.0 | 98.0 | 12649791488 | 91.0 | 1506.2 | 143.2 | 20.2 | 81.0 | 5566.0 | 64.0 | 6642.0 |
 | R5 9600X | 722.0 | 251.0 | on | replica | 100.0 | 60 | 16.6 | 0.0 | 27690.0 | 129752.0 | 197695.0 | 82.0 | 12650520576 | 91.0 | 1488.8 | 141.2 | 58.8 | 93.0 | 5574.0 | 64.0 | 6087.0 |
 | R5 9600X | 669.0 | 222.0 | on | replica | 16.0 | 60 | 2.9 | 1.0 | 34374.0 | 117602.0 | 183484.0 | 77.0 | 18144010240 | 91.0 | 1342.1 | 130.9 | 52.2 | 88.0 | 5232.0 | 61.0 | 6130.0 |
