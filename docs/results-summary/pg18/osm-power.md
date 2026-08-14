@@ -51,11 +51,11 @@ The scatter view shows the same data directly: **R5 9600X** and **R9 9950X** rea
 
 Regenerate: `python3 reports/osm-relation-power.py` (reads the relation table below).
 
-| cpu | ver | rel | avg_watts | max_watts | rel_per_watt |
-| --- | --- | --- | --- | --- | --- |
-| Apple M4 Max | 17 | 2016 | 8 | 23 | 245 |
-| Apple M4 Max Studio | 17 | 1666 | 5 | 25 | 325 |
-| NVIDIA P4242 | 16 | 1284 | 25 | 64 | 51 |
-| AMD R5 9600X | 17 | 4691 | 46 | 89 | 101 |
-| AMD R9 9950X | 17 | 4654 | 73 | 168 | 64 |
-| Intel i5-13600K | 17 | 3771 | 46 | 124 | 82 |
+| cpu | ver | rel | avg_watts | max_watts | rel_per_watt | cpu_c |
+| --- | --- | --- | --- | --- | --- | --- |
+| Apple M4 Max | 17 | 2016 | 8 | 23 | 245 | #000000 |
+| Apple M4 Max Studio | 17 | 1666 | 5 | 25 | 325 | #000000 |
+| NVIDIA P4242 | 16 | 1284 | 25 | 64 | 51 | #76B900 |
+| AMD R5 9600X | 17 | 4691 | 46 | 89 | 101 | #ED1C24 |
+| AMD R9 9950X | 17 | 4654 | 73 | 168 | 64 | #ED1C24 |
+| Intel i5-13600K | 17 | 3771 | 46 | 124 | 82 | #0071C5 |

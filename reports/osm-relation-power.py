@@ -30,7 +30,7 @@ DEFAULT_SCATTER = REPO_ROOT / "docs/images/pg18-osm-relation-scatter.png"
 RELATION_HEADING = "## Relation power efficiency"
 
 BAR_COLOR = "#72b7b2"
-POINT_COLOR = "#4c78a8"
+DEFAULT_POINT_COLOR = "#333333"
 
 
 def parse_args() -> argparse.Namespace:
@@ -105,27 +105,27 @@ def plot_relation_efficiency(df: pd.DataFrame, output: Path, show: bool = False)
 def plot_relation_scatter(df: pd.DataFrame, output: Path, show: bool = False) -> None:
     fig, ax = plt.subplots(figsize=(10, 6))
 
-    ax.scatter(
-        df["avg_watts"],
-        df["rel"],
-        s=80,
-        color=POINT_COLOR,
-        zorder=3,
-    )
-
     for _, row in df.iterrows():
+        color = str(row.get("cpu_c", "")).strip() or DEFAULT_POINT_COLOR
+        ax.scatter(
+            row["avg_watts"],
+            row["rel"],
+            s=80,
+            color=color,
+            zorder=3,
+        )
         ax.annotate(
             row["cpu"],
             xy=(row["avg_watts"], row["rel"]),
             xytext=(6, 6),
             textcoords="offset points",
             fontsize=11,
-            color="#333333",
+            color=color,
         )
 
     ax.set_xlabel("Average package power (W)")
     ax.set_ylabel("Relation Phase Rate")
-    ax.set_title("PostgreSQL 18 OSM load: relation throughput vs average power")
+    ax.set_title("PostgreSQL 16-18 OSM load: relation throughput vs average power")
     ax.grid(True, linestyle="--", alpha=0.4)
     plain_axis(ax)
 
