@@ -45,6 +45,10 @@ Relation-build throughput during OSM planet load, normalized by **average** pack
 
 **Apple M4 Max Studio** leads at **325** relations per watt (**1666** rel at **5 W** average); desktop AMD and Intel parts move more relations overall but at higher average draw. Bar labels show raw relation count and average watts.
 
+![OSM relation throughput vs average power]({{ '/images/pg18-osm-relation-scatter.png' | relative_url }})
+
+The scatter view shows the same data directly: **R5 9600X** and **R9 9950X** reach the highest relation counts at **46–73 W** average, while Apple Silicon stays in the lower-left with strong **rel_per_watt** efficiency.
+
 Regenerate: `python3 reports/osm-relation-power.py` (reads the relation table below).
 
 | cpu | ver | rel | avg_watts | max_watts | rel_per_watt |

@@ -2,8 +2,9 @@
 """
 Graph OSM relation power efficiency from the PG18 osm-power snapshot.
 
-Reads the "Relation power efficiency" table in docs/results-summary/pg18/osm-power.md
-and charts relations per average watt by CPU.
+Generates:
+  - Horizontal bar chart of relations per average watt
+  - Scatter plot of relation count vs average watts
 
 Usage:
   python3 reports/osm-relation-power.py
@@ -25,15 +26,18 @@ from snapshot_table import load_snapshot_table
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SNAPSHOT = REPO_ROOT / "docs/results-summary/pg18/osm-power.md"
 DEFAULT_OUTPUT = REPO_ROOT / "docs/images/pg18-osm-relation-power.png"
+DEFAULT_SCATTER = REPO_ROOT / "docs/images/pg18-osm-relation-scatter.png"
 RELATION_HEADING = "## Relation power efficiency"
 
 BAR_COLOR = "#72b7b2"
+POINT_COLOR = "#4c78a8"
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Plot PG18 OSM relation power efficiency")
     parser.add_argument("--snapshot", type=Path, default=DEFAULT_SNAPSHOT)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--scatter-output", type=Path, default=DEFAULT_SCATTER)
     parser.add_argument("--show", action="store_true", help="Display interactively")
     return parser.parse_args()
 
@@ -98,6 +102,42 @@ def plot_relation_efficiency(df: pd.DataFrame, output: Path, show: bool = False)
     plt.close(fig)
 
 
+def plot_relation_scatter(df: pd.DataFrame, output: Path, show: bool = False) -> None:
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    ax.scatter(
+        df["avg_watts"],
+        df["rel"],
+        s=80,
+        color=POINT_COLOR,
+        zorder=3,
+    )
+
+    for _, row in df.iterrows():
+        ax.annotate(
+            row["cpu"],
+            xy=(row["avg_watts"], row["rel"]),
+            xytext=(6, 6),
+            textcoords="offset points",
+            fontsize=11,
+            color="#333333",
+        )
+
+    ax.set_xlabel("Average package power (W)")
+    ax.set_ylabel("Relation Phase Rate")
+    ax.set_title("PostgreSQL 18 OSM load: relation throughput vs average power")
+    ax.grid(True, linestyle="--", alpha=0.4)
+    plain_axis(ax)
+
+    fig.tight_layout()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output, dpi=160, bbox_inches="tight")
+    print(f"Wrote {output}")
+    if show:
+        plt.show()
+    plt.close(fig)
+
+
 def main() -> int:
     args = parse_args()
     rows = load_snapshot_table(args.snapshot, heading=RELATION_HEADING)
@@ -107,6 +147,7 @@ def main() -> int:
     if df.empty:
         raise SystemExit("Relation table has no plottable rows")
     plot_relation_efficiency(df, args.output, show=args.show)
+    plot_relation_scatter(df, args.scatter_output, show=args.show)
     return 0
 
 
