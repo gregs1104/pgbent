@@ -4,6 +4,8 @@ Graph OSM power study results from the PG18 static snapshot.
 
 Generates:
   - Throughput (total and index) vs maximum package watts
+  - Total throughput vs maximum package watts
+  - Index throughput vs maximum package watts
   - Throughput per watt (efficiency) by CPU
 
 Usage:
@@ -28,6 +30,8 @@ from snapshot_table import load_snapshot_table
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SNAPSHOT = REPO_ROOT / "docs/results-summary/pg18/osm-power.md"
 DEFAULT_THROUGHPUT = REPO_ROOT / "docs/images/pg18-osm-power.png"
+DEFAULT_TOTAL = REPO_ROOT / "docs/images/pg18-osm-power-total.png"
+DEFAULT_INDEX = REPO_ROOT / "docs/images/pg18-osm-power-index.png"
 DEFAULT_EFFICIENCY = REPO_ROOT / "docs/images/pg18-osm-power-efficiency.png"
 
 DEFAULT_POINT_COLOR = "#333333"
@@ -43,6 +47,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Plot PG18 OSM power study")
     parser.add_argument("--snapshot", type=Path, default=DEFAULT_SNAPSHOT)
     parser.add_argument("--throughput-output", type=Path, default=DEFAULT_THROUGHPUT)
+    parser.add_argument("--total-output", type=Path, default=DEFAULT_TOTAL)
+    parser.add_argument("--index-output", type=Path, default=DEFAULT_INDEX)
     parser.add_argument("--efficiency-output", type=Path, default=DEFAULT_EFFICIENCY)
     parser.add_argument("--show", action="store_true", help="Display interactively")
     return parser.parse_args()
@@ -136,6 +142,48 @@ def plot_throughput_vs_power(df: pd.DataFrame, output: Path, show: bool = False)
     plt.close(fig)
 
 
+def plot_single_throughput_vs_power(
+    df: pd.DataFrame,
+    output: Path,
+    metric_col: str,
+    title: str,
+    show: bool = False,
+) -> None:
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    for _, row in df.iterrows():
+        color = row_color(row)
+        ax.scatter(
+            row["max_pkg"],
+            row[metric_col],
+            s=80,
+            color=color,
+            zorder=3,
+        )
+        ax.annotate(
+            row["cpu"],
+            xy=(row["max_pkg"], row[metric_col]),
+            xytext=(6, 6),
+            textcoords="offset points",
+            fontsize=POINT_LABEL_FONTSIZE,
+            color=color,
+        )
+
+    ax.set_xlabel("Maximum package power (W)")
+    ax.set_ylabel("OSM load throughput (kNodes/s)")
+    ax.set_title(title)
+    ax.grid(True, linestyle="--", alpha=0.4)
+    plain_axis(ax)
+
+    fig.tight_layout()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output, dpi=160, bbox_inches="tight")
+    print(f"Wrote {output}")
+    if show:
+        plt.show()
+    plt.close(fig)
+
+
 def plot_efficiency(df: pd.DataFrame, output: Path, show: bool = False) -> None:
     plot_df = df.sort_values("nodes_per_watt", ascending=True).reset_index(drop=True)
     y = range(len(plot_df))
@@ -183,6 +231,20 @@ def main() -> int:
         raise SystemExit(f"No table found in {args.snapshot}")
     df = prepare_power_df(rows)
     plot_throughput_vs_power(df, args.throughput_output, show=args.show)
+    plot_single_throughput_vs_power(
+        df,
+        args.total_output,
+        "nodes_kips",
+        "PostgreSQL 18 OSM load: total throughput vs package power",
+        show=args.show,
+    )
+    plot_single_throughput_vs_power(
+        df,
+        args.index_output,
+        "index_kips",
+        "PostgreSQL 18 OSM load: index throughput vs package power",
+        show=args.show,
+    )
     plot_efficiency(df, args.efficiency_output, show=args.show)
     return 0
 
