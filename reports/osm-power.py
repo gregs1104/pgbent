@@ -17,6 +17,8 @@ import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
 import pandas as pd
 from matplotlib.ticker import ScalarFormatter
 
@@ -28,8 +30,13 @@ DEFAULT_SNAPSHOT = REPO_ROOT / "docs/results-summary/pg18/osm-power.md"
 DEFAULT_THROUGHPUT = REPO_ROOT / "docs/images/pg18-osm-power.png"
 DEFAULT_EFFICIENCY = REPO_ROOT / "docs/images/pg18-osm-power-efficiency.png"
 
-NODES_COLOR = "#e4572e"
-INDEX_COLOR = "#4c78a8"
+DEFAULT_POINT_COLOR = "#333333"
+INDEX_BAR_ALPHA = 0.45
+POINT_LABEL_FONTSIZE = 11
+
+
+def row_color(row: pd.Series) -> str:
+    return str(row.get("cpu_c", "")).strip() or DEFAULT_POINT_COLOR
 
 
 def parse_args() -> argparse.Namespace:
@@ -69,43 +76,39 @@ def plot_throughput_vs_power(df: pd.DataFrame, output: Path, show: bool = False)
     fig, ax = plt.subplots(figsize=(10, 6))
 
     for _, row in df.iterrows():
+        color = row_color(row)
         ax.plot(
             [row["max_pkg"], row["max_pkg"]],
             [row["index_kips"], row["nodes_kips"]],
-            color="#999999",
+            color=color,
             linewidth=1.5,
-            alpha=0.6,
+            alpha=0.45,
             zorder=1,
         )
-
-    ax.scatter(
-        df["max_pkg"],
-        df["nodes_kips"],
-        marker="o",
-        s=70,
-        color=NODES_COLOR,
-        label="Total (kNodes/s)",
-        zorder=3,
-    )
-    ax.scatter(
-        df["max_pkg"],
-        df["index_kips"],
-        marker="s",
-        s=70,
-        color=INDEX_COLOR,
-        label="Index (kNodes/s)",
-        zorder=3,
-    )
-
-    for _, row in df.iterrows():
+        ax.scatter(
+            row["max_pkg"],
+            row["nodes_kips"],
+            marker="o",
+            s=70,
+            color=color,
+            zorder=3,
+        )
+        ax.scatter(
+            row["max_pkg"],
+            row["index_kips"],
+            marker="s",
+            s=70,
+            color=color,
+            zorder=3,
+        )
         ax.annotate(
             row["cpu"],
             xy=(row["max_pkg"], row["nodes_kips"]),
             xytext=(0, 8),
             textcoords="offset points",
             ha="center",
-            fontsize=8,
-            color=NODES_COLOR,
+            fontsize=POINT_LABEL_FONTSIZE,
+            color=color,
         )
 
     ax.set_xlabel("Maximum package power (W)")
@@ -115,7 +118,13 @@ def plot_throughput_vs_power(df: pd.DataFrame, output: Path, show: bool = False)
         "Vertical bars connect index and total speed at each CPU"
     )
     ax.grid(True, linestyle="--", alpha=0.4)
-    ax.legend(loc="upper left")
+    ax.legend(
+        handles=[
+            Line2D([0], [0], marker="o", color="w", markerfacecolor="#666666", markersize=8, label="Total (kNodes/s)"),
+            Line2D([0], [0], marker="s", color="w", markerfacecolor="#666666", markersize=8, label="Index (kNodes/s)"),
+        ],
+        loc="upper left",
+    )
     plain_axis(ax)
 
     fig.tight_layout()
@@ -131,16 +140,31 @@ def plot_efficiency(df: pd.DataFrame, output: Path, show: bool = False) -> None:
     plot_df = df.sort_values("nodes_per_watt", ascending=True).reset_index(drop=True)
     y = range(len(plot_df))
     height = 0.35
+    colors = [row_color(row) for _, row in plot_df.iterrows()]
 
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.barh([i - height / 2 for i in y], plot_df["nodes_per_watt"], height=height, color=NODES_COLOR, label="Total / W")
-    ax.barh([i + height / 2 for i in y], plot_df["index_per_watt"], height=height, color=INDEX_COLOR, label="Index / W")
+    ax.barh([i - height / 2 for i in y], plot_df["nodes_per_watt"], height=height, color=colors)
+    ax.barh(
+        [i + height / 2 for i in y],
+        plot_df["index_per_watt"],
+        height=height,
+        color=colors,
+        alpha=INDEX_BAR_ALPHA,
+    )
     ax.set_yticks(list(y))
-    ax.set_yticklabels(plot_df["cpu"])
+    ax.set_yticklabels(plot_df["cpu"], fontsize=POINT_LABEL_FONTSIZE)
+    for tick, color in zip(ax.get_yticklabels(), colors):
+        tick.set_color(color)
     ax.set_xlabel("Throughput per maximum package watt (kNodes/s per W)")
     ax.set_title("PostgreSQL 18 OSM load: efficiency vs package power envelope")
     ax.grid(True, axis="x", linestyle="--", alpha=0.4)
-    ax.legend(loc="lower right")
+    ax.legend(
+        handles=[
+            Patch(facecolor="#666666", alpha=INDEX_BAR_ALPHA, label="Index / W"),
+            Patch(facecolor="#666666", label="Total / W"),
+        ],
+        loc="lower right",
+    )
     plain_axis(ax, y=False)
 
     fig.tight_layout()
