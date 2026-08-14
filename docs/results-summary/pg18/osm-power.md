@@ -18,7 +18,7 @@ Each CPU is positioned by **maximum package watts** during the load. Grey vertic
 
 Throughput per peak watt favors efficiency cores—**Apple M4 Max** leads on both total and index load. **NVIDIA Spark** lands between **R5 9600X** and the high-TDP Intel/AMD parts on kNodes/s per watt; desktop chips that move more data overall often draw far more power for it. Rows marked `est` in the table lacked average-power samples; charts use **max_pkg** because every CPU has it.
 
-Regenerate: `python3 reports/osm-power.py` (reads `docs/results-summary/pg18/osm-power.md`).
+Regenerate throughput charts: `python3 reports/osm-power.py` (reads the first table below).
 
 _Snapshot of the [Streamlit explorer — down between releases](https://pgbent.streamlit.app/) (OSM Power) on 2026-08-09._
 _Captured by `explorer/snapshot-streamlit.py` from the live site._
@@ -36,3 +36,22 @@ _Query returned 8 rows._
 | Apple M4 Max | 128 | 463.0 | 273.0 |  | 23.0 | 8.0 | off | 12.8 | 348.0 | 4763.0 | 348.0 | 4763.0 | #555555 |
 | Apple M4 Max Studio | 128 | 450.0 | 282.0 |  | 25.0 | 5.0 | off | 12.4 | 196.0 | 5148.0 | 196.0 | 5148.0 | #555555 |
 | NVIDIA P4242 | 119 | 425.0 | 252.0 |  | 64.0 | 25.0 | off | 11.7 | 137.0 | 6597.0 | 112.0 | 6625.0 |  |
+
+## Relation power efficiency
+
+Relation-build throughput during OSM planet load, normalized by **average** package watts over the full run (not peak).
+
+![OSM relation throughput per average watt]({{ '/images/pg18-osm-relation-power.png' | relative_url }})
+
+**Apple M4 Max Studio** leads at **325** relations per watt (**1666** rel at **5 W** average); desktop AMD and Intel parts move more relations overall but at higher average draw. Bar labels show raw relation count and average watts.
+
+Regenerate: `python3 reports/osm-relation-power.py` (reads the relation table below).
+
+| cpu | ver | rel | avg_watts | max_watts | rel_per_watt |
+| --- | --- | --- | --- | --- | --- |
+| Apple M4 Max | 17 | 2016 | 8 | 23 | 245 |
+| Apple M4 Max Studio | 17 | 1666 | 5 | 25 | 325 |
+| NVIDIA P4242 | 16 | 1284 | 25 | 64 | 51 |
+| AMD R5 9600X | 17 | 4691 | 46 | 89 | 101 |
+| AMD R9 9950X | 17 | 4654 | 73 | 168 | 64 |
+| Intel i5-13600K | 17 | 3771 | 46 | 124 | 82 |
