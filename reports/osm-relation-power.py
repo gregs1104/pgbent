@@ -29,8 +29,11 @@ DEFAULT_OUTPUT = REPO_ROOT / "docs/images/pg18-osm-relation-power.png"
 DEFAULT_SCATTER = REPO_ROOT / "docs/images/pg18-osm-relation-scatter.png"
 RELATION_HEADING = "## Relation power efficiency"
 
-BAR_COLOR = "#72b7b2"
 DEFAULT_POINT_COLOR = "#333333"
+
+
+def row_color(row: pd.Series) -> str:
+    return str(row.get("cpu_c", "")).strip() or DEFAULT_POINT_COLOR
 
 
 def parse_args() -> argparse.Namespace:
@@ -67,15 +70,16 @@ def plot_relation_efficiency(df: pd.DataFrame, output: Path, show: bool = False)
     plot_df = df.sort_values("rel_per_watt", ascending=True).reset_index(drop=True)
     y = range(len(plot_df))
 
+    colors = [row_color(row) for _, row in plot_df.iterrows()]
+
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.barh(list(y), plot_df["rel_per_watt"], color=BAR_COLOR)
+    ax.barh(list(y), plot_df["rel_per_watt"], color=colors)
     ax.set_yticks(list(y))
     ax.set_yticklabels(plot_df["cpu"])
+    for tick, color in zip(ax.get_yticklabels(), colors):
+        tick.set_color(color)
     ax.set_xlabel("Relations per average watt (rel / W)")
-    ax.set_title(
-        "PostgreSQL 18 OSM load: relation phase efficiency\n"
-        "Average package power over the full planet load"
-    )
+    ax.set_title("PostgreSQL 16-17 OSM load: relation phase efficiency")
     ax.grid(True, axis="x", linestyle="--", alpha=0.4)
 
     xmax = plot_df["rel_per_watt"].max()
@@ -106,7 +110,7 @@ def plot_relation_scatter(df: pd.DataFrame, output: Path, show: bool = False) ->
     fig, ax = plt.subplots(figsize=(10, 6))
 
     for _, row in df.iterrows():
-        color = str(row.get("cpu_c", "")).strip() or DEFAULT_POINT_COLOR
+        color = row_color(row)
         ax.scatter(
             row["avg_watts"],
             row["rel"],
