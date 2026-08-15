@@ -47,7 +47,7 @@ replica   | 16G          | 2.9
 replica   | 100GB        | 16.6
 replica   | 256GB        | 42.5
 
-See the checkpoint_tuning page for a detailed analysis of this data and how to generate similar figures for your own database.
+See the [checkpoint_tuning]({{ '/model/checkpoint_timeout' | relative_url }}) page for a detailed analysis of this data and how to generate similar figures for your own database.
 
 You can see that in the starter config where max_wal_size=16GB, the server was sometimes hitting the limit in under 3 minutes.  So even though I wanted hourly checkpoints, I didn't have enough WAL file space to handle it.
 
