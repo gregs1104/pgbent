@@ -8,6 +8,7 @@ checkpoint settings.
 
 Usage:
   python3 reports/osm-checkpoint.py
+  python3 reports/osm-checkpoint.py --output docs/images/pg18-osm-checkpoint.png
 """
 
 from __future__ import annotations
@@ -19,21 +20,29 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.ticker import FixedLocator, NullLocator, ScalarFormatter
+from matplotlib.transforms import offset_copy
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from label_layout import place_point_labels
+from pg18_style import LEADERBOARD_LEGEND_FONTSIZE, SMALL_ANNOTATION_FONTSIZE, use_pg18_style
 from snapshot_table import load_snapshot_table
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SNAPSHOT = REPO_ROOT / "docs/results-summary/pg18/osm-checkpoint.md"
 DEFAULT_OUTPUT = REPO_ROOT / "docs/images/pg18-osm-checkpoint.png"
 
-LABEL_FONTSIZE = 7
-LEGEND_FONTSIZE = 9
-
 NODES_COLOR = "#e4572e"
 INDEX_COLOR = "#4c78a8"
 WAL_COLORS = {"minimal": NODES_COLOR, "replica": "#c44e32"}
 INDEX_WAL_COLORS = {"minimal": INDEX_COLOR, "replica": "#6b8ebf"}
+
+
+DROP_CPUS = {
+    "Apple M1 Pro",
+    "Apple M4 Max",
+    "Apple M4 Max Studio",
+    "NVIDIA P4242",
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -65,12 +74,31 @@ def prepare_checkpoint_df(rows: list[dict[str, str]]) -> pd.DataFrame:
 
 
 def config_label(row: pd.Series) -> str:
-    parts = [f"{int(row['max_wal_gb'])}GB WAL"]
-    if row["fsync"] == "on":
-        parts.append("fsync")
-    if row["timeout"] == 5:
-        parts.append("5min timeout")
-    return ", ".join(parts)
+    if row["max_wal_gb"] != 256:
+        return f"{int(row['max_wal_gb'])}GB"
+    return ""
+
+
+def series_label(row: pd.Series, kind: str) -> str:
+    name = str(row["cpu"])
+    if kind == "index":
+        return f"{name} index"
+    config = config_label(row)
+    if config:
+        return f"{name}\n{config}"
+    return name
+
+
+def labeled_runs(df: pd.DataFrame) -> pd.DataFrame:
+    """Keep isolated CPUs and the shortest/longest checkpoint run on each CPU."""
+    keep: list[int] = []
+    for _, group in df.groupby("cpu"):
+        if len(group) == 1:
+            keep.extend(group.index.tolist())
+            continue
+        keep.append(int(group["chkp_mins"].idxmin()))
+        keep.append(int(group["chkp_mins"].idxmax()))
+    return df.loc[sorted(set(keep))]
 
 
 def plain_axis(ax, y: bool = True, x: bool = False) -> None:
@@ -83,6 +111,7 @@ def plain_axis(ax, y: bool = True, x: bool = False) -> None:
 
 
 def plot_checkpoint(df: pd.DataFrame, output: Path, show: bool = False) -> None:
+    df = df[~df["cpu"].isin(DROP_CPUS)].copy()
     fig, ax = plt.subplots(figsize=(10, 6))
 
     for (cpu, wal_level), group in df.groupby(["cpu", "wal_level"]):
@@ -127,34 +156,96 @@ def plot_checkpoint(df: pd.DataFrame, output: Path, show: bool = False) -> None:
             zorder=3,
         )
 
-    extremes = df.loc[df.groupby("wal_level")["chkp_mins"].idxmin()]
-    extremes = pd.concat([extremes, df.loc[df.groupby("wal_level")["chkp_mins"].idxmax()]])
-    for _, row in extremes.drop_duplicates().iterrows():
-        ax.annotate(
-            f"{row['cpu']}\n{config_label(row)}",
-            xy=(row["chkp_mins"], row["nodes_kips"]),
-            xytext=(8, 8),
-            textcoords="offset points",
-            fontsize=LABEL_FONTSIZE,
-            color=WAL_COLORS[row["wal_level"]],
-        )
-
     ax.set_xscale("log")
     x_ticks = [3, 5, 10, 20, 30, 40, 60, 70]
     ax.xaxis.set_major_locator(FixedLocator(x_ticks))
     ax.xaxis.set_minor_locator(NullLocator())
     ax.set_xticklabels([str(t) for t in x_ticks])
     ax.set_xlabel("Minutes between checkpoints (achieved)")
-    ax.set_ylabel("OSM load throughput (kNodes/s)")
+    ax.set_ylabel("Throughput (kNodes/s)")
     ax.set_title(
         "PostgreSQL 18 OSM load: checkpoint tuning\n"
         "Throughput vs achieved checkpoint interval"
     )
+    y_top = float(df["nodes_kips"].max())
+    ax.set_ylim(140, y_top * 1.18)
     ax.grid(True, which="major", linestyle="--", alpha=0.4)
-    ax.legend(loc="lower right", fontsize=LEGEND_FONTSIZE)
+    ax.legend(
+        loc="center left",
+        bbox_to_anchor=(0.0, 0.38),
+        fontsize=LEADERBOARD_LEGEND_FONTSIZE,
+        markerscale=0.75,
+    )
     plain_axis(ax, x=True)
 
     fig.tight_layout()
+
+    label_df = labeled_runs(df)
+    labels: list[str] = []
+    xs: list[float] = []
+    ys: list[float] = []
+    colors: list[str] = []
+    for _, row in label_df.iterrows():
+        labels.append(series_label(row, "total"))
+        xs.append(float(row["chkp_mins"]))
+        ys.append(float(row["nodes_kips"]))
+        colors.append(WAL_COLORS[row["wal_level"]])
+        if row["cpu"] == "R9 9950X":
+            continue
+        if row["cpu"] == "i3-13100" and float(row["chkp_mins"]) > 20:
+            continue
+        if row["cpu"] == "R5 9600X" and float(row["chkp_mins"]) > 50:
+            continue
+        if row["cpu"] == "i5-13600K" and float(row["chkp_mins"]) > 50:
+            continue
+        labels.append(series_label(row, "index"))
+        xs.append(float(row["chkp_mins"]))
+        ys.append(float(row["index_kips"]))
+        colors.append(INDEX_WAL_COLORS[row["wal_level"]])
+    place_point_labels(ax, labels, xs, ys, colors, SMALL_ANNOTATION_FONTSIZE)
+
+    r9 = df[df["cpu"] == "R9 9950X"].iloc[0]
+    r9_index_trans = offset_copy(
+        ax.get_yaxis_transform(), fig=fig, x=-4, y=10, units="points"
+    )
+    ax.text(
+        1.0,
+        float(r9["index_kips"]),
+        series_label(r9, "index"),
+        transform=r9_index_trans,
+        ha="right",
+        va="bottom",
+        fontsize=SMALL_ANNOTATION_FONTSIZE,
+        color=INDEX_WAL_COLORS[r9["wal_level"]],
+        clip_on=True,
+    )
+
+    r5_right = df[df["cpu"] == "R5 9600X"].sort_values("chkp_mins").iloc[-1]
+    ax.annotate(
+        series_label(r5_right, "index"),
+        xy=(float(r5_right["chkp_mins"]), float(r5_right["index_kips"])),
+        xytext=(0, -22),
+        textcoords="offset points",
+        ha="right",
+        va="top",
+        fontsize=SMALL_ANNOTATION_FONTSIZE,
+        color=INDEX_WAL_COLORS[r5_right["wal_level"]],
+        clip_on=True,
+    )
+
+    i5_right = df[df["cpu"] == "i5-13600K"].sort_values("chkp_mins").iloc[-1]
+    ax.annotate(
+        series_label(i5_right, "index"),
+        xy=(float(i5_right["chkp_mins"]), float(i5_right["index_kips"])),
+        xytext=(18, 8),
+        textcoords="offset points",
+        ha="right",
+        va="bottom",
+        fontsize=SMALL_ANNOTATION_FONTSIZE,
+        color=INDEX_WAL_COLORS[i5_right["wal_level"]],
+        clip_on=True,
+    )
+
     output.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output, dpi=160, bbox_inches="tight")
     print(f"Wrote {output}")
@@ -164,6 +255,7 @@ def plot_checkpoint(df: pd.DataFrame, output: Path, show: bool = False) -> None:
 
 
 def main() -> int:
+    use_pg18_style()
     args = parse_args()
     rows = load_snapshot_table(args.snapshot)
     if not rows:
