@@ -147,7 +147,7 @@ def plot_dirty_memory(df: pd.DataFrame, output: Path, show: bool = False) -> Non
     ax.set_xlabel("Peak dirty memory during run")
     ax.set_ylabel("Throughput (kNodes/s)")
     ax.set_title(
-        "PostgreSQL 18 OSM load: Linux dirty memory limits (siren)\n"
+        "PostgreSQL 17 OSM load: Linux dirty memory limits\n"
         "Throughput vs peak dirty memory"
     )
     ax.set_xticks(df["max_dirty"])

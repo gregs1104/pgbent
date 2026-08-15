@@ -12,7 +12,7 @@ Linux dirty memory limits during OSM load.
 
 ![OSM load throughput vs peak dirty memory]({{ '/images/pg18-osm-dirty-memory.png' | relative_url }})
 
-Each point is a host-local OSM load on **siren** (128GB RAM, fast SSD) at a different Linux dirty-memory cap. Throughput stays near **700** kNodes/s from the **default ~13.4GB** dirty cache down to a **95MB** byte limit—only a mild drop below 1GB. On this SSD, a large Dirty cache is not buying much; a few GB is enough to keep the drive fed.
+Each point is a host-local OSM load on **siren** (PostgreSQL 17, 128GB RAM, fast SSD) at a different Linux dirty-memory cap. Throughput stays near **700** kNodes/s from the **default ~13.4GB** dirty cache down to a **95MB** byte limit—only a mild drop below 1GB. On this SSD, a large Dirty cache is not buying much; a few GB is enough to keep the drive fed.
 
 Regenerate: `python3 reports/osm-dirty-memory.py` (reads `docs/results-summary/pg18/osm-dirty-memory.md`).
 
