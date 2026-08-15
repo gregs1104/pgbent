@@ -23,7 +23,7 @@ from matplotlib.ticker import FixedLocator, NullLocator, ScalarFormatter
 from matplotlib.transforms import offset_copy
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from label_layout import place_point_labels
+from label_layout import LabelOffset, place_label_at_grid_bottom, place_point_labels
 from pg18_style import LEADERBOARD_LEGEND_FONTSIZE, SMALL_ANNOTATION_FONTSIZE, use_pg18_style
 from snapshot_table import load_snapshot_table
 
@@ -35,6 +35,8 @@ NODES_COLOR = "#e4572e"
 INDEX_COLOR = "#4c78a8"
 WAL_COLORS = {"minimal": NODES_COLOR, "replica": "#c44e32"}
 INDEX_WAL_COLORS = {"minimal": INDEX_COLOR, "replica": "#6b8ebf"}
+TOTAL_MARKERS = {"minimal": "o", "replica": "^"}
+INDEX_MARKERS = {"minimal": "s", "replica": "v"}
 
 
 DROP_CPUS = {
@@ -42,6 +44,11 @@ DROP_CPUS = {
     "Apple M4 Max",
     "Apple M4 Max Studio",
     "NVIDIA P4242",
+}
+
+CHECKPOINT_LABEL_OVERRIDES = {
+    "i5-13600K\n100GB": LabelOffset(11, 5, ha="left", va="top"),
+    "i3-13100": LabelOffset(8, 0, ha="left", va="center"),
 }
 
 
@@ -140,7 +147,7 @@ def plot_checkpoint(df: pd.DataFrame, output: Path, show: bool = False) -> None:
         ax.scatter(
             subset["chkp_mins"],
             subset["nodes_kips"],
-            marker="o",
+            marker=TOTAL_MARKERS[wal_level],
             s=70,
             color=WAL_COLORS[wal_level],
             label=f"{wal_level} total (kNodes/s)",
@@ -149,8 +156,8 @@ def plot_checkpoint(df: pd.DataFrame, output: Path, show: bool = False) -> None:
         ax.scatter(
             subset["chkp_mins"],
             subset["index_kips"],
-            marker="s",
-            s=55,
+            marker=INDEX_MARKERS[wal_level],
+            s=70 if wal_level == "replica" else 55,
             color=INDEX_WAL_COLORS[wal_level],
             label=f"{wal_level} index (kNodes/s)",
             zorder=3,
@@ -164,15 +171,15 @@ def plot_checkpoint(df: pd.DataFrame, output: Path, show: bool = False) -> None:
     ax.set_xlabel("Minutes between checkpoints (achieved)")
     ax.set_ylabel("Throughput (kNodes/s)")
     ax.set_title(
-        "PostgreSQL 18 OSM load: checkpoint tuning\n"
-        "Throughput vs achieved checkpoint interval"
+        "PG18 OSM load:  achieved checkpoint interval\n"
+        "Tuned values 256GB WAL / 60 min interval"
     )
     y_top = float(df["nodes_kips"].max())
     ax.set_ylim(140, y_top * 1.18)
     ax.grid(True, which="major", linestyle="--", alpha=0.4)
     ax.legend(
         loc="center left",
-        bbox_to_anchor=(0.0, 0.38),
+        bbox_to_anchor=(0.0, 0.35),
         fontsize=LEADERBOARD_LEGEND_FONTSIZE,
         markerscale=0.75,
     )
@@ -186,23 +193,45 @@ def plot_checkpoint(df: pd.DataFrame, output: Path, show: bool = False) -> None:
     ys: list[float] = []
     colors: list[str] = []
     for _, row in label_df.iterrows():
-        labels.append(series_label(row, "total"))
-        xs.append(float(row["chkp_mins"]))
-        ys.append(float(row["nodes_kips"]))
-        colors.append(WAL_COLORS[row["wal_level"]])
+        skip_i5_right = row["cpu"] == "i5-13600K" and float(row["chkp_mins"]) > 50
+        if not skip_i5_right:
+            labels.append(series_label(row, "total"))
+            xs.append(float(row["chkp_mins"]))
+            ys.append(float(row["nodes_kips"]))
+            colors.append(WAL_COLORS[row["wal_level"]])
         if row["cpu"] == "R9 9950X":
             continue
-        if row["cpu"] == "i3-13100" and float(row["chkp_mins"]) > 20:
+        if row["cpu"] == "i3-13100":
             continue
         if row["cpu"] == "R5 9600X" and float(row["chkp_mins"]) > 50:
             continue
-        if row["cpu"] == "i5-13600K" and float(row["chkp_mins"]) > 50:
+        if row["cpu"] == "i5-13600K":
             continue
         labels.append(series_label(row, "index"))
         xs.append(float(row["chkp_mins"]))
         ys.append(float(row["index_kips"]))
         colors.append(INDEX_WAL_COLORS[row["wal_level"]])
-    place_point_labels(ax, labels, xs, ys, colors, SMALL_ANNOTATION_FONTSIZE)
+    place_point_labels(
+        ax,
+        labels,
+        xs,
+        ys,
+        colors,
+        SMALL_ANNOTATION_FONTSIZE,
+        overrides=CHECKPOINT_LABEL_OVERRIDES,
+    )
+
+    i3_left = df[df["cpu"] == "i3-13100"].sort_values("chkp_mins").iloc[0]
+    place_label_at_grid_bottom(
+        ax,
+        float(i3_left["chkp_mins"]),
+        float(i3_left["index_kips"]),
+        series_label(i3_left, "index"),
+        INDEX_WAL_COLORS[i3_left["wal_level"]],
+        SMALL_ANNOTATION_FONTSIZE,
+        x_gap_points=-6,
+        align_fraction=0.04,
+    )
 
     r9 = df[df["cpu"] == "R9 9950X"].iloc[0]
     r9_index_trans = offset_copy(
@@ -233,7 +262,34 @@ def plot_checkpoint(df: pd.DataFrame, output: Path, show: bool = False) -> None:
         clip_on=True,
     )
 
+    i5_left = df[df["cpu"] == "i5-13600K"].sort_values("chkp_mins").iloc[0]
+    ax.annotate(
+        series_label(i5_left, "index"),
+        xy=(float(i5_left["chkp_mins"]), float(i5_left["index_kips"])),
+        xytext=(0, -6),
+        textcoords="offset points",
+        ha="center",
+        va="top",
+        fontsize=SMALL_ANNOTATION_FONTSIZE,
+        color=INDEX_WAL_COLORS[i5_left["wal_level"]],
+        clip_on=True,
+    )
+
     i5_right = df[df["cpu"] == "i5-13600K"].sort_values("chkp_mins").iloc[-1]
+    i5_total_trans = offset_copy(
+        ax.get_yaxis_transform(), fig=fig, x=-4, y=-15, units="points"
+    )
+    ax.text(
+        1.0,
+        float(i5_right["nodes_kips"]),
+        series_label(i5_right, "total"),
+        transform=i5_total_trans,
+        ha="right",
+        va="center",
+        fontsize=SMALL_ANNOTATION_FONTSIZE,
+        color=WAL_COLORS[i5_right["wal_level"]],
+        clip_on=True,
+    )
     ax.annotate(
         series_label(i5_right, "index"),
         xy=(float(i5_right["chkp_mins"]), float(i5_right["index_kips"])),
