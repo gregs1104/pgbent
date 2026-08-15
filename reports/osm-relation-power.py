@@ -13,6 +13,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import math
 import sys
 from pathlib import Path
 
@@ -22,6 +23,7 @@ from matplotlib.ticker import ScalarFormatter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from snapshot_table import load_snapshot_table
+from label_layout import LabelOffset, place_label_at_grid_bottom, place_point_labels
 from pg18_style import BAR_LABEL_FONTSIZE, POINT_LABEL_FONTSIZE, use_pg18_style
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -31,6 +33,20 @@ DEFAULT_SCATTER = REPO_ROOT / "docs/images/pg18-osm-relation-scatter.png"
 RELATION_HEADING = "## Relation power efficiency"
 
 DEFAULT_POINT_COLOR = "#333333"
+SCATTER_MARKER_SIZE = 80
+
+
+def _marker_x_gap(gap: float = 12) -> float:
+    return math.sqrt(SCATTER_MARKER_SIZE / math.pi) + gap
+
+
+RELATION_SCATTER_LABEL_OVERRIDES: dict[str, LabelOffset] = {
+    "Apple M4 Max": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
+    "Apple M4 Max Studio": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
+    "AMD R5 9600X": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
+    "AMD R9 9950X": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
+    "Intel i5-13600K": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
+}
 
 
 def row_color(row: pd.Series) -> str:
@@ -115,26 +131,44 @@ def plot_relation_scatter(df: pd.DataFrame, output: Path, show: bool = False) ->
         ax.scatter(
             row["avg_watts"],
             row["rel"],
-            s=80,
+            s=SCATTER_MARKER_SIZE,
             color=color,
             zorder=3,
         )
-        ax.annotate(
-            row["cpu"],
-            xy=(row["avg_watts"], row["rel"]),
-            xytext=(6, 6),
-            textcoords="offset points",
-            fontsize=POINT_LABEL_FONTSIZE,
-            color=color,
-        )
 
     ax.set_xlabel("Average package power (W)")
-    ax.set_ylabel("Relation Phase Rate")
+    ax.set_ylabel("Relations")
     ax.set_title("PostgreSQL 16-18 OSM load: relation throughput vs average power")
     ax.grid(True, linestyle="--", alpha=0.4)
     plain_axis(ax)
 
     fig.tight_layout()
+    ymin, ymax = ax.get_ylim()
+    ax.set_ylim(ymin, ymax + (ymax - ymin) * 0.06)
+    label_df = df[df["cpu"] != "NVIDIA P4242"]
+    place_point_labels(
+        ax,
+        label_df["cpu"],
+        label_df["avg_watts"],
+        label_df["rel"],
+        [row_color(row) for _, row in label_df.iterrows()],
+        POINT_LABEL_FONTSIZE,
+        overrides=RELATION_SCATTER_LABEL_OVERRIDES,
+    )
+    nvidia = df[df["cpu"] == "NVIDIA P4242"]
+    if not nvidia.empty:
+        row = nvidia.iloc[0]
+        place_label_at_grid_bottom(
+            ax,
+            row["avg_watts"],
+            row["rel"],
+            row["cpu"],
+            row_color(row),
+            POINT_LABEL_FONTSIZE,
+            x_gap_points=_marker_x_gap(),
+            align_fraction=0.14,
+        )
+
     output.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output, dpi=160, bbox_inches="tight")
     print(f"Wrote {output}")

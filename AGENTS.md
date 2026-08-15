@@ -42,6 +42,7 @@ Streamlit explorer: `explorer/submission-explore.py` (`st.connection` example).
 | Programmatic DB access | `explorer/submission-explore.py` |
 | Per-run metric graphs | `metview.py`, [docs/plans/metview.md](docs/plans/metview.md) |
 | Plotting migration | [docs/plans/plotting.md](docs/plans/plotting.md) |
+| Scatter label tuning | [.cursor/skills/scatter-label-layout/SKILL.md](.cursor/skills/scatter-label-layout/SKILL.md), `reports/label_layout.py` |
 
 ## Active plans
 
