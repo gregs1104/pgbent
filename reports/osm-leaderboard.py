@@ -22,6 +22,7 @@ from matplotlib.ticker import ScalarFormatter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from snapshot_table import load_snapshot_table
+from pg18_style import Y_LABEL_FONTSIZE, use_pg18_style
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SNAPSHOT = REPO_ROOT / "docs/results-summary/pg18/osm-leaderboard.md"
@@ -99,7 +100,7 @@ def plot_leaderboard(df: pd.DataFrame, output: Path, show: bool = False) -> None
     )
 
     ax.set_yticks(list(y))
-    ax.set_yticklabels(df["label"], fontsize=9)
+    ax.set_yticklabels(df["label"], fontsize=Y_LABEL_FONTSIZE)
     ax.set_xlabel("OSM load throughput (kNodes/s)")
     ax.set_title(
         "PostgreSQL OSM load leaderboard\n"
@@ -119,6 +120,7 @@ def plot_leaderboard(df: pd.DataFrame, output: Path, show: bool = False) -> None
 
 
 def main() -> int:
+    use_pg18_style()
     args = parse_args()
     rows = load_snapshot_table(args.snapshot)
     if not rows:

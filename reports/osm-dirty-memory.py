@@ -21,6 +21,7 @@ from matplotlib.ticker import ScalarFormatter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from snapshot_table import load_snapshot_table
+from pg18_style import ANNOTATION_FONTSIZE, use_pg18_style
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SNAPSHOT = REPO_ROOT / "docs/results-summary/pg18/osm-dirty-memory.md"
@@ -94,7 +95,7 @@ def plot_dirty_memory(df: pd.DataFrame, output: Path, show: bool = False) -> Non
         xy=(default["max_dirty"], default["nodes_kips"]),
         xytext=(12, -16),
         textcoords="offset points",
-        fontsize=9,
+        fontsize=ANNOTATION_FONTSIZE,
         color="#e4572e",
     )
     ax.annotate(
@@ -102,7 +103,7 @@ def plot_dirty_memory(df: pd.DataFrame, output: Path, show: bool = False) -> Non
         xy=(default["max_dirty"], default["index_kips"]),
         xytext=(12, 8),
         textcoords="offset points",
-        fontsize=9,
+        fontsize=ANNOTATION_FONTSIZE,
         color="#4c78a8",
     )
     ax.annotate(
@@ -110,7 +111,7 @@ def plot_dirty_memory(df: pd.DataFrame, output: Path, show: bool = False) -> Non
         xy=(smallest["max_dirty"], smallest["nodes_kips"]),
         xytext=(12, -16),
         textcoords="offset points",
-        fontsize=9,
+        fontsize=ANNOTATION_FONTSIZE,
         color="#e4572e",
         arrowprops={"arrowstyle": "->", "color": "#e4572e", "lw": 1},
     )
@@ -119,7 +120,7 @@ def plot_dirty_memory(df: pd.DataFrame, output: Path, show: bool = False) -> Non
         xy=(smallest["max_dirty"], smallest["index_kips"]),
         xytext=(12, 10),
         textcoords="offset points",
-        fontsize=9,
+        fontsize=ANNOTATION_FONTSIZE,
         color="#4c78a8",
         arrowprops={"arrowstyle": "->", "color": "#4c78a8", "lw": 1},
     )
@@ -150,6 +151,7 @@ def plot_dirty_memory(df: pd.DataFrame, output: Path, show: bool = False) -> Non
 
 
 def main() -> int:
+    use_pg18_style()
     args = parse_args()
     rows = load_snapshot_table(args.snapshot)
     if not rows:

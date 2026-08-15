@@ -23,6 +23,7 @@ from matplotlib.ticker import ScalarFormatter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from snapshot_table import conn_mbps, load_snapshot_table
+from pg18_style import ANNOTATION_FONTSIZE, use_pg18_style
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SNAPSHOT = REPO_ROOT / "docs/results-summary/pg18/osm-network.md"
@@ -86,7 +87,7 @@ def plot_connection_speed(df: pd.DataFrame, output: Path, show: bool = False) ->
         xy=(remote["conn_mbps"].max(), i5_host["nodes_kips"]),
         xytext=(8, -14),
         textcoords="offset points",
-        fontsize=9,
+        fontsize=ANNOTATION_FONTSIZE,
         color="#e4572e",
     )
     ax.annotate(
@@ -94,7 +95,7 @@ def plot_connection_speed(df: pd.DataFrame, output: Path, show: bool = False) ->
         xy=(remote["conn_mbps"].max(), i5_host["index_kips"]),
         xytext=(8, 6),
         textcoords="offset points",
-        fontsize=9,
+        fontsize=ANNOTATION_FONTSIZE,
         color="#4c78a8",
     )
     ax.annotate(
@@ -102,7 +103,7 @@ def plot_connection_speed(df: pd.DataFrame, output: Path, show: bool = False) ->
         xy=(10000, at_10g["nodes_kips"]),
         xytext=(-120, -18),
         textcoords="offset points",
-        fontsize=9,
+        fontsize=ANNOTATION_FONTSIZE,
         color="#e4572e",
         arrowprops={"arrowstyle": "->", "color": "#e4572e", "lw": 1},
     )
@@ -111,7 +112,7 @@ def plot_connection_speed(df: pd.DataFrame, output: Path, show: bool = False) ->
         xy=(10000, at_10g["index_kips"]),
         xytext=(-120, 12),
         textcoords="offset points",
-        fontsize=9,
+        fontsize=ANNOTATION_FONTSIZE,
         color="#4c78a8",
         arrowprops={"arrowstyle": "->", "color": "#4c78a8", "lw": 1},
     )
@@ -142,6 +143,7 @@ def plot_connection_speed(df: pd.DataFrame, output: Path, show: bool = False) ->
 
 
 def main() -> int:
+    use_pg18_style()
     args = parse_args()
     rows = load_snapshot_table(args.snapshot)
     if not rows:

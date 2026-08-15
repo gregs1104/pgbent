@@ -22,6 +22,7 @@ from matplotlib.ticker import ScalarFormatter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from snapshot_table import load_snapshot_table
+from pg18_style import BAR_LABEL_FONTSIZE, POINT_LABEL_FONTSIZE, use_pg18_style
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SNAPSHOT = REPO_ROOT / "docs/results-summary/pg18/osm-power.md"
@@ -90,7 +91,7 @@ def plot_relation_efficiency(df: pd.DataFrame, output: Path, show: bool = False)
             i,
             f"{int(row['rel']):,} rel · {int(row['avg_watts'])} W avg",
             va="center",
-            fontsize=8,
+            fontsize=BAR_LABEL_FONTSIZE,
             color="#333333",
         )
 
@@ -123,7 +124,7 @@ def plot_relation_scatter(df: pd.DataFrame, output: Path, show: bool = False) ->
             xy=(row["avg_watts"], row["rel"]),
             xytext=(6, 6),
             textcoords="offset points",
-            fontsize=11,
+            fontsize=POINT_LABEL_FONTSIZE,
             color=color,
         )
 
@@ -143,6 +144,7 @@ def plot_relation_scatter(df: pd.DataFrame, output: Path, show: bool = False) ->
 
 
 def main() -> int:
+    use_pg18_style()
     args = parse_args()
     rows = load_snapshot_table(args.snapshot, heading=RELATION_HEADING)
     if not rows:

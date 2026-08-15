@@ -22,6 +22,7 @@ from matplotlib.ticker import FixedLocator, NullLocator, ScalarFormatter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from snapshot_table import load_snapshot_table
+from pg18_style import ANNOTATION_FONTSIZE, SMALL_ANNOTATION_FONTSIZE, use_pg18_style
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SNAPSHOT = REPO_ROOT / "docs/results-summary/pg18/osm-checkpoint.md"
@@ -132,7 +133,7 @@ def plot_checkpoint(df: pd.DataFrame, output: Path, show: bool = False) -> None:
             xy=(row["chkp_mins"], row["nodes_kips"]),
             xytext=(8, 8),
             textcoords="offset points",
-            fontsize=7,
+            fontsize=SMALL_ANNOTATION_FONTSIZE,
             color=WAL_COLORS[row["wal_level"]],
         )
 
@@ -148,7 +149,7 @@ def plot_checkpoint(df: pd.DataFrame, output: Path, show: bool = False) -> None:
         "Throughput vs achieved checkpoint interval"
     )
     ax.grid(True, which="major", linestyle="--", alpha=0.4)
-    ax.legend(loc="lower right", fontsize=9)
+    ax.legend(loc="lower right")
     plain_axis(ax, x=True)
 
     fig.tight_layout()
@@ -161,6 +162,7 @@ def plot_checkpoint(df: pd.DataFrame, output: Path, show: bool = False) -> None:
 
 
 def main() -> int:
+    use_pg18_style()
     args = parse_args()
     rows = load_snapshot_table(args.snapshot)
     if not rows:

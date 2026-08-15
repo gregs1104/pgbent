@@ -26,6 +26,7 @@ from matplotlib.ticker import ScalarFormatter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from snapshot_table import load_snapshot_table
+from pg18_style import LEGEND_MARKER_SIZE, POINT_LABEL_FONTSIZE, use_pg18_style
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SNAPSHOT = REPO_ROOT / "docs/results-summary/pg18/osm-power.md"
@@ -36,7 +37,6 @@ DEFAULT_EFFICIENCY = REPO_ROOT / "docs/images/pg18-osm-power-efficiency.png"
 
 DEFAULT_POINT_COLOR = "#333333"
 INDEX_BAR_ALPHA = 0.45
-POINT_LABEL_FONTSIZE = 11
 
 
 def row_color(row: pd.Series) -> str:
@@ -126,8 +126,8 @@ def plot_throughput_vs_power(df: pd.DataFrame, output: Path, show: bool = False)
     ax.grid(True, linestyle="--", alpha=0.4)
     ax.legend(
         handles=[
-            Line2D([0], [0], marker="o", color="w", markerfacecolor="#666666", markersize=8, label="Total (kNodes/s)"),
-            Line2D([0], [0], marker="s", color="w", markerfacecolor="#666666", markersize=8, label="Index (kNodes/s)"),
+            Line2D([0], [0], marker="o", color="w", markerfacecolor="#666666", markersize=LEGEND_MARKER_SIZE, label="Total (kNodes/s)"),
+            Line2D([0], [0], marker="s", color="w", markerfacecolor="#666666", markersize=LEGEND_MARKER_SIZE, label="Index (kNodes/s)"),
         ],
         loc="upper left",
     )
@@ -225,6 +225,7 @@ def plot_efficiency(df: pd.DataFrame, output: Path, show: bool = False) -> None:
 
 
 def main() -> int:
+    use_pg18_style()
     args = parse_args()
     rows = load_snapshot_table(args.snapshot)
     if not rows:
