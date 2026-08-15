@@ -57,10 +57,10 @@ Same output layout; uses `submission_studies.py` SQL directly.
 
 ## Workflow (PG 18)
 
-1. [ ] Run `snapshot-streamlit.py` (or `archive-results.py` if DB available)
-2. [ ] Review and commit `docs/results-summary/pg18/*.md`
-3. [ ] Link from docs index / tuning pages
-4. [ ] Optionally pause Streamlit Cloud hosting until the next release cycle—**keep all explorer code** for PG 19
+1. [x] Run `snapshot-streamlit.py` (or `archive-results.py` if DB available)
+2. [x] Review and commit `docs/results-summary/pg18/*.md`
+3. [x] Link from docs index / tuning pages
+4. [x] Optionally pause Streamlit Cloud hosting until the next release cycle—**keep all explorer code** for PG 19
 
 ## Milestones
 
@@ -70,5 +70,5 @@ Same output layout; uses `submission_studies.py` SQL directly.
 - [x] `submission-explore.py` uses `study_sql()`
 - [x] `docs/results-summary/` hub + `pg18/` index
 - [x] PG 18 study `.md` files captured via snapshot script
-- [ ] PG 18 study `.md` files committed
-- [ ] Site links updated
+- [x] PG 18 study `.md` files committed
+- [x] Site links updated
