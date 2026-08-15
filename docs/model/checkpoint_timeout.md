@@ -10,6 +10,8 @@ nav_order: 24
 
 Checkpoints are the background heartbeat of every PostgreSQL database.  When a checkpoint finishes, you have a consistent snapshot of the database's internal state at a point in time.  While always running, they only make note of themselves only via a cryptic summary every 5 minutes that one of then finished.  Periods without activity don't trigger checkpoints.
 
+![OSM load throughput vs checkpoint interval]({{ '/images/pg18-osm-checkpoint.png' | relative_url }})
+
 The standard tuning practice for `checkpoint_timeout` follows this workflow:
 
 * Increase `checkpoint_timeout` from 5 minutes to 10 minutes.

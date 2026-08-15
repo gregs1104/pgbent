@@ -10,6 +10,8 @@ nav_order: 25
 
 One of the primary tunables for PostgreSQL is how much disk space is provided for the 16MB Write-Ahead Log file segments, set by the max_wal_size GUC.  
 
+![OSM load throughput vs checkpoint parameters]({{ '/images/pg18-osm-checkpoint.png' | relative_url }})
+
 WAL recovery is fastest when previously used WAL files are recycled for each checkoint.  On a fresh cluster, the files won't be there yet.  The server will have to create the file set for the first time, then start recycling them once there's no active checkpoint using them.  Recycling happens from files left behind by a previous checkpoint.  That means the disk space figure you provide will roughly be cleaved in half for the checkpoint cycle.
 
 To function as designed, creating new WAL files requires they be fully written out full of zeroes, a 16MB write, and then that write confirmed on disk using your system's sync call (fsync etc.)  That's only way the recovery code can deal with the short writes that crashes tend to leave behind.  The sync to disk means WAL files are expensive to create, sometime stuck behind massive writes in the disk queue.  Systems hitting checkpoints too fast will see everyone is waiting around. with writers all get stuck behind whatever process is extending the size of the latest WAL files needed.
