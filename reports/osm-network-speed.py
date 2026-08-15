@@ -23,11 +23,12 @@ from matplotlib.ticker import ScalarFormatter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from snapshot_table import conn_mbps, load_snapshot_table
-from pg18_style import ANNOTATION_FONTSIZE, use_pg18_style
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SNAPSHOT = REPO_ROOT / "docs/results-summary/pg18/osm-network.md"
 DEFAULT_OUTPUT = REPO_ROOT / "docs/images/pg18-osm-network-speed.png"
+
+ANNOTATION_FONTSIZE = 9
 
 
 def parse_args() -> argparse.Namespace:
@@ -143,7 +144,6 @@ def plot_connection_speed(df: pd.DataFrame, output: Path, show: bool = False) ->
 
 
 def main() -> int:
-    use_pg18_style()
     args = parse_args()
     rows = load_snapshot_table(args.snapshot)
     if not rows:
