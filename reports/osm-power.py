@@ -15,6 +15,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import math
 import sys
 from pathlib import Path
 
@@ -26,6 +27,7 @@ from matplotlib.ticker import ScalarFormatter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from snapshot_table import load_snapshot_table
+from label_layout import LabelOffset, place_label_at_grid_bottom, place_point_labels
 from pg18_style import LEGEND_MARKER_SIZE, POINT_LABEL_FONTSIZE, use_pg18_style
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -37,6 +39,30 @@ DEFAULT_EFFICIENCY = REPO_ROOT / "docs/images/pg18-osm-power-efficiency.png"
 
 DEFAULT_POINT_COLOR = "#333333"
 INDEX_BAR_ALPHA = 0.45
+SCATTER_MARKER_SIZE = 80
+
+
+def _marker_x_gap(gap: float = 12) -> float:
+    return math.sqrt(SCATTER_MARKER_SIZE / math.pi) + gap
+
+
+# Fine-tune label offsets when automatic placement still crowds a chart.
+SINGLE_CHART_LABEL_OVERRIDES: dict[str, dict[str, LabelOffset]] = {
+    "index_kips": {
+        "Apple M4 Max": LabelOffset(10, 24, ha="left", va="bottom"),
+        "Apple M4 Max Studio": LabelOffset(10, -8, va="top"),
+        "i5-13600K": LabelOffset(8, -10, va="top"),
+        "R5 9600X": LabelOffset(8, 8),
+        "NVIDIA P4242": LabelOffset(0, -12, ha="center", va="top"),
+    },
+    "nodes_kips": {
+        "Apple M4 Max": LabelOffset(_marker_x_gap(-4), 6, ha="left", va="bottom"),
+        "Apple M4 Max Studio": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
+        "i5-13600K": LabelOffset(8, -10, va="top"),
+        "R5 9600X": LabelOffset(8, 8),
+        "i3-13100": LabelOffset(8, -10, va="top"),
+    },
+}
 
 
 def row_color(row: pd.Series) -> str:
@@ -118,7 +144,7 @@ def plot_throughput_vs_power(df: pd.DataFrame, output: Path, show: bool = False)
         )
 
     ax.set_xlabel("Maximum package power (W)")
-    ax.set_ylabel("OSM load throughput (kNodes/s)")
+    ax.set_ylabel("Throughput (kNodes/s)")
     ax.set_title(
         "PostgreSQL 18 OSM load: throughput vs package power\n"
         "Vertical bars connect index and total speed at each CPU"
@@ -156,26 +182,41 @@ def plot_single_throughput_vs_power(
         ax.scatter(
             row["max_pkg"],
             row[metric_col],
-            s=80,
+            s=SCATTER_MARKER_SIZE,
             color=color,
             zorder=3,
         )
-        ax.annotate(
-            row["cpu"],
-            xy=(row["max_pkg"], row[metric_col]),
-            xytext=(6, 6),
-            textcoords="offset points",
-            fontsize=POINT_LABEL_FONTSIZE,
-            color=color,
-        )
 
     ax.set_xlabel("Maximum package power (W)")
-    ax.set_ylabel("OSM load throughput (kNodes/s)")
+    ax.set_ylabel("Throughput (kNodes/s)")
     ax.set_title(title)
     ax.grid(True, linestyle="--", alpha=0.4)
     plain_axis(ax)
 
     fig.tight_layout()
+    label_df = df[df["cpu"] != "NVIDIA P4242"] if metric_col == "nodes_kips" else df
+    place_point_labels(
+        ax,
+        label_df["cpu"],
+        label_df["max_pkg"],
+        label_df[metric_col],
+        [row_color(row) for _, row in label_df.iterrows()],
+        POINT_LABEL_FONTSIZE,
+        overrides=SINGLE_CHART_LABEL_OVERRIDES.get(metric_col),
+    )
+    if metric_col == "nodes_kips":
+        nvidia = df[df["cpu"] == "NVIDIA P4242"].iloc[0]
+        place_label_at_grid_bottom(
+            ax,
+            nvidia["max_pkg"],
+            nvidia["nodes_kips"],
+            nvidia["cpu"],
+            row_color(nvidia),
+            POINT_LABEL_FONTSIZE,
+            x_gap_points=_marker_x_gap(),
+            align_fraction=0.14,
+        )
+
     output.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output, dpi=160, bbox_inches="tight")
     print(f"Wrote {output}")
