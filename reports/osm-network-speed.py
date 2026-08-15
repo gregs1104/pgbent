@@ -23,13 +23,12 @@ from matplotlib.ticker import ScalarFormatter
 from matplotlib.transforms import offset_copy
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from pg18_style import ANNOTATION_FONTSIZE, LEADERBOARD_LEGEND_FONTSIZE, use_pg18_style
 from snapshot_table import conn_mbps, load_snapshot_table
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SNAPSHOT = REPO_ROOT / "docs/results-summary/pg18/osm-network.md"
 DEFAULT_OUTPUT = REPO_ROOT / "docs/images/pg18-osm-network-speed.png"
-
-ANNOTATION_FONTSIZE = 9
 
 
 def parse_args() -> argparse.Namespace:
@@ -81,18 +80,18 @@ def plot_connection_speed(df: pd.DataFrame, output: Path, show: bool = False) ->
         label="Index (kNodes/s)",
     )
 
-    ax.axhline(i5_host["nodes_kips"], color="#e4572e", linestyle=":", alpha=0.5)
-    ax.axhline(i5_host["index_kips"], color="#4c78a8", linestyle=":", alpha=0.5)
+    ax.axhline(i5_host["nodes_kips"], color="#e4572e", linestyle=":", linewidth=2.5, alpha=0.85)
+    ax.axhline(i5_host["index_kips"], color="#4c78a8", linestyle=":", linewidth=2.5, alpha=0.85)
 
     ax.set_xscale("log")
     y_top = max(float(remote["nodes_kips"].max()), float(i5_host["nodes_kips"]))
-    ax.set_ylim(0, y_top * 1.06)
+    ax.set_ylim(0, y_top * 1.12)
 
     xmin = remote["conn_mbps"].min()
     ax.annotate(
         f"i5 host-local total ({int(i5_host['nodes_kips'])} kNodes/s)",
         xy=(xmin, i5_host["nodes_kips"]),
-        xytext=(8, -14),
+        xytext=(8, -22),
         textcoords="offset points",
         ha="left",
         fontsize=ANNOTATION_FONTSIZE,
@@ -102,7 +101,7 @@ def plot_connection_speed(df: pd.DataFrame, output: Path, show: bool = False) ->
     ax.annotate(
         f"i5 host-local index ({int(i5_host['index_kips'])} kNodes/s)",
         xy=(xmin, i5_host["index_kips"]),
-        xytext=(8, 6),
+        xytext=(8, 10),
         textcoords="offset points",
         ha="left",
         fontsize=ANNOTATION_FONTSIZE,
@@ -137,7 +136,7 @@ def plot_connection_speed(df: pd.DataFrame, output: Path, show: bool = False) ->
     )
 
     ax.set_xlabel("Client–server link rate (Mb/s)")
-    ax.set_ylabel("OSM load throughput (kNodes/s)")
+    ax.set_ylabel("Throughput (kNodes/s)")
     ax.set_title(
         "PostgreSQL 18 OSM load: R9 9950X client on i5-13600K server\n"
         "Throughput vs client–server link rate"
@@ -145,7 +144,7 @@ def plot_connection_speed(df: pd.DataFrame, output: Path, show: bool = False) ->
     ax.set_xticks(remote["conn_mbps"])
     ax.set_xticklabels([f"{int(v / 1000)}Gb/s" if v >= 1000 else f"{int(v)}Mb/s" for v in remote["conn_mbps"]])
     ax.grid(True, which="major", linestyle="--", alpha=0.4)
-    ax.legend(loc="lower right")
+    ax.legend(loc="center right", fontsize=LEADERBOARD_LEGEND_FONTSIZE, markerscale=0.75)
 
     formatter = ScalarFormatter(useOffset=False)
     formatter.set_scientific(False)
@@ -161,6 +160,7 @@ def plot_connection_speed(df: pd.DataFrame, output: Path, show: bool = False) ->
 
 
 def main() -> int:
+    use_pg18_style()
     args = parse_args()
     rows = load_snapshot_table(args.snapshot)
     if not rows:
