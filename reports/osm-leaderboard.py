@@ -22,7 +22,7 @@ from matplotlib.ticker import ScalarFormatter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from snapshot_table import load_snapshot_table
-from pg18_style import Y_LABEL_FONTSIZE, use_pg18_style
+from pg18_style import LEADERBOARD_LEGEND_FONTSIZE, LEADERBOARD_Y_LABEL_FONTSIZE, use_pg18_style
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SNAPSHOT = REPO_ROOT / "docs/results-summary/pg18/osm-leaderboard.md"
@@ -45,11 +45,10 @@ def numeric(series: pd.Series) -> pd.Series:
 
 
 def config_label(row: pd.Series) -> str:
-    disk = str(row["disk"]).strip()
-    if len(disk) > 12:
-        disk = disk[:10] + "…"
+    """Two-line label: cpu and memory, then disk on its own line."""
     mem = int(row["mem_gb"])
-    return f"{row['cpu']} · {mem}GB · {disk}"
+    disk = str(row["disk"]).strip()
+    return f"{row['cpu']} · {mem}GB\n{disk}"
 
 
 def prepare_leaderboard_df(rows: list[dict[str, str]]) -> pd.DataFrame:
@@ -79,7 +78,7 @@ def plain_axis(ax, y: bool = False, x: bool = True) -> None:
 
 
 def plot_leaderboard(df: pd.DataFrame, output: Path, show: bool = False) -> None:
-    height = max(6, 0.35 * len(df) + 1.5)
+    height = max(6, 0.52 * len(df) + 1.5)
     fig, ax = plt.subplots(figsize=(10, height))
     y = range(len(df))
     bar_height = 0.35
@@ -100,14 +99,15 @@ def plot_leaderboard(df: pd.DataFrame, output: Path, show: bool = False) -> None
     )
 
     ax.set_yticks(list(y))
-    ax.set_yticklabels(df["label"], fontsize=Y_LABEL_FONTSIZE)
-    ax.set_xlabel("OSM load throughput (kNodes/s)")
-    ax.set_title(
-        "PostgreSQL OSM load leaderboard\n"
-        "Best host-local run per server configuration"
+    ax.set_yticklabels(
+        df["label"],
+        fontsize=LEADERBOARD_Y_LABEL_FONTSIZE,
+        linespacing=0.95,
     )
+    ax.set_xlabel("OSM load throughput (kNodes/s)")
+    ax.set_title("PostgreSQL OSM load leaderboard")
     ax.grid(True, axis="x", linestyle="--", alpha=0.4)
-    ax.legend(loc="lower right")
+    ax.legend(loc="lower right", fontsize=LEADERBOARD_LEGEND_FONTSIZE, markerscale=0.75)
     plain_axis(ax)
 
     fig.tight_layout()
