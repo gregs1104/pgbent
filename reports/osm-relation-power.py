@@ -34,6 +34,8 @@ RELATION_HEADING = "## Relation power efficiency"
 
 DEFAULT_POINT_COLOR = "#333333"
 SCATTER_MARKER_SIZE = 80
+BAR_LABEL_INSIDE_COLOR = "#ffffff"
+BAR_LABEL_OUTSIDE_COLOR = "#333333"
 
 
 def _marker_x_gap(gap: float = 12) -> float:
@@ -83,6 +85,29 @@ def plain_axis(ax, y: bool = True, x: bool = True) -> None:
         ax.xaxis.set_major_formatter(formatter)
 
 
+def _contrast_text_color(hex_color: str) -> str:
+    color = hex_color.lstrip("#")
+    if len(color) != 6:
+        return BAR_LABEL_INSIDE_COLOR
+    r, g, b = (int(color[i : i + 2], 16) / 255 for i in (0, 2, 4))
+    luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    return BAR_LABEL_INSIDE_COLOR if luminance < 0.55 else BAR_LABEL_OUTSIDE_COLOR
+
+
+def _text_width_data(ax, text: str, fontsize: float, renderer) -> float:
+    probe = ax.text(0, 0, text, fontsize=fontsize, alpha=0.0)
+    ax.figure.canvas.draw()
+    bbox = probe.get_window_extent(renderer)
+    probe.remove()
+    x0, _ = ax.transData.inverted().transform((bbox.x0, bbox.y0))
+    x1, _ = ax.transData.inverted().transform((bbox.x1, bbox.y1))
+    return abs(x1 - x0)
+
+
+def _bar_value_label(row: pd.Series) -> str:
+    return f"{int(row['rel']):,} rel · {int(row['avg_watts'])} W avg"
+
+
 def plot_relation_efficiency(df: pd.DataFrame, output: Path, show: bool = False) -> None:
     plot_df = df.sort_values("rel_per_watt", ascending=True).reset_index(drop=True)
     y = range(len(plot_df))
@@ -99,19 +124,46 @@ def plot_relation_efficiency(df: pd.DataFrame, output: Path, show: bool = False)
     ax.set_title("PostgreSQL 16-17 OSM load: relation phase efficiency")
     ax.grid(True, axis="x", linestyle="--", alpha=0.4)
 
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
     xmax = plot_df["rel_per_watt"].max()
     pad = max(xmax * 0.02, 3)
-    for i, row in plot_df.iterrows():
-        ax.text(
-            row["rel_per_watt"] + pad,
-            i,
-            f"{int(row['rel']):,} rel · {int(row['avg_watts'])} W avg",
-            va="center",
-            fontsize=BAR_LABEL_FONTSIZE,
-            color="#333333",
-        )
+    inner_pad = max(xmax * 0.015, 2)
+    max_x = xmax
 
-    ax.set_xlim(0, xmax + pad * 8)
+    for i, (_, row) in enumerate(plot_df.iterrows()):
+        bar_width = row["rel_per_watt"]
+        label = _bar_value_label(row)
+        text_width = _text_width_data(ax, label, BAR_LABEL_FONTSIZE, renderer)
+        bar_color = colors[i]
+
+        if text_width + inner_pad * 2 <= bar_width:
+            ax.text(
+                bar_width - inner_pad,
+                i,
+                label,
+                va="center",
+                ha="right",
+                fontsize=BAR_LABEL_FONTSIZE,
+                color=_contrast_text_color(bar_color),
+                clip_on=True,
+            )
+            max_x = max(max_x, bar_width)
+        else:
+            x = bar_width + pad
+            ax.text(
+                x,
+                i,
+                label,
+                va="center",
+                ha="left",
+                fontsize=BAR_LABEL_FONTSIZE,
+                color=BAR_LABEL_OUTSIDE_COLOR,
+                clip_on=True,
+            )
+            max_x = max(max_x, x + text_width)
+
+    ax.set_xlim(0, max_x + pad)
     plain_axis(ax, y=False)
 
     fig.tight_layout()

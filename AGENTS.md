@@ -42,7 +42,22 @@ Streamlit explorer: `explorer/submission-explore.py` (`st.connection` example).
 | Programmatic DB access | `explorer/submission-explore.py` |
 | Per-run metric graphs | `metview.py`, [docs/plans/metview.md](docs/plans/metview.md) |
 | Plotting migration | [docs/plans/plotting.md](docs/plans/plotting.md) |
-| Scatter label tuning | [.cursor/skills/scatter-label-layout/SKILL.md](.cursor/skills/scatter-label-layout/SKILL.md), `reports/label_layout.py` |
+| Graph label layout | [.cursor/skills/scatter-label-layout/SKILL.md](.cursor/skills/scatter-label-layout/SKILL.md) — scatter points (`reports/label_layout.py`) and horizontal bar value labels (`reports/osm-relation-power.py`) |
+
+## PG18 graph labels
+
+When tuning Matplotlib snapshot graphs, read
+[scatter-label-layout/SKILL.md](.cursor/skills/scatter-label-layout/SKILL.md).
+
+**Scatter charts** — one label per dot, inside the plot grid; use
+`place_point_labels()` plus per-CPU overrides for crowded markers.
+
+**Horizontal bar value labels** — measure whether the descriptive string fits
+inside the bar. Long bars (the ones that extend farthest right) are usually
+wide enough for **inside placement with contrast-colored text** (white on dark
+bars). Short bars keep **outside-right** labels; set `xlim` from measured label
+width so nothing leaves the plot area. See `plot_relation_efficiency()` in
+`reports/osm-relation-power.py`.
 
 ## Active plans
 

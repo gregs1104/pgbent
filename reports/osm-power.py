@@ -2,11 +2,12 @@
 """
 Graph OSM power study results from the PG18 static snapshot.
 
-Generates:
-  - Throughput (total and index) vs maximum package watts
+Generates by default:
   - Total throughput vs maximum package watts
   - Index throughput vs maximum package watts
   - Throughput per watt (efficiency) by CPU
+
+Optional (--throughput-output): combined total+index chart with vertical bars.
 
 Usage:
   python3 reports/osm-power.py
@@ -32,7 +33,6 @@ from pg18_style import LEGEND_MARKER_SIZE, POINT_LABEL_FONTSIZE, use_pg18_style
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SNAPSHOT = REPO_ROOT / "docs/results-summary/pg18/osm-power.md"
-DEFAULT_THROUGHPUT = REPO_ROOT / "docs/images/pg18-osm-power.png"
 DEFAULT_TOTAL = REPO_ROOT / "docs/images/pg18-osm-power-total.png"
 DEFAULT_INDEX = REPO_ROOT / "docs/images/pg18-osm-power-index.png"
 DEFAULT_EFFICIENCY = REPO_ROOT / "docs/images/pg18-osm-power-efficiency.png"
@@ -72,7 +72,12 @@ def row_color(row: pd.Series) -> str:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Plot PG18 OSM power study")
     parser.add_argument("--snapshot", type=Path, default=DEFAULT_SNAPSHOT)
-    parser.add_argument("--throughput-output", type=Path, default=DEFAULT_THROUGHPUT)
+    parser.add_argument(
+        "--throughput-output",
+        type=Path,
+        default=None,
+        help="Optional combined total+index chart, e.g. docs/images/pg18-osm-power.png",
+    )
     parser.add_argument("--total-output", type=Path, default=DEFAULT_TOTAL)
     parser.add_argument("--index-output", type=Path, default=DEFAULT_INDEX)
     parser.add_argument("--efficiency-output", type=Path, default=DEFAULT_EFFICIENCY)
@@ -272,7 +277,8 @@ def main() -> int:
     if not rows:
         raise SystemExit(f"No table found in {args.snapshot}")
     df = prepare_power_df(rows)
-    plot_throughput_vs_power(df, args.throughput_output, show=args.show)
+    if args.throughput_output is not None:
+        plot_throughput_vs_power(df, args.throughput_output, show=args.show)
     plot_single_throughput_vs_power(
         df,
         args.total_output,

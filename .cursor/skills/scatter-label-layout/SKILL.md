@@ -1,13 +1,18 @@
 ---
 name: scatter-label-layout
 description: >-
-  Tune Matplotlib scatter point labels in pgbent PG18 charts: overlap avoidance,
-  per-CPU overrides, axis text, and PNG regeneration. Use when fixing crowded
-  scatter labels, label-dot alignment, pg18-osm-power-*.png,
+  Tune Matplotlib labels on pgbent PG18 charts: scatter point placement,
+  horizontal bar value labels (inside bar with contrast color when they fit),
+  overlap avoidance, and PNG regeneration. Use when fixing crowded scatter or
+  bar labels, pg18-osm-power-*.png, pg18-osm-relation-power.png,
   pg18-osm-relation-scatter.png, reports/label_layout.py, or place_point_labels.
 ---
 
-# Scatter label layout (pgbent)
+# Graph label layout (pgbent)
+
+Scatter point labels and horizontal bar value labels share one goal: **keep
+readable text inside the plot grid**, associated clearly with its mark, without
+crowding neighbors.
 
 ## Goal
 
@@ -31,8 +36,9 @@ Each scatter marker gets **one clearly associated label**:
 | Overlap-aware placement | `reports/label_layout.py` — `place_point_labels()`, `place_label_at_grid_bottom()` |
 | Override tuple | `LabelOffset(dx, dy, ha=..., va=...)` in **offset points** from the marker |
 | Marker gap helper | `_marker_x_gap(gap=12)` — `sqrt(marker_size/π) + gap` |
-| Font/style | `reports/pg18_style.py` — call `use_pg18_style()`; use `POINT_LABEL_FONTSIZE` |
-| Reference charts | `reports/osm-power.py`, `reports/osm-relation-power.py` |
+| Font/style | `reports/pg18_style.py` — call `use_pg18_style()`; use `POINT_LABEL_FONTSIZE`, `BAR_LABEL_FONTSIZE` |
+| Reference scatter charts | `reports/osm-power.py`, `reports/osm-relation-power.py` (scatter) |
+| Reference bar chart | `reports/osm-relation-power.py` — `plot_relation_efficiency()` |
 
 ## Workflow
 
@@ -123,3 +129,41 @@ Copy patterns from those dicts before inventing new layout logic.
 - [ ] Horizontal placement matches user-approved side before vertical fine-tuning.
 - [ ] PNG under `docs/images/` regenerated and matches the script output.
 - [ ] Residual overlap warnings understood (minor point overlap may remain; text overlap should not).
+
+## Horizontal bar value labels
+
+Used on charts like `pg18-osm-relation-power.png` where each bar needs a
+descriptive value string (e.g. `1,666 rel · 5 W avg`).
+
+### Rule: inside when it fits, outside when it does not
+
+1. After drawing bars, measure each label’s **text width in data coordinates**
+   (probe with `alpha=0.0`, not `visible=False` — invisible text returns zero width).
+2. Compare to **bar width** (`rel_per_watt` or equivalent x value).
+3. **Fits** (`text_width + 2 * inner_pad <= bar_width`):
+   - Place **inside the bar**, `ha="right"`, x = `bar_width - inner_pad`.
+   - Set text color with **`_contrast_text_color(bar_color)`** (white on dark bars).
+   - Enable `clip_on=True`.
+4. **Does not fit**:
+   - Place **outside to the right**, `ha="left"`, x = `bar_width + pad`.
+   - Use a neutral outside color (e.g. `#333333`).
+5. Set **`xlim` from actual label extents** (`max_x + pad`), not a fixed multiple of
+   `xmax`. Outside labels on short bars must not drive text off the right edge.
+
+### Why this works on PG18 relation power
+
+The **longest bars** (highest rel/W — typically Apple Silicon) extend farthest
+right and are **always wide enough** to hold the full value string inside. Those
+are exactly the bars that previously pushed outside labels past the plot edge.
+Shorter bars (AMD/Intel/NVIDIA) keep outside labels because the string is wider
+than the bar — that is expected.
+
+Reference implementation: `_text_width_data()`, `_contrast_text_color()`, and
+the label loop in `plot_relation_efficiency()` in `reports/osm-relation-power.py`.
+
+### Bar chart checklist
+
+- [ ] Longest bars use inverted/contrast text inside the bar.
+- [ ] Short bars keep outside labels; none overlap the y-axis category text.
+- [ ] `xlim` fits all outside labels without extra dead space from a blind `xmax * N`.
+- [ ] Text width probe uses `alpha=0.0` so fit detection is reliable.

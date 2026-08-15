@@ -10,13 +10,9 @@ nav_order: 1
 
 OSM load throughput vs package power draw.
 
-![OSM throughput vs maximum package power]({{ '/images/pg18-osm-power.png' | relative_url }})
-
-Each CPU is positioned by **maximum package watts** during the load. Vertical bars connect index and total throughput at the same power envelope. Desktop AMD (**R9 9950X**, **R5 9600X**) leads on raw **kNodes/s**; **NVIDIA Spark (P4242)** sits mid-chart at **425** kNodes/s and **64 W** peak; **Apple M4 Max** reaches **463** kNodes/s at only **23 W**.
-
 ![OSM total throughput vs maximum package power]({{ '/images/pg18-osm-power-total.png' | relative_url }})
 
-Total planet load throughput only—**R9 9950X** peaks at **758** kNodes/s at **167 W**; **Apple M4 Max Studio** reaches **450** kNodes/s at **25 W**.
+Each CPU is positioned by **maximum package watts** during the load. Desktop AMD (**R9 9950X**, **R5 9600X**) leads on raw **kNodes/s**; **NVIDIA Spark (P4242)** sits mid-chart at **425** kNodes/s and **64 W** peak; **Apple M4 Max** reaches **463** kNodes/s at only **23 W**. **R9 9950X** peaks at **758** kNodes/s total at **167 W**; **Apple M4 Max Studio** reaches **450** kNodes/s at **25 W**.
 
 ![OSM index throughput vs maximum package power]({{ '/images/pg18-osm-power-index.png' | relative_url }})
 
