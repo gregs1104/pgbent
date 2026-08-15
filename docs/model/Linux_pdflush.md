@@ -66,7 +66,7 @@ As in the original article, lowering these aggressively often fights congestion 
 
 ## Volume: ratios
 
-`dirty_background_ratio` (commonly 10): percentage of **dirtyable** memory at which background flushers start writing. Dirtyable memory is free pages plus reclaimable file pages (not total RAM). The kernel docs stress that this base is not equal to total system memory.
+`dirty_background_ratio` (commonly 10): percentage of **dirtyable** memory at which background flushers start writing. Dirtyable memory is free pages plus reclaimable file pages (not total RAM). The official kernel wording for that distinction came from the 2007 article on this page; see [Kernel documentation](#kernel-documentation).
 
 `dirty_ratio` (commonly 20): percentage of dirtyable memory at which writing processes must start cleaning dirty pages themselves during their time slice. When this trips, write throttling is system-wide—not only for the process that filled the cache.
 
@@ -142,6 +142,7 @@ On fast SSDs, pgbent measurements show only small gains from large Dirty caches;
 # References (current)
 
 * [Documentation for /proc/sys/vm/](https://docs.kernel.org/admin-guide/sysctl/vm.html) — `dirty_*` sysctls
+* [715ea41](https://github.com/torvalds/linux/commit/715ea41e60277f28f84d6c937737350e00955d56) — 2013 rewrite of the `dirty_*_ratio` descriptions
 * Linux `mm/page-writeback.c` — dirtyable memory and limit logic
 * LWN: [Flushing out pdflush](https://lwn.net/Articles/326552/), [R.I.P. pdflush](https://lwn.net/Articles/508212/)
 * pgbent: [Linux dirty memory](/model/Linux_dirty_memory)
@@ -150,7 +151,14 @@ On fast SSDs, pgbent measurements show only small gains from large Dirty caches;
 
 # Historical article: The Linux Page Cache and pdflush (2007-2008)
 
-* This section restores the modestly referenced [westnet.com linux-pdflush.htm](https://www.westnet.com/~gsmith/content/linux-pdflush.htm) article (Linux 2.6 era), with a related blog post [A Linux write cache mystery](https://notemagnet.blogspot.com/2008/08/linux-write-cache-mystery.html).
+* This section restores the [westnet.com linux-pdflush.htm](https://www.westnet.com/~gsmith/content/linux-pdflush.htm) article (Linux 2.6 era), with a related blog post [A Linux write cache mystery](https://notemagnet.blogspot.com/2008/08/linux-write-cache-mystery.html).
+
+<a id="kernel-documentation"></a>
+This article showed that `dirty_background_ratio` and `dirty_ratio` are not percentages of total RAM. The source used dirtyable memory—roughly `MemFree + Cached - Mapped`—while `Documentation/sysctl/vm.txt` still said “percentage of total system memory.”
+
+In November 2013, [715ea41](https://github.com/torvalds/linux/commit/715ea41e60277f28f84d6c937737350e00955d56) (*mm: improve the description for dirty_background_ratio/dirty_ratio sysctl*, Zheng Liu) rewrote both entries to “percentage of total available memory that contains free pages and reclaimable pages” and added “The total available memory is not equal to total system memory.” That is still the text in [Documentation for /proc/sys/vm/](https://docs.kernel.org/admin-guide/sysctl/vm.html).
+
+The kernel tree adopted the correction without citing the article. The public record is that this write-up was more accurate than the official docs for six years, and the current kernel wording *is* that rewrite.
 
 _The following is the original article text, restored for history. It describes Linux 2.6 pdflush behavior and defaults of that era. Prefer the modern section above for current kernels._
 
