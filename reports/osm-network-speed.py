@@ -20,6 +20,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.ticker import ScalarFormatter
+from matplotlib.transforms import offset_copy
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from snapshot_table import conn_mbps, load_snapshot_table
@@ -83,42 +84,58 @@ def plot_connection_speed(df: pd.DataFrame, output: Path, show: bool = False) ->
     ax.axhline(i5_host["nodes_kips"], color="#e4572e", linestyle=":", alpha=0.5)
     ax.axhline(i5_host["index_kips"], color="#4c78a8", linestyle=":", alpha=0.5)
 
+    ax.set_xscale("log")
+    y_top = max(float(remote["nodes_kips"].max()), float(i5_host["nodes_kips"]))
+    ax.set_ylim(0, y_top * 1.06)
+
+    xmin = remote["conn_mbps"].min()
     ax.annotate(
         f"i5 host-local total ({int(i5_host['nodes_kips'])} kNodes/s)",
-        xy=(remote["conn_mbps"].max(), i5_host["nodes_kips"]),
+        xy=(xmin, i5_host["nodes_kips"]),
         xytext=(8, -14),
         textcoords="offset points",
+        ha="left",
         fontsize=ANNOTATION_FONTSIZE,
         color="#e4572e",
+        clip_on=True,
     )
     ax.annotate(
         f"i5 host-local index ({int(i5_host['index_kips'])} kNodes/s)",
-        xy=(remote["conn_mbps"].max(), i5_host["index_kips"]),
+        xy=(xmin, i5_host["index_kips"]),
         xytext=(8, 6),
         textcoords="offset points",
+        ha="left",
         fontsize=ANNOTATION_FONTSIZE,
         color="#4c78a8",
+        clip_on=True,
     )
-    ax.annotate(
+    total_label_trans = offset_copy(ax.transData, fig=fig, x=-12, y=0, units="points")
+    ax.text(
+        10000,
+        at_10g["nodes_kips"],
         f"10Gb/s remote total ({int(at_10g['nodes_kips'])} kNodes/s)",
-        xy=(10000, at_10g["nodes_kips"]),
-        xytext=(-120, -18),
-        textcoords="offset points",
+        transform=total_label_trans,
+        ha="right",
+        va="center",
         fontsize=ANNOTATION_FONTSIZE,
         color="#e4572e",
-        arrowprops={"arrowstyle": "->", "color": "#e4572e", "lw": 1},
+        clip_on=True,
     )
-    ax.annotate(
+    index_label_trans = offset_copy(
+        ax.get_yaxis_transform(), fig=fig, x=-4, y=-10, units="points"
+    )
+    ax.text(
+        1.0,
+        at_10g["index_kips"],
         f"10Gb/s remote index ({int(at_10g['index_kips'])} kNodes/s)",
-        xy=(10000, at_10g["index_kips"]),
-        xytext=(-120, 12),
-        textcoords="offset points",
+        transform=index_label_trans,
+        ha="right",
+        va="top",
         fontsize=ANNOTATION_FONTSIZE,
         color="#4c78a8",
-        arrowprops={"arrowstyle": "->", "color": "#4c78a8", "lw": 1},
+        clip_on=True,
     )
 
-    ax.set_xscale("log")
     ax.set_xlabel("Client–server link rate (Mb/s)")
     ax.set_ylabel("OSM load throughput (kNodes/s)")
     ax.set_title(
