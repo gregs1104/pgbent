@@ -7,6 +7,7 @@ each run—same layout as osm-network-speed.py.
 
 Usage:
   python3 reports/osm-dirty-memory.py
+  python3 reports/osm-dirty-memory.py --output docs/images/pg18-osm-dirty-memory.png
 """
 
 from __future__ import annotations
@@ -18,15 +19,15 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.ticker import ScalarFormatter
+from matplotlib.transforms import offset_copy
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from pg18_style import ANNOTATION_FONTSIZE, LEADERBOARD_LEGEND_FONTSIZE, use_pg18_style
 from snapshot_table import load_snapshot_table
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SNAPSHOT = REPO_ROOT / "docs/results-summary/pg18/osm-dirty-memory.md"
 DEFAULT_OUTPUT = REPO_ROOT / "docs/images/pg18-osm-dirty-memory.png"
-
-ANNOTATION_FONTSIZE = 9
 
 
 def parse_args() -> argparse.Namespace:
@@ -91,44 +92,60 @@ def plot_dirty_memory(df: pd.DataFrame, output: Path, show: bool = False) -> Non
         label="Index (kNodes/s)",
     )
 
+    ax.set_xscale("log")
+    y_top = float(df["nodes_kips"].max())
+    ax.set_ylim(200, y_top * 1.32)
+
+    xmin = df["max_dirty"].min()
     ax.annotate(
-        f"Default ({default['dirty_label']}) total {default['nodes_kips']:.0f}",
-        xy=(default["max_dirty"], default["nodes_kips"]),
-        xytext=(12, -16),
+        f"Smallest limit ({smallest['dirty_label']}) total ({int(smallest['nodes_kips'])} kNodes/s)",
+        xy=(xmin, smallest["nodes_kips"]),
+        xytext=(8, -22),
         textcoords="offset points",
+        ha="left",
         fontsize=ANNOTATION_FONTSIZE,
         color="#e4572e",
+        clip_on=True,
     )
     ax.annotate(
-        f"Default ({default['dirty_label']}) index {default['index_kips']:.0f}",
-        xy=(default["max_dirty"], default["index_kips"]),
-        xytext=(12, 8),
+        f"Smallest limit ({smallest['dirty_label']}) index ({int(smallest['index_kips'])} kNodes/s)",
+        xy=(xmin, smallest["index_kips"]),
+        xytext=(8, 10),
         textcoords="offset points",
+        ha="left",
         fontsize=ANNOTATION_FONTSIZE,
         color="#4c78a8",
+        clip_on=True,
     )
-    ax.annotate(
-        f"Smallest limit ({smallest['dirty_label']}) total {smallest['nodes_kips']:.0f}",
-        xy=(smallest["max_dirty"], smallest["nodes_kips"]),
-        xytext=(12, -16),
-        textcoords="offset points",
+    total_label_trans = offset_copy(ax.transData, fig=fig, x=-8, y=10, units="points")
+    ax.text(
+        default["max_dirty"],
+        default["nodes_kips"],
+        f"Default ({default['dirty_label']}) total ({int(default['nodes_kips'])} kNodes/s)",
+        transform=total_label_trans,
+        ha="right",
+        va="bottom",
         fontsize=ANNOTATION_FONTSIZE,
         color="#e4572e",
-        arrowprops={"arrowstyle": "->", "color": "#e4572e", "lw": 1},
+        clip_on=True,
     )
-    ax.annotate(
-        f"Smallest limit ({smallest['dirty_label']}) index {smallest['index_kips']:.0f}",
-        xy=(smallest["max_dirty"], smallest["index_kips"]),
-        xytext=(12, 10),
-        textcoords="offset points",
+    index_label_trans = offset_copy(
+        ax.get_yaxis_transform(), fig=fig, x=-4, y=-10, units="points"
+    )
+    ax.text(
+        1.0,
+        default["index_kips"],
+        f"Default ({default['dirty_label']}) index ({int(default['index_kips'])} kNodes/s)",
+        transform=index_label_trans,
+        ha="right",
+        va="top",
         fontsize=ANNOTATION_FONTSIZE,
         color="#4c78a8",
-        arrowprops={"arrowstyle": "->", "color": "#4c78a8", "lw": 1},
+        clip_on=True,
     )
 
-    ax.set_xscale("log")
     ax.set_xlabel("Peak dirty memory during run")
-    ax.set_ylabel("OSM load throughput (kNodes/s)")
+    ax.set_ylabel("Throughput (kNodes/s)")
     ax.set_title(
         "PostgreSQL 18 OSM load: Linux dirty memory limits (siren)\n"
         "Throughput vs peak dirty memory"
@@ -136,7 +153,7 @@ def plot_dirty_memory(df: pd.DataFrame, output: Path, show: bool = False) -> Non
     ax.set_xticks(df["max_dirty"])
     ax.set_xticklabels(df["dirty_label"], rotation=35, ha="right")
     ax.grid(True, which="major", linestyle="--", alpha=0.4)
-    ax.legend(loc="lower left")
+    ax.legend(loc="center right", fontsize=LEADERBOARD_LEGEND_FONTSIZE, markerscale=0.75)
 
     formatter = ScalarFormatter(useOffset=False)
     formatter.set_scientific(False)
@@ -152,6 +169,7 @@ def plot_dirty_memory(df: pd.DataFrame, output: Path, show: bool = False) -> Non
 
 
 def main() -> int:
+    use_pg18_style()
     args = parse_args()
     rows = load_snapshot_table(args.snapshot)
     if not rows:
