@@ -14,7 +14,7 @@ New pages are created in the buffer cache then written.  Reads of pages already 
 
 Databases need a robust Cache Replacement Policy deep in their core.  The current one in PG, a [Clock Sweep](https://en.wikipedia.org/wiki/Cache_replacement_policies#Clock_with_adaptive_replacement_(CAR)) method, was never built to be the *best* solution.  It came out of a [triage commit](https://www.postgresql.org/message-id/9533.1105991326%40sss.pgh.pa.us) to remove a better but patent encumbered one, followed by single development cycle rework in the [next version](https://www.postgresql.org/docs/9.3/release-8-1.html), to avoid the foundational patents limiting what the PG community could do.
 
-PG servers work best when their working set all fits in RAM.  That means servers running in the optimal zone will not be reading that much from actual storage.  They'll be doing a lots of page transfers from the OS Cache to Postgres, then writing changes.  Modern processors usually have hard acceleration for memory moves, which make that style of read and write path performant.
+PG servers work best when their working set all fits in RAM.  That means servers running in the optimal zone will not be reading that much from actual storage.  They'll be doing a lots of page transfers from the OS Cache to Postgres, then writing changes.  Modern processors usually have hardware acceleration for memory moves, which make that style of read and write path performant.
 
 ## 1/4 RAM size recommendation
 
@@ -22,7 +22,7 @@ There are two main scalability limits to large amount of `shared_buffers`.  The 
 
 Increase it to 38%/48GB and it gets faster.  But the CPU overhead of running the buffer cache makes that and higher values less efficient.   Eviction from the cache with the simple Clock Sweep method requires multiple passes over the entire pool before something gets removed.  Obtaining locks on the buffer cache structures, with full database sementics, that adds overhead too.
 
-Larger values ultimately take too much from the OS read cache as well.  There is so worst case behavior possible with both PG and Linux's cache designs.  The diversity to page evication logic of combining both PG's reference counting and the OS's LRU approach triages some of those.
+Larger values ultimately take too much from the OS read cache as well.  There is some worst case pathological behavior possible with both PG and Linux's cache designs.  The diversity to page evication logic of combining both PG's reference counting and the OS's LRU approach triages some of those.
 
 ## Buffer hit overhead
 
@@ -32,7 +32,7 @@ Reality is complicated.  `shared_buffers` is itself a bottleneck sometimes.  Whe
 
 # Deployment platform advancement limits
 
-Postgres then is not faster and more efficient at caching large read sets than Linux.  That distribution of work is not optimal, but it's been acceptable.  Work to improve an AIO path is ongoing and challenging.  Trying to access the underlying APIs in an OS neutral way has been a struggle since the first commit of POSIX `fadvise` support.  It hasn't been a higher priority because the current system works well enough to keep up with most hardware.  
+Postgres then is not faster and more efficient at caching large read sets than Linux.  That distribution of work is not optimal, but it's been acceptable.  Work to improve an direct AIO path is ongoing and challenging.  Trying to access the underlying APIs in an OS neutral way has been a struggle since the first commit of POSIX `fadvise` support.  It hasn't been a higher priority because the current system works well enough to keep up with most hardware.
 
 Also, Postgres is aiming at the broadest possible user base.  That platform approach means everything only advances in time with the oldest systems in mass deployment.  Traditional DBMS deployment approaches might lock support to a short list of known good kernels; that isn’t practical for PG.  Development has only been able to evolve incorporating more advanced filesystem semantics once they're solid across a huge installed base.
 
