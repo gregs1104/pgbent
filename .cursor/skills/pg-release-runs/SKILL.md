@@ -75,6 +75,93 @@ Rules for running studies in parallel:
 `SERVERNAME` defaults to the hostname. It is part of every study key, so keep it stable for the whole cycle.
 It must not contain `-`, because `download` parses the server name from the archive filename.
 
+### Recorded setup: siren, PostgreSQL 19 (2026-10-13)
+
+Taken from the `gsmith` and `postgres` shell histories. Failed typos are omitted. Older major versions stay installed; this setup does not remove PostgreSQL 18. On this host the benchmark drive is `/sk51` (same disk as the PG18 `main` cluster) and Debian assigned port **5437**.
+
+As `gsmith`. The PGDG source line ends in the major version to install:
+
+```bash
+sudo mkdir /sk51/19
+sudo chown postgres:postgres /sk51/19
+# /etc/apt/sources.list.d/pgdg.list:
+#   deb http://apt.postgresql.org/pub/repos/apt/ bookworm-pgdg main 19
+sudo apt update
+sudo apt install postgresql-19 postgresql-19-postgis-3-scripts
+```
+
+As `postgres`. Home is `/var/lib/postgresql`. The package creates the `19/main` cluster; `pg_createcluster` was also run. Move the data directory only while that cluster is stopped (`sudo systemctl stop postgresql@19-main` as `gsmith`).
+
+```bash
+cd ~/19
+rsync -av --progress main /sk51/19/
+mv main main.old
+ln -s /sk51/19/main
+pg_lsclusters
+```
+
+As `gsmith`, deploy config and the local trust rules, then start:
+
+```bash
+cd /etc/postgresql/19/main/conf.d
+sudo cp ~postgres/pgbent/conf/19/conf.d/* .
+cd /etc/postgresql/19/main
+sudo vi pg_hba.conf    # trust block from ~postgres/pgbent/conf/pg-hba.trusted
+sudo systemctl start postgresql@19-main
+```
+
+As `postgres`, point pgbent at the new port and confirm `util/newgis`. Stash local edits before pulling so `conf/19` is present:
+
+```bash
+cd ~/pgbent
+# config: TESTPORT=5437
+git stash && git pull && git stash apply
+util/newgis            # creates gis; pg_stat_statements, pg_buffercache, postgis, hstore; pgbent_tune
+```
+
+Leave only two clusters online: the results database and the active one. On siren the results database is still the PostgreSQL 17 cluster (port 5433). Everything else stays installed and is stopped:
+
+```bash
+pg_lsclusters
+sudo systemctl stop postgresql@15-main
+sudo systemctl stop postgresql@16-main
+sudo systemctl stop postgresql@18-main
+sudo systemctl stop postgresql@18-nocheck
+```
+
+That leaves `17/main` and `19/main` online.
+
+As `postgres`, confirm the running server is PostgreSQL 19 and that the 128GB memory tier from `conf/19/conf.d/osm-mem-128.conf` loaded. On siren `psql -p 5437` reported `19beta4 (Debian 19~beta4-1.pgdg12+1)` and:
+
+```sql
+SHOW shared_buffers;          -- 48GB
+SHOW work_mem;                -- 1GB
+SHOW maintenance_work_mem;    -- 8GB
+```
+
+Open one baseline set and start a single OSM load. `params` on siren was already the one-point planet load (`osm2pgsql-1.11`, 5 clients, scale 75000). Results stay on the PostgreSQL 17 cluster.
+
+```bash
+cd ~/pgbent
+./newset "PG19 beta4"
+nohup ./runset &
+util/progress
+tail -f results/siren/2974/results.txt
+```
+
+`util/progress` on this run showed the load writing `gis` on port 5437 and storing results with `psql -h localhost -U postgres -p 5433 -d results`. The test number was 2974. It also printed `ERROR: extension "pg_buffercache" already exists` because `wl/osm-import` creates that extension again after `util/newgis`; the load continued (node processing in `results.txt`).
+
+`./latest_set` shows only the active set. Mid-run the test row is there and TPS is still blank. On this run that was set 71, `osm2pgsql-1.11`, scale 75000, version 19, test 2974, 5 clients, with empty `tps`, `avg_latency`, `90%<`, and `max_latency`. After the run finishes, a blank TPS means the run failed. That holds for any test, not only OSM.
+
+Finished OSM loads are read in context from the results database. `reports/osm-speed.sql` returns three summaries: one row per test (hours and nodes/s), a phase breakdown (polygon, line, and point time, plus node, way, relation, and index rates), and the tuned settings (buffers, durability, checkpoint and WAL rates).
+
+```bash
+./latest_set
+psql -p 5433 -d results -f reports/osm-speed.sql
+```
+
+`pgbent_tune` was already installed on siren. Still unchecked from the prep list above: the `server` table row, `osm2pgsql --version`, and the planet / flat-nodes paths.
+
 ## Workloads
 
 | Workload | How to run | `script` in submission |
@@ -110,6 +197,7 @@ WHERE t.server = '<host>' ORDER BY t.test DESC LIMIT 5;
 ```
 
 ```
+- [ ] ./latest_set shows a TPS once the run has finished. Blank TPS after the run ends means it failed
 - [ ] Run is in the intended study set (info = study description)
 - [ ] server_version shows PostgreSQL <N>.x
 - [ ] test_settings shows the study variable at the intended value
