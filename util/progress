@@ -2,8 +2,20 @@
 . ./config
 . ./params
 TESTPSQL="psql -h $TESTHOST -U $TESTUSER -p $TESTPORT -d $TESTDB"
+RESULTPSQL="psql -h $RESULTHOST -U $RESULTUSER -p $RESULTPORT -d $RESULTDB"
 df -h | egrep -v "/sys/fs/cgroup|/sys/firmware/|/boot/efi|^/dev/loop|^tmpfs|^efivarfs|^udev|^devfs|/System/Volumes/"
 echo
 $TESTPSQL -c "SELECT pg_size_pretty(pg_database_size(current_database())) AS db_size,pg_size_pretty(sum(size)) AS wal_used FROM pg_ls_waldir()"
 echo
+RUNNING=$($RESULTPSQL -Atq -c "
+WITH lastset AS (
+  SELECT max(set) as lastset from tests
+)
+SELECT
+  server || '/' || test FROM lastset,tests where lastset=tests.set ORDER BY test DESC LIMIT 1;"
+)
+echo == Running test:
+tail results/$RUNNING/results.txt
+echo
+echo == Running automation:
 tail nohup.out
