@@ -1,0 +1,3 @@
+# osm2pgsql - full durable replication setup
+wal_level = replica
+
