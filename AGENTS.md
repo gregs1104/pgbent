@@ -42,6 +42,7 @@ Streamlit explorer: `explorer/submission-explore.py` (`st.connection` example).
 | Programmatic DB access | `explorer/submission-explore.py` |
 | Per-run metric graphs | `metview.py`, [docs/plans/metview.md](docs/plans/metview.md) |
 | Plotting migration | [docs/plans/plotting.md](docs/plans/plotting.md) |
+| New PG release study (e.g. PG19) | Skills `pg-release-config`, `pg-release-runs`, `pg-release-publish` in `.cursor/skills/` |
 | Graph label layout | [.cursor/skills/scatter-label-layout/SKILL.md](.cursor/skills/scatter-label-layout/SKILL.md) — scatter points (`reports/label_layout.py`) and horizontal bar value labels (`reports/osm-relation-power.py`) |
 
 ## PG18 graph labels
