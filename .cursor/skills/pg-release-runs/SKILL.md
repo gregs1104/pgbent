@@ -62,6 +62,8 @@ Rules for running studies in parallel:
 ## Server prep (once per server per cycle)
 
 ```
+- [ ] In ~postgres/pgbent: `git stash && git pull && git stash apply`
+      The server's checkout will not have `conf/<N>` until this pull. `config` and `params` are dirty on every host, so stash first and apply after.
 - [ ] Install PostgreSQL <N> (plus PostGIS, hstore for OSM) and deploy conf/<N>/conf.d
 - [ ] Edit ./config: TESTHOST/TESTPORT/TESTDB, RESULTHOST/RESULTDB, SERVERNAME, DISKLIST, ARCHIVE
 - [ ] Install sudo helpers in /usr/local/bin with NOPASSWD rules (see each script header):
@@ -90,6 +92,8 @@ sudo apt update
 sudo apt install postgresql-19 postgresql-19-postgis-3-scripts
 ```
 
+The data-directory move below is specific to siren's 2TB disk. `conf/19` sets `max_wal_size = 100GB`, and that OSM load plus the planet database barely fits 2TB, so the old PG18 cluster had to be moved off that disk before PG19 could use it. A 4TB host such as twilight does not need that shuffle: leave the previous major installed and put the new cluster on the same drive. There are six test servers, and keeping their `params` identical by hand is the failure this setup is meant to avoid.
+
 As `postgres`. Home is `/var/lib/postgresql`. The package creates the `19/main` cluster; `pg_createcluster` was also run. Move the data directory only while that cluster is stopped (`sudo systemctl stop postgresql@19-main` as `gsmith`).
 
 ```bash
@@ -100,7 +104,14 @@ ln -s /sk51/19/main
 pg_lsclusters
 ```
 
-As `gsmith`, deploy config and the local trust rules, then start:
+As `postgres`, update the pgbent checkout before copying config. A new major's `conf/<N>` is not on the server until this pull. Twilight already had `conf/19` only because the checkout had been fast-forwarded to `9959630` at 16:24; do not skip the pull on the next host.
+
+```bash
+cd ~/pgbent
+git stash && git pull && git stash apply
+```
+
+As `gsmith`, deploy that config and the local trust rules, then start:
 
 ```bash
 cd /etc/postgresql/19/main/conf.d
@@ -110,12 +121,11 @@ sudo vi pg_hba.conf    # trust block from ~postgres/pgbent/conf/pg-hba.trusted
 sudo systemctl start postgresql@19-main
 ```
 
-As `postgres`, point pgbent at the new port and confirm `util/newgis`. Stash local edits before pulling so `conf/19` is present:
+As `postgres`, point pgbent at the new port and confirm `util/newgis`:
 
 ```bash
 cd ~/pgbent
 # config: TESTPORT=5437
-git stash && git pull && git stash apply
 util/newgis            # creates gis; pg_stat_statements, pg_buffercache, postgis, hstore; pgbent_tune
 ```
 
@@ -139,7 +149,7 @@ SHOW work_mem;                -- 1GB
 SHOW maintenance_work_mem;    -- 8GB
 ```
 
-Open one baseline set and start a single OSM load. `params` on siren was already the one-point planet load (`osm2pgsql-1.11`, 5 clients, scale 75000). Results stay on the PostgreSQL 17 cluster.
+Open one baseline set and start a single OSM load. Every server should use the same one-point planet load: `osm2pgsql-1.11`, 5 clients, scale **75000**, one set. Siren was already on 75000. Twilight's first PG19 load (set 118, test 2593) started at scale 60000 because `params` was stale; that run was left alone. Results on siren stay on the PostgreSQL 17 cluster.
 
 ```bash
 cd ~/pgbent
@@ -185,7 +195,7 @@ touch complete    # (in STATEDIR) stop after the current run finishes
 - A planet load takes roughly 3–5 hours on desktop hardware. `RECOVERY=3600` gives an hour of cooldown between runs.
 - `util/newgis` recreates `gis` with extensions and runs `pgbent_tune`. If `dropdb`
   fails, connections are still open, so stop and investigate. Don't force it.
-- 256GB `max_wal_size` plus the planet DB will not fit on a 2TB drive.
+- Configured `max_wal_size` is 100GB. That plus the planet database barely fits a 2TB drive, so a 2TB host has to move the previous major's cluster off that disk first. 256GB `max_wal_size` will not fit on 2TB. A 4TB host does not need that disk shuffle.
 - A crashed run can leave orphaned OS stats collectors (`timed-os-stats`, iostat, vmstat). Check `ps` before restarting.
 
 ## Validate each finished run
