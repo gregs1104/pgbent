@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Graph OSM relation power efficiency from the PG18 osm-power snapshot.
+Graph OSM relation power efficiency from a release's osm-power snapshot (default PG18).
 
 Generates:
   - Horizontal bar chart of relations per average watt
@@ -8,6 +8,7 @@ Generates:
 
 Usage:
   python3 reports/osm-relation-power.py
+  python3 reports/osm-relation-power.py --pg 19
 """
 
 from __future__ import annotations
@@ -25,11 +26,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from snapshot_table import load_snapshot_table
 from label_layout import LabelOffset, place_label_at_grid_bottom, place_point_labels
 from pg18_style import BAR_LABEL_FONTSIZE, POINT_LABEL_FONTSIZE, use_pg18_style
+from release_paths import add_pg_argument, image_path, snapshot_path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_SNAPSHOT = REPO_ROOT / "docs/results-summary/pg18/osm-power.md"
-DEFAULT_OUTPUT = REPO_ROOT / "docs/images/pg18-osm-relation-power.png"
-DEFAULT_SCATTER = REPO_ROOT / "docs/images/pg18-osm-relation-scatter.png"
 RELATION_HEADING = "## Relation power efficiency"
 
 DEFAULT_POINT_COLOR = "#333333"
@@ -56,12 +54,17 @@ def row_color(row: pd.Series) -> str:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Plot PG18 OSM relation power efficiency")
-    parser.add_argument("--snapshot", type=Path, default=DEFAULT_SNAPSHOT)
-    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
-    parser.add_argument("--scatter-output", type=Path, default=DEFAULT_SCATTER)
+    parser = argparse.ArgumentParser(description="Plot OSM relation power efficiency")
+    add_pg_argument(parser)
+    parser.add_argument("--snapshot", type=Path)
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--scatter-output", type=Path)
     parser.add_argument("--show", action="store_true", help="Display interactively")
-    return parser.parse_args()
+    args = parser.parse_args()
+    args.snapshot = args.snapshot or snapshot_path(args.pg, "osm-power")
+    args.output = args.output or image_path(args.pg, "osm-relation-power")
+    args.scatter_output = args.scatter_output or image_path(args.pg, "osm-relation-scatter")
+    return args
 
 
 def numeric(series: pd.Series) -> pd.Series:

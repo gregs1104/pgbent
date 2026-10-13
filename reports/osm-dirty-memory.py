@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Graph OSM dirty memory study results from the PG18 static snapshot.
+Graph OSM dirty memory study results from a release's static snapshot (default PG18).
 
 Plots nodes vs index load throughput against peak dirty memory observed during
 each run—same layout as osm-network-speed.py.
@@ -8,6 +8,7 @@ each run—same layout as osm-network-speed.py.
 Usage:
   python3 reports/osm-dirty-memory.py
   python3 reports/osm-dirty-memory.py --output docs/images/pg18-osm-dirty-memory.png
+  python3 reports/osm-dirty-memory.py --pg 19
 """
 
 from __future__ import annotations
@@ -23,19 +24,20 @@ from matplotlib.transforms import offset_copy
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from pg18_style import ANNOTATION_FONTSIZE, LEADERBOARD_LEGEND_FONTSIZE, use_pg18_style
+from release_paths import add_pg_argument, image_path, snapshot_path
 from snapshot_table import load_snapshot_table
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_SNAPSHOT = REPO_ROOT / "docs/results-summary/pg18/osm-dirty-memory.md"
-DEFAULT_OUTPUT = REPO_ROOT / "docs/images/pg18-osm-dirty-memory.png"
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Plot PG18 OSM dirty memory study")
-    parser.add_argument("--snapshot", type=Path, default=DEFAULT_SNAPSHOT)
-    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser = argparse.ArgumentParser(description="Plot OSM dirty memory study")
+    add_pg_argument(parser)
+    parser.add_argument("--snapshot", type=Path)
+    parser.add_argument("--output", type=Path)
     parser.add_argument("--show", action="store_true", help="Display interactively")
-    return parser.parse_args()
+    args = parser.parse_args()
+    args.snapshot = args.snapshot or snapshot_path(args.pg, "osm-dirty-memory")
+    args.output = args.output or image_path(args.pg, "osm-dirty-memory")
+    return args
 
 
 def numeric(series: pd.Series) -> pd.Series:

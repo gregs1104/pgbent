@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Graph OSM checkpoint study results from the PG18 static snapshot.
+Graph OSM checkpoint study results from a release's static snapshot (default PG18).
 
 Plots throughput vs achieved minutes between checkpoints (chkp_mins). Points are
 colored by wal_level; lines connect runs on the same CPU when it has multiple
@@ -9,6 +9,7 @@ checkpoint settings.
 Usage:
   python3 reports/osm-checkpoint.py
   python3 reports/osm-checkpoint.py --output docs/images/pg18-osm-checkpoint.png
+  python3 reports/osm-checkpoint.py --pg 19
 """
 
 from __future__ import annotations
@@ -25,11 +26,8 @@ from matplotlib.transforms import offset_copy
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from label_layout import LabelOffset, place_label_at_grid_bottom, place_point_labels
 from pg18_style import LEADERBOARD_LEGEND_FONTSIZE, SMALL_ANNOTATION_FONTSIZE, use_pg18_style
+from release_paths import add_pg_argument, image_path, snapshot_path
 from snapshot_table import load_snapshot_table
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_SNAPSHOT = REPO_ROOT / "docs/results-summary/pg18/osm-checkpoint.md"
-DEFAULT_OUTPUT = REPO_ROOT / "docs/images/pg18-osm-checkpoint.png"
 
 NODES_COLOR = "#e4572e"
 INDEX_COLOR = "#4c78a8"
@@ -53,11 +51,15 @@ CHECKPOINT_LABEL_OVERRIDES = {
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Plot PG18 OSM checkpoint study")
-    parser.add_argument("--snapshot", type=Path, default=DEFAULT_SNAPSHOT)
-    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser = argparse.ArgumentParser(description="Plot OSM checkpoint study")
+    add_pg_argument(parser)
+    parser.add_argument("--snapshot", type=Path)
+    parser.add_argument("--output", type=Path)
     parser.add_argument("--show", action="store_true", help="Display interactively")
-    return parser.parse_args()
+    args = parser.parse_args()
+    args.snapshot = args.snapshot or snapshot_path(args.pg, "osm-checkpoint")
+    args.output = args.output or image_path(args.pg, "osm-checkpoint")
+    return args
 
 
 def numeric(series: pd.Series) -> pd.Series:
@@ -117,7 +119,7 @@ def plain_axis(ax, y: bool = True, x: bool = False) -> None:
         ax.xaxis.set_major_formatter(formatter)
 
 
-def plot_checkpoint(df: pd.DataFrame, output: Path, show: bool = False) -> None:
+def plot_checkpoint(df: pd.DataFrame, output: Path, pg: str, show: bool = False) -> None:
     df = df[~df["cpu"].isin(DROP_CPUS)].copy()
     fig, ax = plt.subplots(figsize=(10, 6))
 
@@ -171,7 +173,7 @@ def plot_checkpoint(df: pd.DataFrame, output: Path, show: bool = False) -> None:
     ax.set_xlabel("Minutes between checkpoints (achieved)")
     ax.set_ylabel("Throughput (kNodes/s)")
     ax.set_title(
-        "PG18 OSM load:  achieved checkpoint interval\n"
+        f"PG{pg} OSM load:  achieved checkpoint interval\n"
         "Tuned values 256GB WAL / 60 min interval"
     )
     y_top = float(df["nodes_kips"].max())
@@ -317,7 +319,7 @@ def main() -> int:
     if not rows:
         raise SystemExit(f"No table found in {args.snapshot}")
     df = prepare_checkpoint_df(rows)
-    plot_checkpoint(df, args.output, show=args.show)
+    plot_checkpoint(df, args.output, args.pg, show=args.show)
     return 0
 
 

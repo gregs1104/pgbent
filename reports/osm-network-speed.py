@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Graph OSM network study results from the PG18 static snapshot.
+Graph OSM network study results from a release's static snapshot (default PG18).
 
 Shows how remote-client load speed falls as link rate drops on a fixed server
 (i5-13600K), with i5 host-local runs as the on-server baseline. Cross-CPU
@@ -9,6 +9,7 @@ host-local comparisons need matched hardware or bidirectional tests.
 Usage:
   python3 reports/osm-network-speed.py
   python3 reports/osm-network-speed.py --output docs/images/pg18-osm-network-speed.png
+  python3 reports/osm-network-speed.py --pg 19
 """
 
 from __future__ import annotations
@@ -24,19 +25,20 @@ from matplotlib.transforms import offset_copy
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from pg18_style import ANNOTATION_FONTSIZE, LEADERBOARD_LEGEND_FONTSIZE, use_pg18_style
+from release_paths import add_pg_argument, image_path, snapshot_path
 from snapshot_table import conn_mbps, load_snapshot_table
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_SNAPSHOT = REPO_ROOT / "docs/results-summary/pg18/osm-network.md"
-DEFAULT_OUTPUT = REPO_ROOT / "docs/images/pg18-osm-network-speed.png"
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Plot PG18 OSM network connection speed study")
-    parser.add_argument("--snapshot", type=Path, default=DEFAULT_SNAPSHOT)
-    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser = argparse.ArgumentParser(description="Plot OSM network connection speed study")
+    add_pg_argument(parser)
+    parser.add_argument("--snapshot", type=Path)
+    parser.add_argument("--output", type=Path)
     parser.add_argument("--show", action="store_true", help="Display interactively")
-    return parser.parse_args()
+    args = parser.parse_args()
+    args.snapshot = args.snapshot or snapshot_path(args.pg, "osm-network")
+    args.output = args.output or image_path(args.pg, "osm-network-speed")
+    return args
 
 
 def numeric(series: pd.Series) -> pd.Series:
@@ -51,7 +53,7 @@ def prepare_network_df(rows: list[dict[str, str]]) -> pd.DataFrame:
     return df
 
 
-def plot_connection_speed(df: pd.DataFrame, output: Path, show: bool = False) -> None:
+def plot_connection_speed(df: pd.DataFrame, output: Path, pg: str, show: bool = False) -> None:
     remote = df[
         (df["server"] == "i5-13600K")
         & df["client"].str.contains("R9 9950X", na=False)
@@ -138,7 +140,7 @@ def plot_connection_speed(df: pd.DataFrame, output: Path, show: bool = False) ->
     ax.set_xlabel("Client–server link rate (Mb/s)")
     ax.set_ylabel("Throughput (kNodes/s)")
     ax.set_title(
-        "PostgreSQL 18 OSM load: R9 9950X client on i5-13600K server\n"
+        f"PostgreSQL {pg} OSM load: R9 9950X client on i5-13600K server\n"
         "Throughput vs client–server link rate"
     )
     ax.set_xticks(remote["conn_mbps"])
@@ -166,7 +168,7 @@ def main() -> int:
     if not rows:
         raise SystemExit(f"No table found in {args.snapshot}")
     df = prepare_network_df(rows)
-    plot_connection_speed(df, args.output, show=args.show)
+    plot_connection_speed(df, args.output, args.pg, show=args.show)
     return 0
 
 

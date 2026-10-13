@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Graph OSM power study results from the PG18 static snapshot.
+Graph OSM power study results from a release's static snapshot (default PG18).
 
 Generates by default:
   - Total throughput vs maximum package watts
@@ -11,6 +11,7 @@ Optional (--throughput-output): combined total+index chart with vertical bars.
 
 Usage:
   python3 reports/osm-power.py
+  python3 reports/osm-power.py --pg 19
 """
 
 from __future__ import annotations
@@ -30,12 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from snapshot_table import load_snapshot_table
 from label_layout import LabelOffset, place_label_at_grid_bottom, place_point_labels
 from pg18_style import LEGEND_MARKER_SIZE, POINT_LABEL_FONTSIZE, use_pg18_style
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_SNAPSHOT = REPO_ROOT / "docs/results-summary/pg18/osm-power.md"
-DEFAULT_TOTAL = REPO_ROOT / "docs/images/pg18-osm-power-total.png"
-DEFAULT_INDEX = REPO_ROOT / "docs/images/pg18-osm-power-index.png"
-DEFAULT_EFFICIENCY = REPO_ROOT / "docs/images/pg18-osm-power-efficiency.png"
+from release_paths import add_pg_argument, image_path, snapshot_path
 
 DEFAULT_POINT_COLOR = "#333333"
 INDEX_BAR_ALPHA = 0.45
@@ -70,19 +66,25 @@ def row_color(row: pd.Series) -> str:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Plot PG18 OSM power study")
-    parser.add_argument("--snapshot", type=Path, default=DEFAULT_SNAPSHOT)
+    parser = argparse.ArgumentParser(description="Plot OSM power study")
+    add_pg_argument(parser)
+    parser.add_argument("--snapshot", type=Path)
     parser.add_argument(
         "--throughput-output",
         type=Path,
         default=None,
         help="Optional combined total+index chart, e.g. docs/images/pg18-osm-power.png",
     )
-    parser.add_argument("--total-output", type=Path, default=DEFAULT_TOTAL)
-    parser.add_argument("--index-output", type=Path, default=DEFAULT_INDEX)
-    parser.add_argument("--efficiency-output", type=Path, default=DEFAULT_EFFICIENCY)
+    parser.add_argument("--total-output", type=Path)
+    parser.add_argument("--index-output", type=Path)
+    parser.add_argument("--efficiency-output", type=Path)
     parser.add_argument("--show", action="store_true", help="Display interactively")
-    return parser.parse_args()
+    args = parser.parse_args()
+    args.snapshot = args.snapshot or snapshot_path(args.pg, "osm-power")
+    args.total_output = args.total_output or image_path(args.pg, "osm-power-total")
+    args.index_output = args.index_output or image_path(args.pg, "osm-power-index")
+    args.efficiency_output = args.efficiency_output or image_path(args.pg, "osm-power-efficiency")
+    return args
 
 
 def numeric(series: pd.Series) -> pd.Series:
@@ -109,7 +111,7 @@ def plain_axis(ax, y: bool = True, x: bool = True) -> None:
         ax.xaxis.set_major_formatter(formatter)
 
 
-def plot_throughput_vs_power(df: pd.DataFrame, output: Path, show: bool = False) -> None:
+def plot_throughput_vs_power(df: pd.DataFrame, output: Path, pg: str, show: bool = False) -> None:
     fig, ax = plt.subplots(figsize=(10, 6))
 
     for _, row in df.iterrows():
@@ -151,7 +153,7 @@ def plot_throughput_vs_power(df: pd.DataFrame, output: Path, show: bool = False)
     ax.set_xlabel("Maximum package power (W)")
     ax.set_ylabel("Throughput (kNodes/s)")
     ax.set_title(
-        "PostgreSQL 18 OSM load: throughput vs package power\n"
+        f"PostgreSQL {pg} OSM load: throughput vs package power\n"
         "Vertical bars connect index and total speed at each CPU"
     )
     ax.grid(True, linestyle="--", alpha=0.4)
@@ -209,8 +211,9 @@ def plot_single_throughput_vs_power(
         POINT_LABEL_FONTSIZE,
         overrides=SINGLE_CHART_LABEL_OVERRIDES.get(metric_col),
     )
-    if metric_col == "nodes_kips":
-        nvidia = df[df["cpu"] == "NVIDIA P4242"].iloc[0]
+    nvidia_rows = df[df["cpu"] == "NVIDIA P4242"]
+    if metric_col == "nodes_kips" and not nvidia_rows.empty:
+        nvidia = nvidia_rows.iloc[0]
         place_label_at_grid_bottom(
             ax,
             nvidia["max_pkg"],
@@ -230,7 +233,7 @@ def plot_single_throughput_vs_power(
     plt.close(fig)
 
 
-def plot_efficiency(df: pd.DataFrame, output: Path, show: bool = False) -> None:
+def plot_efficiency(df: pd.DataFrame, output: Path, pg: str, show: bool = False) -> None:
     plot_df = df.sort_values("nodes_per_watt", ascending=True).reset_index(drop=True)
     y = range(len(plot_df))
     height = 0.35
@@ -250,7 +253,7 @@ def plot_efficiency(df: pd.DataFrame, output: Path, show: bool = False) -> None:
     for tick, color in zip(ax.get_yticklabels(), colors):
         tick.set_color(color)
     ax.set_xlabel("Throughput per maximum package watt (kNodes/s per W)")
-    ax.set_title("PostgreSQL 18 OSM load: efficiency vs package power envelope")
+    ax.set_title(f"PostgreSQL {pg} OSM load: efficiency vs package power envelope")
     ax.grid(True, axis="x", linestyle="--", alpha=0.4)
     ax.legend(
         handles=[
@@ -278,22 +281,22 @@ def main() -> int:
         raise SystemExit(f"No table found in {args.snapshot}")
     df = prepare_power_df(rows)
     if args.throughput_output is not None:
-        plot_throughput_vs_power(df, args.throughput_output, show=args.show)
+        plot_throughput_vs_power(df, args.throughput_output, args.pg, show=args.show)
     plot_single_throughput_vs_power(
         df,
         args.total_output,
         "nodes_kips",
-        "PostgreSQL 18 OSM load: total throughput vs package power",
+        f"PostgreSQL {args.pg} OSM load: total throughput vs package power",
         show=args.show,
     )
     plot_single_throughput_vs_power(
         df,
         args.index_output,
         "index_kips",
-        "PostgreSQL 18 OSM load: index throughput vs package power",
+        f"PostgreSQL {args.pg} OSM load: index throughput vs package power",
         show=args.show,
     )
-    plot_efficiency(df, args.efficiency_output, show=args.show)
+    plot_efficiency(df, args.efficiency_output, args.pg, show=args.show)
     return 0
 
 

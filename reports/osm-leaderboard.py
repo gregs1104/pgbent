@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Graph OSM leaderboard results from the PG18 static snapshot.
+Graph OSM leaderboard results from a release's static snapshot (default PG18).
 
 Keeps one row per host-local server configuration (cpu, memory, disk) — the best
 nodes_kips run for that hardware, regardless of PostgreSQL version or tuning.
@@ -8,6 +8,7 @@ Remote-client runs (non-host conn) are excluded.
 
 Usage:
   python3 reports/osm-leaderboard.py
+  python3 reports/osm-leaderboard.py --pg 19
 """
 
 from __future__ import annotations
@@ -23,21 +24,22 @@ from matplotlib.ticker import ScalarFormatter
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from snapshot_table import load_snapshot_table
 from pg18_style import LEADERBOARD_LEGEND_FONTSIZE, LEADERBOARD_Y_LABEL_FONTSIZE, use_pg18_style
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_SNAPSHOT = REPO_ROOT / "docs/results-summary/pg18/osm-leaderboard.md"
-DEFAULT_OUTPUT = REPO_ROOT / "docs/images/pg18-osm-leaderboard.png"
+from release_paths import add_pg_argument, image_path, snapshot_path
 
 NODES_COLOR = "#e4572e"
 INDEX_COLOR = "#4c78a8"
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Plot PG18 OSM leaderboard")
-    parser.add_argument("--snapshot", type=Path, default=DEFAULT_SNAPSHOT)
-    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser = argparse.ArgumentParser(description="Plot OSM leaderboard")
+    add_pg_argument(parser)
+    parser.add_argument("--snapshot", type=Path)
+    parser.add_argument("--output", type=Path)
     parser.add_argument("--show", action="store_true", help="Display interactively")
-    return parser.parse_args()
+    args = parser.parse_args()
+    args.snapshot = args.snapshot or snapshot_path(args.pg, "osm-leaderboard")
+    args.output = args.output or image_path(args.pg, "osm-leaderboard")
+    return args
 
 
 def numeric(series: pd.Series) -> pd.Series:
