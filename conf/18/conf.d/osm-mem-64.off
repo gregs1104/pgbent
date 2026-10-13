@@ -3,5 +3,4 @@ effective_cache_size = 32GB
 shared_buffers = 8GB
 work_mem = 1GB
 
-# Dropping from standard 8GB setting due to PG18.0 bug
-maintenance_work_mem = 256MB
+maintenance_work_mem = 2GB
