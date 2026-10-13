@@ -14,6 +14,6 @@ $RESULTPSQL -c "TRUNCATE TABLE tmp_metric_import"
 
 pushd results
 pg_dump -a -h $RESULTHOST -U $RESULTUSER -p $RESULTPORT $RESULTDB > $SERVERNAME/$SERVERNAME-results.sql
-tar cvf $TARBALL $SERVERNAME
+tar cvfz $TARBALL $SERVERNAME
 rsync -av --progress $TARBALL $DEST
 popd
