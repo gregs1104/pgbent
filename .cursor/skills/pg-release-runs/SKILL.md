@@ -49,10 +49,16 @@ Study: <topic>
 
 ### When to call `newset`
 
-A set is a **batch of related work**, not one config. Report SQL expects multiple
-`postgresql.conf` combinations in the same set and filters on `test_settings`.
-Trying a new set for every GUC change was a mess; the PG18 history is full of
-sets that mix parameter combinations on purpose.
+A set is a **batch of related work**, not one config. Trying a new set for every
+GUC change was a mess; the PG18 history is full of sets that mix parameter
+combinations on purpose.
+
+That mix is intentional and supported by the reports. `reports/osm-speed.sql`,
+the OSM submission helpers (`reports/submission.sql`, `submission-best-osm.sql`,
+`write_internals.sql`), and the published study SQL pull common GUCs into each
+row — `shared_buffers` / `shared_gb`, `maintenance_work_mem`, `max_wal_size`,
+`checkpoint_timeout`, `fsync`, `wal_level`, checksums, parallel-maintenance
+workers — so variants in one set stay distinguishable without a new batch.
 
 Call `./newset` when you need a **named batch**, for example:
 

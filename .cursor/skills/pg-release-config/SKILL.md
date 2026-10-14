@@ -59,8 +59,11 @@ WHERE sourcefile LIKE '%conf.d%' ORDER BY sourcefile, name;
 `conf/<N>` is the shared baseline every machine runs. A study that varies a
 setting changes it on the participating machines only. Use a `.conf`/`.off`
 variant file or a temporary edit, reload, and keep the **same** testset —
-reports expect multiple GUC combinations in one set and filter on
-`test_settings`. Do not open a new set for each GUC flip (see `pg-release-runs`).
+reports expect multiple GUC combinations in one set. OSM reports
+(`osm-speed.sql`) and the submission summary (`submission.sql`,
+`write_internals.sql`) pull `shared_buffers`, checkpoint settings, and
+durability into each row for that purpose. Do not open a new set for each
+GUC flip (see `pg-release-runs`).
 Promote a study's winning value into `conf/<N>` only with a commit that cites
 the study.
 
