@@ -54,13 +54,20 @@ A set is a **batch of related work**, not one config. Report SQL expects multipl
 Trying a new set for every GUC change was a mess; the PG18 history is full of
 sets that mix parameter combinations on purpose.
 
-Call `./newset` when something **beyond Postgres GUCs** changes, for example:
+Call `./newset` when you need a **named batch**, for example:
 
 - A new PostgreSQL major (or a named beta/RC campaign worth separating)
 - A new raw planet dump / OSM data vintage
 - A different workload script family, client topology, or hardware role that should not mix with the current batch
+- **Opening a study** that should stand alone later — same description prefix on every
+  participating machine so assembly can select it. PG18's published sections
+  (checkpoint, dirty memory, network, …) started as sets flagged this way, then
+  became study SQL and results pages. Use a clear `testset.info` while the topic
+  is live; GUC variants *inside* that study stay in the same set.
 
-Do **not** open a new set just to flip `osm-sync-*`, `osm-mem-*`, `maintenance_work_mem`, or other GUCs. Change the files, reload, keep running under the same `testset.info`.
+Do **not** open a new set just to flip `osm-sync-*`, `osm-mem-*`,
+`maintenance_work_mem`, or other GUCs on the baseline. Change the files, reload,
+keep running under the same `testset.info`.
 
 Rules for running studies in parallel:
 
@@ -103,12 +110,14 @@ Do **not** open this until all four servers (siren, twilight, abbey, court) are 
 
 **Question.** The PG17 OSM config was a local maximum: high memory use that delivered peak throughput. Parallel GIN / index work in PG18 destabilized that peak (see the final PG18 retune commit). On 128GB hosts the node-cache phase packs `osm2pgsql` RSS (~60GB at scale 75000), `shared_buffers` (48GB in `osm-mem-128`), and shared memory into RAM and spills into the default ~15GB swap. When the loader enters the index phase it **drops the node cache**; Postgres pages that were pushed out are not pulled back automatically, then `maintenance_work_mem` × parallel maintenance workers allocates on top. Suspect the fix is to shrink **either** the osm2pgsql node cache (`scale` / `OSMNODECACHE` in `params`) **or** `shared_buffers` (`osm-mem-*`), not to keep chasing the PG17 packing.
 
-**How to run it.** Stay on the existing PG19 set. Change one variable at a time
-(`osm-mem-*` tier or `scale` / `OSMNODECACHE`), keep durability durable, and let
-report SQL separate the rows via `test_settings`. Compare hours, `nodes_kips`,
-`index_kips`, and swap/iowait across the index transition (`watch util/progress`,
-`free -h`, `results.txt` leaving node processing). Promote a winner into
-`conf/19` only with a commit that cites the study.
+**How to run it.** When the topic opens, `./newset` with a shared description
+prefix on every participating machine (that batch becomes the study handle for
+assembly). Inside the study, change one variable at a time (`osm-mem-*` tier or
+`scale` / `OSMNODECACHE`), keep durability durable, and let report SQL separate
+the rows via `test_settings`. Compare hours, `nodes_kips`, `index_kips`, and
+swap/iowait across the index transition (`watch util/progress`, `free -h`,
+`results.txt` leaving node processing). Promote a winner into `conf/19` only
+with a commit that cites the study.
 
 ### Recorded setup: siren, PostgreSQL 19 (2026-10-13)
 
