@@ -67,6 +67,22 @@ other study-critical GUCs) rather than `sourcefile LIKE '%conf.d%'`.
 When the Homebrew cluster major changes, migrate the results database with the
 upload-then-reload workflow in `pg-release-runs` before opening a new study set.
 
+### Homebrew Python (`dateutil` / `pgsysinfo`)
+
+pgbent needs the Python `dateutil` module (`import dateutil`); `./pgsysinfo` is the
+smoke test. After a Homebrew Python upgrade the module is often gone (PEP 668
+marks the brew interpreter as externally managed). The clean fix is a local
+venv + `pip install python-dateutil` (or the `dateutils` meta-package). On a
+Mac that only runs these benchmarks, the short path used on abbey is:
+
+```bash
+sudo pip3 install dateutils --break-system-packages
+./pgsysinfo   # must print version / SETCLIENTS / SCALES / OSMNODECACHE again
+```
+
+(`--break-system-packages` is a trailing pip option; putting it before `install`
+fails.) Re-run that after brew Python updates when `pgsysinfo` starts ImportErroring.
+
 ## Baseline vs study variants
 
 `conf/<N>` is the shared baseline every machine runs. A study that varies a

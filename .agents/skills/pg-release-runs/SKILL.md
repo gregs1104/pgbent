@@ -108,7 +108,7 @@ One machine is configured by hand and is where the process gets written down. Fo
 
 Two other machines are active:
 
-- **abbey** is a Mac Studio on Homebrew. PG17 tests on the 2026 planet are finished (sets 8–10). It is moving to PostgreSQL 18; Homebrew has no `conf.d`, so settings from `conf/18/conf.d` are folded into the single `postgresql.conf` (see `pg-release-config`). Migrate the results DB with the upload-then-reload workflow below before opening a PG18 set.
+- **abbey** is a Mac Studio on Homebrew. PG17 tests on the 2026 planet are finished (sets 8–10). It is moving to PostgreSQL 18; Homebrew has no `conf.d`, so settings from `conf/18/conf.d` are folded into the single `postgresql.conf` (see `pg-release-config`). Migrate the results DB with the upload-then-reload workflow below before opening a PG18 set. After brew Python updates, reinstall `dateutil` and confirm with `./pgsysinfo` (same skill, Homebrew Python note).
 - **court** is an NVIDIA DGX Spark (ARM64). As of 2026-10-14 it is on **DGX OS 7.6.0 / Ubuntu 24.04.5** with kernel **`7.0.0-1019-nvidia`**. That is the DGX OS 7 kernel update, not Ubuntu 26.04 (DGX OS 8 is a different line and is not supported on Spark yet). It is still on the PostgreSQL **16** launch configuration and was running an OSM load after the reboot. The hardware has been unreliable about booting; the force-restart procedure that worked last time has not been written down here yet.
 
 ### Planned study: node cache vs shared_buffers (after identical PG19 baselines)
