@@ -45,6 +45,16 @@ while [ ! -f ${STATEDIR}/complete ] ; do
     echo $PID $P > ${STATEDIR}/pgbent.pid
     echo Set running pid ${P}
     wait $P
+
+    # A finished run with no TPS did not complete. OSM loads stay at 0 when
+    # the node rate cannot be computed, which is what a full disk looks like.
+    RESULTPSQL="psql -X -h $RESULTHOST -U $RESULTUSER -p $RESULTPORT -d $RESULTDB"
+    TPS=`$RESULTPSQL -Atqc "SELECT CASE WHEN tps > 0 THEN 'ok' END FROM tests WHERE server='${SERVERNAME}' ORDER BY test DESC LIMIT 1"`
+    if [ "$TPS" != "ok" ] ; then
+      echo "Last test has no TPS, stopping"
+      FAILED=1
+      break
+    fi
   fi
 done
 rm -f ${STATEDIR}/complete ${STATEDIR}/pgbent.pid
