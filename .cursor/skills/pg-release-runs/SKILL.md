@@ -170,6 +170,8 @@ Finished OSM loads are read in context from the results database. `reports/osm-s
 psql -p 5433 -d results -f reports/osm-speed.sql
 ```
 
+Siren's first PG19 run (test 2974) finished in **4.17** hours. Since the planet grew to the 2026 size of 850GB, eight PG18 loads on this host took 4.45 to 4.73 hours. 4.17 is ahead of every one of those, and that gap is large enough to treat as a real improvement.
+
 `pgbent_tune` was already installed on siren. Still unchecked from the prep list above: the `server` table row, `osm2pgsql --version`, and the planet / flat-nodes paths.
 
 ## Workloads
@@ -181,9 +183,7 @@ psql -p 5433 -d results -f reports/osm-speed.sql
 | pgbench init (build time) | Recorded automatically by `runset` before each scale when `NEWINIT=1` | `:-i%` |
 | Single point | `./benchwarmer <clients>` | as configured |
 
-`wl/osm-import` calls `./newset "OSM"` itself. For a study, run `./newset '<description>'`
-**after** it so the runs land in the study's set. Alternatively, write `params` the way it does
-and skip its `newset`.
+`wl/osm-import` writes the standard `params` for this loop, including `RECOVERY=3600`. Run it, then edit those parameters if this host needs a change. `repeat-gis` does not invent that file. `wl/osm-import` also calls `./newset "OSM"`. For a study, run `./newset '<description>'` after it so the repeated loads land in the study's set.
 
 OSM loop control:
 
@@ -193,8 +193,7 @@ touch complete    # (in STATEDIR) stop after the current run finishes
 ```
 
 - A planet load takes roughly 3–5 hours on desktop hardware. `RECOVERY=3600` gives an hour of cooldown between runs.
-- `util/newgis` recreates `gis` with extensions and runs `pgbent_tune`. If `dropdb`
-  fails, connections are still open, so stop and investigate. Don't force it.
+- `util/newgis` recreates `gis` with extensions and runs `pgbent_tune`. If it fails, `repeat-gis` stops and removes the pid files. A failed `dropdb` means connections are still open, so investigate that before starting again. Don't force it.
 - Configured `max_wal_size` is 100GB. That plus the planet database barely fits a 2TB drive, so a 2TB host has to move the previous major's cluster off that disk first. 256GB `max_wal_size` will not fit on 2TB. A 4TB host does not need that disk shuffle.
 - A crashed run can leave orphaned OS stats collectors (`timed-os-stats`, iostat, vmstat). Check `ps` before restarting.
 

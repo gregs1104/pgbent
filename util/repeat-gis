@@ -21,11 +21,15 @@ fi
 FALSE=0
 TRUE=1
 FIRST=${TRUE}
+FAILED=0
 
 while [ ! -f ${STATEDIR}/complete ] ; do
   util/newgis
-
-  [ -x /usr/local/bin/bench_tune ] && sudo /usr/local/bin/bench_tune
+  if [ $? -ne 0 ] ; then
+    echo "util/newgis failed, stopping"
+    FAILED=1
+    break
+  fi
 
   if !(($FIRST)) ; then
     echo Waiting $RECOVERY seconds for cooldown disk cache recovery
@@ -43,4 +47,5 @@ while [ ! -f ${STATEDIR}/complete ] ; do
     wait $P
   fi
 done
-rm ${STATEDIR}/complete ${STATEDIR}/pgbent.pid
+rm -f ${STATEDIR}/complete ${STATEDIR}/pgbent.pid
+exit $FAILED
