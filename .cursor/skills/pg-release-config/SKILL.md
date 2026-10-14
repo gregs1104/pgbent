@@ -22,7 +22,7 @@ Switch a variant by renaming files, never by editing them in place.
 | `network.conf` | `listen_addresses`, `max_connections`, parallel worker counts, comparability toggles |
 | `osm-general.conf` | WAL size, checkpoints, bgwriter, autovacuum off |
 | `osm-mem-{16,32,64,128}` | Memory tiers; exactly one is `.conf` |
-| `osm-sync-fast` / `osm-sync-durable` | Durability; exactly one is `.conf` |
+| `osm-sync-fast` / `osm-sync-durable` | Durability; exactly one is `.conf`. **PG19 default is durable** |
 | `README.md` | Deploy instructions |
 
 ## Start a cycle
@@ -92,3 +92,21 @@ mv osm-mem-128.conf osm-mem-128.off && mv osm-mem-64.off osm-mem-64.conf
 Checkpoint-related values (`max_wal_size`, `checkpoint_timeout`) follow the
 tuning model in `docs/model/max_wal_size.md` and `docs/model/checkpoint_timeout.md`.
 Larger WAL (256GB, 60 min) is faster but may not fit on 2TB drives. 100GB / 30 min is the default.
+
+## Durability default (PG19)
+
+The published baseline is **production durability** (`osm-sync-durable.conf`:
+`fsync`/`synchronous_commit`/`full_page_writes` on, `wal_level=replica`).
+Fast-sync (`osm-sync-fast.conf`: all of those off, `wal_level=minimal`) is a
+study variant, not the cycle default. The speed gain is too small to justify
+publishing a non-production config.
+
+`conf/19` was copied from PG18 with fast-sync still active. Leave those files
+as they are until the current fast-sync PG19 runs on siren finish; Greg will
+rename them to durable and re-run. Do not flip the files in the repo ahead of
+that. After the switch, confirm with `SHOW fsync; SHOW wal_level;` (`on` /
+`replica`) and open a new `newset` so the durable runs are a separate batch.
+
+PG18 set 70 on siren (`New planet 2026-08-13`) was already switched to durable
+by hand, so it is the matching 2026-planet reference. Do not compare PG19
+fast-sync (set 71) against that set as a version result.

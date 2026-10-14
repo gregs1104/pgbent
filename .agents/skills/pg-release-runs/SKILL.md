@@ -154,6 +154,8 @@ As `postgres`, confirm the running server is PostgreSQL 19 and that the 128GB me
 SHOW shared_buffers;          -- 48GB
 SHOW work_mem;                -- 1GB
 SHOW maintenance_work_mem;    -- 8GB
+SHOW fsync;                   -- on after the durable switch; currently off on the leftover fast-sync runs
+SHOW wal_level;               -- replica after the durable switch; currently minimal
 ```
 
 Open one baseline set and start a single OSM load. Every server should use the same one-point planet load: `osm2pgsql-1.11`, 5 clients, scale **75000**, one set. Siren was already on 75000. Twilight's first PG19 load (set 118, test 2593) started at scale 60000 because `params` was stale; that run was left alone. Results on siren stay on the PostgreSQL 17 cluster.
@@ -177,7 +179,7 @@ Finished OSM loads are read in context from the results database. `reports/osm-s
 psql -p 5433 -d results -f reports/osm-speed.sql
 ```
 
-Siren's first PG19 run (test 2974) finished in **4.17** hours. Since the planet grew to the 2026 size of 850GB, eight PG18 loads on this host took 4.45 to 4.73 hours. 4.17 is ahead of every one of those, and that gap is large enough to treat as a real improvement.
+Siren's first PG19 run (test 2974) finished in **4.17** hours; tests 2975 and 3009 followed at 4.13 and 4.03. Those three are **fast-sync** (`fsync=off`, `wal_level=minimal`) because `conf/19` was copied from PG18 with `osm-sync-fast` still active. PG18 set 70 (`New planet 2026-08-13`, 4.45–4.73 hours on the same 850GB planet) was switched to **durable** by hand to get a production-config reference. Do not treat 4.03–4.17 vs 4.45–4.73 as a version comparison. Let a few more fast-sync PG19 loads finish so that data is collected, then Greg switches `conf/19` to durable and re-runs on siren (see `pg-release-config`).
 
 `pgbent_tune` was already installed on siren. Still unchecked from the prep list above: the `server` table row, `osm2pgsql --version`, and the planet / flat-nodes paths.
 
