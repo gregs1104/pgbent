@@ -57,10 +57,12 @@ WHERE sourcefile LIKE '%conf.d%' ORDER BY sourcefile, name;
 ## Baseline vs study variants
 
 `conf/<N>` is the shared baseline every machine runs. A study that varies a
-setting changes it on the participating machines only, for the sets flagged for
-that study. Use a `.conf`/`.off` variant file or a temporary edit, and revert it before
-the next `newset`. Promote a study's winning value into `conf/<N>` only with a
-commit that cites the study.
+setting changes it on the participating machines only. Use a `.conf`/`.off`
+variant file or a temporary edit, reload, and keep the **same** testset —
+reports expect multiple GUC combinations in one set and filter on
+`test_settings`. Do not open a new set for each GUC flip (see `pg-release-runs`).
+Promote a study's winning value into `conf/<N>` only with a commit that cites
+the study.
 
 ## Retuning during the cycle
 
@@ -118,10 +120,11 @@ publishing a non-production config.
 fast-sync loads when that landed; after those hit `complete` (aim for **at
 least three runs** on a config before judging it), pull on each host and
 **copy** into `/etc/postgresql/19/main/conf.d`, then confirm
-`SHOW fsync; SHOW wal_level;` → `on` / `replica` and open a **new** `newset`
-so durable runs are a separate batch.
+`SHOW fsync; SHOW wal_level;` → `on` / `replica`. Stay on the existing PG19
+set — durable and fast-sync runs live in the same batch and are told apart by
+`test_settings`.
 
 `osm-sync-durable.conf` only sets `wal_level=replica`; durability comes from
 Postgres defaults once fast-sync is off. PG18 set 70 on siren
 (`New planet 2026-08-13`) is the matching 2026-planet durable reference. Do
-not compare PG19 fast-sync (set 71) against that set as a version result.
+not compare PG19 fast-sync rows against that set as a version result.

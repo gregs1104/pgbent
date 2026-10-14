@@ -40,22 +40,35 @@ so assembly can match on `batch`.
 
 ```
 Study: <topic>
-- [ ] Write down the question and the one variable being changed (GUC, kernel setting, link speed, hardware)
-- [ ] Choose a short slug and description convention, e.g. 'pg19 io_method=worker', 'pg19 io_method=io_uring'
-- [ ] Choose the participating machines and the baseline config they share (conf/<N>)
-- [ ] On each machine, per variant: apply the setting → ./newset '<description>' → run the workload
-- [ ] Record the study (slug, description prefix, machines) wherever the user tracks open studies
+- [ ] Write down the question and the one variable being changed (GUC, node cache, etc.)
+- [ ] Confirm the active set is still the right batch (same major version, same planet, same non-GUC context)
+- [ ] Choose the participating machines and the shared conf/<N> baseline
+- [ ] On each machine: apply the setting → reload/restart → run the workload (same set)
+- [ ] Reports split variants via test_settings (fsync, wal_level, shared_buffers, …), not via a new set
 ```
+
+### When to call `newset`
+
+A set is a **batch of related work**, not one config. Report SQL expects multiple
+`postgresql.conf` combinations in the same set and filters on `test_settings`.
+Trying a new set for every GUC change was a mess; the PG18 history is full of
+sets that mix parameter combinations on purpose.
+
+Call `./newset` when something **beyond Postgres GUCs** changes, for example:
+
+- A new PostgreSQL major (or a named beta/RC campaign worth separating)
+- A new raw planet dump / OSM data vintage
+- A different workload script family, client topology, or hardware role that should not mix with the current batch
+
+Do **not** open a new set just to flip `osm-sync-*`, `osm-mem-*`, `maintenance_work_mem`, or other GUCs. Change the files, reload, keep running under the same `testset.info`.
 
 Rules for running studies in parallel:
 
-- **One study per machine at a time.** A machine's runs go to whichever set was
-  flagged last, so call `newset` before switching topics. Never interleave two studies'
-  runs under one set.
-- **Change one variable per set.** Reset the previous study's setting before flagging the next one.
-  `test_settings` captures every GUC per run, so stray settings will show up in the data.
-- **Baseline runs can feed several studies.** PG18's leaderboard and power studies drew on the same
-  default-config OSM loads. Experiments that move off the baseline get their own sets.
+- **One active set per machine.** Runs go to whichever set was flagged last.
+- **Change one GUC (or node-cache) variable at a time** within that set so
+  `test_settings` stays attributable. Reset the previous variant before the next.
+- **Baseline runs can feed several studies.** PG18's leaderboard and power studies
+  drew on the same default-config OSM loads in shared sets.
 - **Ask before setting `category`** on another study's sets; it removes them from publishing.
   Set it on the source machine, because the central copy is replaced on every `download`.
 
@@ -90,7 +103,12 @@ Do **not** open this until all four servers (siren, twilight, abbey, court) are 
 
 **Question.** The PG17 OSM config was a local maximum: high memory use that delivered peak throughput. Parallel GIN / index work in PG18 destabilized that peak (see the final PG18 retune commit). On 128GB hosts the node-cache phase packs `osm2pgsql` RSS (~60GB at scale 75000), `shared_buffers` (48GB in `osm-mem-128`), and shared memory into RAM and spills into the default ~15GB swap. When the loader enters the index phase it **drops the node cache**; Postgres pages that were pushed out are not pulled back automatically, then `maintenance_work_mem` × parallel maintenance workers allocates on top. Suspect the fix is to shrink **either** the osm2pgsql node cache (`scale` / `OSMNODECACHE` in `params`) **or** `shared_buffers` (`osm-mem-*`), not to keep chasing the PG17 packing.
 
-**How to run it.** Change one variable per set. Description prefix examples: `pg19 osm-mem-64`, `pg19 ncache=60000`, `pg19 ncache=48000`. Keep durability durable. Compare hours, `nodes_kips`, `index_kips`, and swap/iowait across the index transition (`watch util/progress`, `free -h`, `results.txt` leaving node processing). Promote a winner into `conf/19` only with a commit that cites the study.
+**How to run it.** Stay on the existing PG19 set. Change one variable at a time
+(`osm-mem-*` tier or `scale` / `OSMNODECACHE`), keep durability durable, and let
+report SQL separate the rows via `test_settings`. Compare hours, `nodes_kips`,
+`index_kips`, and swap/iowait across the index transition (`watch util/progress`,
+`free -h`, `results.txt` leaving node processing). Promote a winner into
+`conf/19` only with a commit that cites the study.
 
 ### Recorded setup: siren, PostgreSQL 19 (2026-10-13)
 
@@ -189,7 +207,7 @@ psql -p 5433 -d results -f reports/osm-speed.sql
 
 Siren's first PG19 runs (tests 2974, 2975, 3009) finished in **4.17 / 4.13 / 4.03** hours under **fast-sync** (`fsync=off`, `wal_level=minimal`). PG18 set 70 (`New planet 2026-08-13`, 4.45–4.73 hours on the same 850GB planet) is the **durable** reference. Do not treat those gaps as a version comparison.
 
-Aim for **at least three finished runs** on a given config before judging the result range. Siren and twilight were collecting that third (and following) fast-sync pass with `complete` armed so the loop exits after the current load. `conf/19` in git is already durable (`d33ba0a`); after those loads finish, pull, **copy** into `/etc/postgresql/19/main/conf.d` (do not symlink — systemd permissions reject that), confirm `SHOW fsync` / `SHOW wal_level`, and open a new `newset` for the durable baseline (see `pg-release-config`).
+Aim for **at least three finished runs** on a given config before judging the result range. Siren and twilight were collecting that third (and following) fast-sync pass with `complete` armed so the loop exits after the current load. `conf/19` in git is already durable (`d33ba0a`); after those loads finish, pull, **copy** into `/etc/postgresql/19/main/conf.d` (do not symlink — systemd permissions reject that), confirm `SHOW fsync` / `SHOW wal_level`, and keep running in the **same** set — durable vs fast-sync rows are distinguished by `test_settings`, not by a new batch (see `pg-release-config`).
 
 `pgbent_tune` was already installed on siren. Still unchecked from the prep list above: the `server` table row, `osm2pgsql --version`, and the planet / flat-nodes paths.
 
@@ -202,7 +220,7 @@ Aim for **at least three finished runs** on a given config before judging the re
 | pgbench init (build time) | Recorded automatically by `runset` before each scale when `NEWINIT=1` | `:-i%` |
 | Single point | `./benchwarmer <clients>` | as configured |
 
-`wl/osm-import` writes the standard `params` for this loop, including `RECOVERY=3600`. Run it, then edit those parameters if this host needs a change. `repeat-gis` does not invent that file. `wl/osm-import` also calls `./newset "OSM"`. For a study, run `./newset '<description>'` after it so the repeated loads land in the study's set.
+`wl/osm-import` writes the standard `params` for this loop, including `RECOVERY=3600`. Run it, then edit those parameters if this host needs a change. `repeat-gis` does not invent that file. `wl/osm-import` also calls `./newset "OSM"`; if this host is already on the right batch (e.g. `PG19 beta4`), run `./newset` again only when that batch boundary is wrong — not for each GUC tweak.
 
 OSM loop control:
 
