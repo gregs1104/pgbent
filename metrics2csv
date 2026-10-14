@@ -36,7 +36,13 @@ if [ -s "meminfo.log" ] ; then
     echo Processing Linux formatted log files server ${H} test $TESTNUM
     ../../../csv2gnuplot -i iostat.log -d iostat -s "Device" -t "pgbench disk" --disks=${DISKLIST} -o iostat
     ../../../csv2gnuplot -i vmstat.log -d vmstat -s "cache" -t "pgbench vmstat" -o vmstat
-    ../../../csv2gnuplot -i power.log -d power -s "PkgWatt" -t "power" -o power
+    # Power: NVIDIA Grace / DGX Spark (spbm sensors -u) vs x86 turbostat (PkgWatt)
+    if [ -s "power.log" ] && grep -qE 'spbm-|power[0-9]+_input:' power.log ; then
+      echo "Processing sensors power log (spbm) server ${H} test $TESTNUM"
+      ../../../util/power-sensors-parse
+    else
+      ../../../csv2gnuplot -i power.log -d power -s "PkgWatt" -t "power" -o power
+    fi
     ../../../dirty-plot < meminfo.log > dirtydata.txt
 else
     # Assume Darwin for now, eventually others?

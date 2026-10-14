@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
-import sys
+"""Parse timed sensors -u (spbm) power logs into narrow CSV for metrics2csv."""
+import csv
 import re
+import sys
 
-def parse_sensors_to_narrow_csv(input_stream):
+
+def parse_sensors_to_narrow_csv(input_stream, output_stream):
     current_group = "unknown"
-    
+    writer = csv.writer(output_stream)
+    writer.writerow(["Timestamp", "Value", "Metric"])
+
     for line in input_stream:
         line = line.strip()
         if not line:
@@ -14,26 +19,31 @@ def parse_sensors_to_narrow_csv(input_stream):
         ts_match = re.match(r'^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+)', line)
         if not ts_match:
             continue
-            
+
         timestamp = ts_match.group(1)
         # Content is everything after the timestamp
         content = line[len(timestamp):].strip()
 
         if ':' in content:
             label, value = [p.strip() for p in content.split(':', 1)]
-            
+
             # Case 1: Group Header (e.g., "sys_total:")
             if not value:
                 current_group = label
-            
+
             # Case 2: Metric Value (e.g., "power1_input: 25.240")
             else:
                 # Filter out metadata lines like "Adapter: ISA adapter"
                 if label == "Adapter":
                     continue
-                
+
                 full_metric_name = f"{current_group}_{label}"
-                print(f"{timestamp},{value},{full_metric_name}")
+                writer.writerow([timestamp, value, full_metric_name])
+
 
 if __name__ == "__main__":
-    parse_sensors_to_narrow_csv(sys.stdin)
+    # Default matches power-darwin-parse: read power.log, write power.csv.
+    # Optional arg is an alternate input path (e.g. regress/power-sensors.log).
+    infile = sys.argv[1] if len(sys.argv) > 1 else "power.log"
+    with open(infile, "r") as inp, open("power.csv", "w", newline="") as out:
+        parse_sensors_to_narrow_csv(inp, out)
