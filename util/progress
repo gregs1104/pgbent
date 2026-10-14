@@ -14,8 +14,8 @@ WITH lastset AS (
 SELECT
   server || '/' || test FROM lastset,tests where lastset=tests.set ORDER BY test DESC LIMIT 1;"
 )
-echo == Running test:
-tail results/$RUNNING/results.txt
-echo
 echo == Running automation:
 tail nohup.out
+echo
+echo == Running test:
+tail results/$RUNNING/results.txt
