@@ -108,7 +108,7 @@ One machine is configured by hand and is where the process gets written down. Fo
 
 Two other machines are active:
 
-- **abbey** is a Mac Studio on PostgreSQL 17 installed with Homebrew. Its PG17 tests on the 2026 planet are finished. Next is an update to PostgreSQL 18 and a retest.
+- **abbey** is a Mac Studio on Homebrew. PG17 tests on the 2026 planet are finished (sets 8–10). It is moving to PostgreSQL 18; Homebrew has no `conf.d`, so settings from `conf/18/conf.d` are folded into the single `postgresql.conf` (see `pg-release-config`). Migrate the results DB with the upload-then-reload workflow below before opening a PG18 set.
 - **court** is an NVIDIA DGX Spark (ARM64). As of 2026-10-14 it is on **DGX OS 7.6.0 / Ubuntu 24.04.5** with kernel **`7.0.0-1019-nvidia`**. That is the DGX OS 7 kernel update, not Ubuntu 26.04 (DGX OS 8 is a different line and is not supported on Spark yet). It is still on the PostgreSQL **16** launch configuration and was running an OSM load after the reboot. The hardware has been unreliable about booting; the force-restart procedure that worked last time has not been written down here yet.
 
 ### Planned study: node cache vs shared_buffers (after identical PG19 baselines)
@@ -298,6 +298,34 @@ to the first `-`. It runs `./wipe_server <server>`, unpacks into `results/`, and
   Upload once per batch of work, or confirm the newest archive was loaded.
 - `./submit` is separate. It exports a server's `submission` view as CSV for outside
   sharing and is not part of assembly.
+- Every successful `./upload` leaves a durable copy: locally under `results/<server>/`
+  (including `<server>-results.sql`) and as a timestamped tar.gz on `$ARCHIVE`.
+  `./download` also keeps those tar.gz files under `archive/` on the assembly machine.
+
+## Migrating the results database across a major upgrade
+
+When the host that holds the **results** database moves to a new PostgreSQL major
+(Homebrew single-cluster Macs like abbey, or a dedicated results cluster on Linux),
+preserve history **before** the old major goes away:
+
+```
+- [ ] On the old major, still running: `./upload`
+      Confirms `results/<server>/<server>-results.sql` exists and a fresh
+      `<server>-<timestamp>.tar.gz` is on `$ARCHIVE`.
+- [ ] Install/start the new major. Create an empty results DB
+      (`createdb results && psql -f init/resultdb.sql -d results`, or the host's usual bootstrap).
+- [ ] Point `./config` (RESULT* / TEST*) at the new cluster/port.
+- [ ] Reload history, pick one:
+      - Local: `psql -d results -f results/<server>/<server>-results.sql`
+      - Via archive: `./download` on a machine that imports that server's newest tar.gz
+        (`wipe_server` + unpack + load, same as assembly).
+- [ ] `./newset` with no args — prior sets must list. Errors for objects not in
+      `init/resultdb.sql` (e.g. `submission*`) are harmless if core tables loaded.
+- [ ] `./newset "…"` for the new major's study, then continue runs as usual.
+```
+
+Do not open the new major's study set until the reload check passes. Abbey's
+Homebrew PG17→18 move (2026-10-14) is the reference for this path.
 
 ## Recording findings
 

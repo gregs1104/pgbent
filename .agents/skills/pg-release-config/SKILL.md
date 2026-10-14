@@ -54,6 +54,19 @@ SELECT sourcefile, name, setting FROM pg_settings
 WHERE sourcefile LIKE '%conf.d%' ORDER BY sourcefile, name;
 ```
 
+### Homebrew / macOS (no conf.d)
+
+Homebrew PostgreSQL (`/opt/homebrew/var/postgresql@<N>/`) does not ship a
+`conf.d` include directory. Fold the active settings from `conf/<N>/conf.d`
+(`.conf` files only; skip `.off`) into that cluster's single `postgresql.conf`.
+Keep port and locale as the host-specific bits; memory tier, durability,
+logging, and OSM knobs should match the Linux baseline for the same release.
+Verify with `SHOW shared_buffers;` / `SHOW fsync;` / `SHOW wal_level;` (and any
+other study-critical GUCs) rather than `sourcefile LIKE '%conf.d%'`.
+
+When the Homebrew cluster major changes, migrate the results database with the
+upload-then-reload workflow in `pg-release-runs` before opening a new study set.
+
 ## Baseline vs study variants
 
 `conf/<N>` is the shared baseline every machine runs. A study that varies a
