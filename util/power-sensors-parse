@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+import sys
+import re
+
+def parse_sensors_to_narrow_csv(input_stream):
+    current_group = "unknown"
+    
+    for line in input_stream:
+        line = line.strip()
+        if not line:
+            continue
+
+        # Extract timestamp: looking for YYYY-MM-DD HH:MM:SS.ffffff
+        ts_match = re.match(r'^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+)', line)
+        if not ts_match:
+            continue
+            
+        timestamp = ts_match.group(1)
+        # Content is everything after the timestamp
+        content = line[len(timestamp):].strip()
+
+        if ':' in content:
+            label, value = [p.strip() for p in content.split(':', 1)]
+            
+            # Case 1: Group Header (e.g., "sys_total:")
+            if not value:
+                current_group = label
+            
+            # Case 2: Metric Value (e.g., "power1_input: 25.240")
+            else:
+                # Filter out metadata lines like "Adapter: ISA adapter"
+                if label == "Adapter":
+                    continue
+                
+                full_metric_name = f"{current_group}_{label}"
+                print(f"{timestamp},{value},{full_metric_name}")
+
+if __name__ == "__main__":
+    parse_sensors_to_narrow_csv(sys.stdin)
