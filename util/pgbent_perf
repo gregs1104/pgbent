@@ -1,0 +1,45 @@
+#!/bin/bash
+
+# Run Linux perf with privileges the postgres user normally lacks.
+# Suggested install directory is /usr/local/bin
+#
+# Starting from a checkout of pgbent into the postgres user's home directory, you
+# likely need to run sudo as another user to install this, then add a sudo rule to allow
+# the postgres user to run it.  This idiom works here:
+#
+#    cp util/pgbent_perf /tmp
+#    logout
+#    sudo cp /tmp/pgbent_perf /usr/local/bin/
+#    sudo sh -c "echo \"postgres ALL = (ALL) NOPASSWD: /usr/local/bin/pgbent_perf\" >> /etc/sudoers.d/postgres"
+#
+# Used by util/osm-rel-prof:
+#    sudo /usr/local/bin/pgbent_perf record -a -g -o osm-rel-perf.data
+#    sudo /usr/local/bin/pgbent_perf report -i osm-rel-perf.data --stdio
+#
+
+PERF=/usr/bin/perf
+
+if [ ! -x "$PERF" ]; then
+  echo "pgbent_perf: $PERF not found" >&2
+  exit 1
+fi
+
+# After a privileged record, hand -o/--output artifacts back to the invoking user
+# so later analysis in the results directory does not need root.
+if [ "$1" = "record" ]; then
+  shift
+  "$PERF" record "$@"
+  rc=$?
+  if [ -n "$SUDO_USER" ]; then
+    prev=""
+    for a in "$@"; do
+      if [ "$prev" = "-o" ] || [ "$prev" = "--output" ]; then
+        chown "$SUDO_USER:" "$a" 2>/dev/null || true
+      fi
+      prev="$a"
+    done
+  fi
+  exit $rc
+fi
+
+exec "$PERF" "$@"

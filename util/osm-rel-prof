@@ -7,9 +7,10 @@
 # report and exits.  A few seconds of edge jitter is acceptable; the
 # relation phase runs long enough that it does not matter.
 #
-# Requires perf and permission to sample (root, CAP_PERFMON, or a
-# lowered kernel.perf_event_paranoid).  Artifacts land in the current
-# directory (the test results dir when launched from osm-importer):
+# Requires util/pgbent_perf installed under /usr/local/bin with a NOPASSWD
+# sudoers rule (same idiom as pgbent_powermon / pgbent_tune).  Artifacts
+# land in the current directory (the test results dir when launched from
+# osm-importer):
 #   osm-rel-perf.data
 #   osm-rel-perf-report.txt
 
@@ -23,6 +24,7 @@ if [ -z "$OSMRELPROF_POLL" ] || [ "$OSMRELPROF_POLL" = "0" ]; then
 else
   POLL_SEC="$OSMRELPROF_POLL"
 fi
+PGBENT_PERF="sudo /usr/local/bin/pgbent_perf"
 PERF_DATA="osm-rel-perf.data"
 PERF_REPORT="osm-rel-perf-report.txt"
 PERF_PID=""
@@ -55,7 +57,7 @@ done
 
 echo "osm-rel-prof: relation phase detected, starting perf"
 rm -f "$PERF_DATA" "$PERF_REPORT"
-perf record -a -g -o "$PERF_DATA" &
+$PGBENT_PERF record -a -g -o "$PERF_DATA" &
 PERF_PID=$!
 
 while true; do
@@ -78,7 +80,7 @@ PERF_PID=""
 
 if [ -s "$PERF_DATA" ]; then
   echo "osm-rel-prof: writing $PERF_REPORT"
-  if ! perf report -i "$PERF_DATA" --stdio > "$PERF_REPORT" 2>&1; then
+  if ! $PGBENT_PERF report -i "$PERF_DATA" --stdio > "$PERF_REPORT" 2>&1; then
     echo "osm-rel-prof: perf report failed" >&2
   fi
 else

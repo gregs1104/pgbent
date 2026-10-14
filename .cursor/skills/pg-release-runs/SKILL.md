@@ -95,6 +95,7 @@ Rules for running studies in parallel:
 - [ ] Install sudo helpers in /usr/local/bin with NOPASSWD rules (see each script header):
       util/pgbent_tune (governor=performance, readahead 4096, fstrim)
       util/pgbent_powermon (power sampling; set SUDODATA=1 in config)
+      util/pgbent_perf (perf record/report for OSMRELPROF=1 relation profiling)
 - [ ] Update the `server` table row (cpu/mem/disk/OS) if hardware changed — submission reports the human-readable disk from it
 - [ ] Confirm osm2pgsql version: `osm2pgsql --version`; set SCRIPT in wl/osm-import to match (it still says osm2pgsql-1.6)
 - [ ] Planet + flat nodes paths: PLANET_FILE / NODES_FILE (defaults ~/osm/planet-latest.osm.pbf, nodes.db)
