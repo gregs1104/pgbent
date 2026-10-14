@@ -4,13 +4,15 @@
 . ./config
 . ./params
 TESTPSQL="psql -h $TESTHOST -U $TESTUSER -p $TESTPORT -d $TESTDB"
+# Existence / drop checks cannot connect to TESTDB — it may not exist yet.
+TESTPSQL_MAINT="psql -h $TESTHOST -U $TESTUSER -p $TESTPORT -d postgres"
 TESTCONN="-h $TESTHOST -U $TESTUSER -p $TESTPORT"
 
 # TODO psql handles TESTDB being a URI; drop/create needs another approach.
 
 # Only try to drop the database if it's already there, and catch if drop fails
-MATCHES=`$TESTPSQL -Atqc "SELECT count(*) FROM pg_database WHERE datname='$TESTDB'"`
-if [ "$MATCHES" -gt 0 ] ; then
+MATCHES=`$TESTPSQL_MAINT -Atqc "SELECT count(*) FROM pg_database WHERE datname='$TESTDB'"`
+if [ -n "$MATCHES" ] && [ "$MATCHES" -gt 0 ] ; then
   dropdb $TESTCONN $TESTDB
   ERROR=$?
   if [ "$ERROR" -gt 0 ] ; then
