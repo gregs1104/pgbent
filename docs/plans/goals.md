@@ -86,6 +86,38 @@ These conceptual goals tie together the **Queries** section: the long-term payof
 
 ---
 
+## Results distribution (archive → DB → replication)
+
+How result data moves from benchmark nodes to the analysis center. The current
+`./upload` / `./download` cycle was the right bootstrap while each run’s
+artifacts included a large tree of **gnuplot-generated graphs**. The end state
+is database-only analysis with live replication—not tar shipping.
+
+- [ ] **Generate all graphs from the results database** — no per-run PNG/HTML
+  tree required for analysis or publishing. Python/Matplotlib (and successors)
+  read `tests` / `test_metrics_data` / views on an assembly DB.
+  - Existing: `metview.py`, `reports/*.py`, Streamlit explorer; gnuplot still in
+    `webreport` / `plots/` ([plotting.md](plotting.md))
+  - Gate: once graphing no longer depends on files inside `results/<server>/<test>/`,
+    full archives stop being the unit of transfer
+- [ ] **Stop moving full archives** — after the above, ship (or sync) **data** only:
+  tables that `upload` already dumps, not iostat logs and gnuplot output. Keep
+  `upload`/`download` only as long as older studies still need on-disk artifacts
+  for re-analysis
+- [ ] **Logical replication to the analysis center** — when every active node is on
+  a new enough PostgreSQL and historical archive-only eras are retired, stream
+  results from each node’s results DB to a central subscriber; draw graphs there.
+  Replaces periodic rsync of tar.gz as the steady-state path
+  - Existing: multi-node assembly via `$ARCHIVE` + `./download` today
+    (`pg-release-runs` / `pg-release-publish`); no replication topology yet
+  - Related doc backlog: [documentation.md](documentation.md) § Database-first
+    design (mentions replication)
+
+Do not treat archive retirement or logical replication as near-term work while
+gnuplot `webreport` output and older majors still matter for published studies.
+
+---
+
 ## Confidence UI
 
 Regression and comparison UI that quantifies run-to-run variation on the workload grid—not just average TPS/latency per cell.

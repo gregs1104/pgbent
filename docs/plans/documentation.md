@@ -36,7 +36,9 @@ Explain how pgbent's feature set and implementation reflect a **database-first**
 
 - [ ] **Design essay** — why separate test vs results databases; `$RESULTPSQL`; views over raw tables; auditable workloads vs opaque pipelines
   - Existing: `docs/index.md` § Design philosophy (brief); `docs/intro.md` § Metrics; [AGENTS.md](../../AGENTS.md) § Architecture
-  - Tie to: schema hierarchy, query cookbook, set comparisons, replication (this backlog)
+  - Tie to: schema hierarchy, query cookbook, set comparisons; long-term
+    archive → DB-only graphs → logical replication in [goals.md](goals.md)
+    § Results distribution
 
 ### Sample schema
 
