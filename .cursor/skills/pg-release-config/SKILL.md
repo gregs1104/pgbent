@@ -89,6 +89,15 @@ at or below installed RAM:
 mv osm-mem-128.conf osm-mem-128.off && mv osm-mem-64.off osm-mem-64.conf
 ```
 
+On 128GB hosts, `osm-mem-128` (`shared_buffers=48GB`) plus a large osm2pgsql
+node cache (scale / `OSMNODECACHE`, e.g. 75000 → ~60GB RSS) was a **PG17 local
+maximum**. Parallel index / GIN work in PG18 undid that peak; the pack spills
+into the default ~15GB swap, and the pain shows when the loader **drops the
+node cache** for the index phase. A planned PG19 study (see `pg-release-runs`)
+will compare shrinking the node cache versus dropping to a smaller `osm-mem-*`
+tier once all four servers share the durable baseline. Do not retune those
+numbers ad hoc before that study.
+
 Checkpoint-related values (`max_wal_size`, `checkpoint_timeout`) follow the
 tuning model in `docs/model/max_wal_size.md` and `docs/model/checkpoint_timeout.md`.
 Larger WAL (256GB, 60 min) is faster but may not fit on 2TB drives. 100GB / 30 min is the default.

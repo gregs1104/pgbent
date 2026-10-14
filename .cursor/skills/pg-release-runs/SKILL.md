@@ -82,7 +82,15 @@ One machine is configured by hand and is where the process gets written down. Fo
 Two other machines are active:
 
 - **abbey** is a Mac Studio on PostgreSQL 17 installed with Homebrew. Its PG17 tests on the 2026 planet are finished. Next is an update to PostgreSQL 18 and a retest.
-- **court** is an NVIDIA DGX Spark still on the PostgreSQL 16 launch configuration. Its 2026 planet tests are finished. An OS update is in progress. The hardware is unreliable and it is stuck again, not wanting to boot. The force-restart procedure that worked last time has not been written down here yet.
+- **court** is an NVIDIA DGX Spark (ARM64). As of 2026-10-14 it is on **DGX OS 7.6.0 / Ubuntu 24.04.5** with kernel **`7.0.0-1019-nvidia`**. That is the DGX OS 7 kernel update, not Ubuntu 26.04 (DGX OS 8 is a different line and is not supported on Spark yet). It is still on the PostgreSQL **16** launch configuration and was running an OSM load after the reboot. The hardware has been unreliable about booting; the force-restart procedure that worked last time has not been written down here yet.
+
+### Planned study: node cache vs shared_buffers (after identical PG19 baselines)
+
+Do **not** open this until all four servers (siren, twilight, abbey, court) are on PostgreSQL 19 with the same durable `conf/19` baseline and the same one-point OSM load (`osm2pgsql-1.11`, 5 clients, same `scale` / `OSMNODECACHE`).
+
+**Question.** The PG17 OSM config was a local maximum: high memory use that delivered peak throughput. Parallel GIN / index work in PG18 destabilized that peak (see the final PG18 retune commit). On 128GB hosts the node-cache phase packs `osm2pgsql` RSS (~60GB at scale 75000), `shared_buffers` (48GB in `osm-mem-128`), and shared memory into RAM and spills into the default ~15GB swap. When the loader enters the index phase it **drops the node cache**; Postgres pages that were pushed out are not pulled back automatically, then `maintenance_work_mem` × parallel maintenance workers allocates on top. Suspect the fix is to shrink **either** the osm2pgsql node cache (`scale` / `OSMNODECACHE` in `params`) **or** `shared_buffers` (`osm-mem-*`), not to keep chasing the PG17 packing.
+
+**How to run it.** Change one variable per set. Description prefix examples: `pg19 osm-mem-64`, `pg19 ncache=60000`, `pg19 ncache=48000`. Keep durability durable. Compare hours, `nodes_kips`, `index_kips`, and swap/iowait across the index transition (`watch util/progress`, `free -h`, `results.txt` leaving node processing). Promote a winner into `conf/19` only with a commit that cites the study.
 
 ### Recorded setup: siren, PostgreSQL 19 (2026-10-13)
 
