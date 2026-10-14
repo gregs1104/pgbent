@@ -77,6 +77,13 @@ Rules for running studies in parallel:
 `SERVERNAME` defaults to the hostname. It is part of every study key, so keep it stable for the whole cycle.
 It must not contain `-`, because `download` parses the server name from the archive filename.
 
+One machine is configured by hand and is where the process gets written down. For this cycle that machine is **siren**, and only Greg works on it. A second machine, usually an easier build, receives only what has been committed and pulled. For this cycle that machine is **twilight**. Do not invent steps on the second machine that are not yet in the repo.
+
+Two other machines are active:
+
+- **abbey** is a Mac Studio on PostgreSQL 17 installed with Homebrew. Its PG17 tests on the 2026 planet are finished. Next is an update to PostgreSQL 18 and a retest.
+- **court** is an NVIDIA DGX Spark still on the PostgreSQL 16 launch configuration. Its 2026 planet tests are finished. An OS update is in progress. The hardware is unreliable and it is stuck again, not wanting to boot. The force-restart procedure that worked last time has not been written down here yet.
+
 ### Recorded setup: siren, PostgreSQL 19 (2026-10-13)
 
 Taken from the `gsmith` and `postgres` shell histories. Failed typos are omitted. Older major versions stay installed; this setup does not remove PostgreSQL 18. On this host the benchmark drive is `/sk51` (same disk as the PG18 `main` cluster) and Debian assigned port **5437**.
@@ -188,12 +195,15 @@ Siren's first PG19 run (test 2974) finished in **4.17** hours. Since the planet 
 OSM loop control:
 
 ```bash
-util/progress     # disk use, DB/WAL size, tail of current results.txt and nohup.out
-touch complete    # (in STATEDIR) stop after the current run finishes
+watch util/progress   # live dashboard: disk use, DB/WAL size, tail of current results.txt and nohup.out
+touch complete        # (in STATEDIR) stop after the current run finishes
 ```
+
+`watch util/progress` follows `repeat-gis` through its transitions: newgis, recovery sleep, and the next `runset`. It always shows the latest set's newest test, so one dashboard can stay open for the whole loop. This was verified on siren. On macOS, `watch` comes from Homebrew (`brew install watch`).
 
 - A planet load takes roughly 3–5 hours on desktop hardware. `RECOVERY=3600` gives an hour of cooldown between runs.
 - `util/newgis` recreates `gis` with extensions and runs `pgbent_tune`. If it fails, `repeat-gis` stops and removes the pid files. A failed `dropdb` means connections are still open, so investigate that before starting again. Don't force it.
+- After each `runset`, `repeat-gis` reads the latest test's `tps`. A blank or zero TPS means the run failed, often because the disk filled, and the loop stops instead of starting another load.
 - Configured `max_wal_size` is 100GB. That plus the planet database barely fits a 2TB drive, so a 2TB host has to move the previous major's cluster off that disk first. 256GB `max_wal_size` will not fit on 2TB. A 4TB host does not need that disk shuffle.
 - A crashed run can leave orphaned OS stats collectors (`timed-os-stats`, iostat, vmstat). Check `ps` before restarting.
 
