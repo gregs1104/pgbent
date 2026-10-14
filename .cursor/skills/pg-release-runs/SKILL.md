@@ -187,7 +187,9 @@ Finished OSM loads are read in context from the results database. `reports/osm-s
 psql -p 5433 -d results -f reports/osm-speed.sql
 ```
 
-Siren's first PG19 run (test 2974) finished in **4.17** hours; tests 2975 and 3009 followed at 4.13 and 4.03. Those three are **fast-sync** (`fsync=off`, `wal_level=minimal`) because `conf/19` was copied from PG18 with `osm-sync-fast` still active. PG18 set 70 (`New planet 2026-08-13`, 4.45–4.73 hours on the same 850GB planet) was switched to **durable** by hand to get a production-config reference. Do not treat 4.03–4.17 vs 4.45–4.73 as a version comparison. Let a few more fast-sync PG19 loads finish so that data is collected, then Greg switches `conf/19` to durable and re-runs on siren (see `pg-release-config`).
+Siren's first PG19 runs (tests 2974, 2975, 3009) finished in **4.17 / 4.13 / 4.03** hours under **fast-sync** (`fsync=off`, `wal_level=minimal`). PG18 set 70 (`New planet 2026-08-13`, 4.45–4.73 hours on the same 850GB planet) is the **durable** reference. Do not treat those gaps as a version comparison.
+
+Aim for **at least three finished runs** on a given config before judging the result range. Siren and twilight were collecting that third (and following) fast-sync pass with `complete` armed so the loop exits after the current load. `conf/19` in git is already durable (`d33ba0a`); after those loads finish, pull, **copy** into `/etc/postgresql/19/main/conf.d` (do not symlink — systemd permissions reject that), confirm `SHOW fsync` / `SHOW wal_level`, and open a new `newset` for the durable baseline (see `pg-release-config`).
 
 `pgbent_tune` was already installed on siren. Still unchecked from the prep list above: the `server` table row, `osm2pgsql --version`, and the planet / flat-nodes paths.
 

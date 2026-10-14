@@ -36,13 +36,16 @@ Switch a variant by renaming files, never by editing them in place.
 - [ ] Deploy to a test server and confirm `SHOW` values match
 ```
 
-Deploy, Debian/Ubuntu:
+Deploy, Debian/Ubuntu — **copy**, do not symlink:
 
 ```bash
-cd /etc/postgresql/<N>/main/conf.d && cp ~postgres/pgbent/conf/<N>/conf.d/* .
-# or, dedicated benchmark host:
-cd /etc/postgresql/<N>/main && rmdir conf.d && ln -s ~postgres/pgbent/conf/<N>/conf.d
+cd /etc/postgresql/<N>/main/conf.d && sudo cp ~postgres/pgbent/conf/<N>/conf.d/* .
 ```
+
+A symlink from `/etc/postgresql/<N>/main/conf.d` into the pgbent checkout
+failed on systemd's permission setup; leave that approach alone and copy after
+each `git pull` of config changes. Reload or restart the cluster so the new
+files are read.
 
 After deploying, verify no file was silently skipped:
 
@@ -110,12 +113,15 @@ Fast-sync (`osm-sync-fast.conf`: all of those off, `wal_level=minimal`) is a
 study variant, not the cycle default. The speed gain is too small to justify
 publishing a non-production config.
 
-`conf/19` was copied from PG18 with fast-sync still active. Leave those files
-as they are until the current fast-sync PG19 runs on siren finish; Greg will
-rename them to durable and re-run. Do not flip the files in the repo ahead of
-that. After the switch, confirm with `SHOW fsync; SHOW wal_level;` (`on` /
-`replica`) and open a new `newset` so the durable runs are a separate batch.
+`conf/19` in git is durable as of `d33ba0a` (`osm-sync-durable.conf` active,
+`osm-sync-fast.off`). Siren and twilight were still finishing their last
+fast-sync loads when that landed; after those hit `complete` (aim for **at
+least three runs** on a config before judging it), pull on each host and
+**copy** into `/etc/postgresql/19/main/conf.d`, then confirm
+`SHOW fsync; SHOW wal_level;` → `on` / `replica` and open a **new** `newset`
+so durable runs are a separate batch.
 
-PG18 set 70 on siren (`New planet 2026-08-13`) was already switched to durable
-by hand, so it is the matching 2026-planet reference. Do not compare PG19
-fast-sync (set 71) against that set as a version result.
+`osm-sync-durable.conf` only sets `wal_level=replica`; durability comes from
+Postgres defaults once fast-sync is off. PG18 set 70 on siren
+(`New planet 2026-08-13`) is the matching 2026-planet durable reference. Do
+not compare PG19 fast-sync (set 71) against that set as a version result.
