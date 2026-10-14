@@ -1,0 +1,89 @@
+#!/bin/bash
+# Profile the osm2pgsql relation phase.
+#
+# Started in the background by util/osm-importer when OSMRELPROF=1.
+# Polls pg_stat_activity for the slim middle COPY into planet_osm_rels,
+# runs `perf record` while that query is present, then writes a text
+# report and exits.  A few seconds of edge jitter is acceptable; the
+# relation phase runs long enough that it does not matter.
+#
+# Requires perf and permission to sample (root, CAP_PERFMON, or a
+# lowered kernel.perf_event_paranoid).  Artifacts land in the current
+# directory (the test results dir when launched from osm-importer):
+#   osm-rel-perf.data
+#   osm-rel-perf-report.txt
+
+. ../../../config
+. ../../../params
+
+TESTPSQL="psql -X -h $TESTHOST -U $TESTUSER -p $TESTPORT -d $TESTDB -Atq"
+# Default poll interval; never sleep with an empty or zero value.
+if [ -z "$OSMRELPROF_POLL" ] || [ "$OSMRELPROF_POLL" = "0" ]; then
+  POLL_SEC=10
+else
+  POLL_SEC="$OSMRELPROF_POLL"
+fi
+PERF_DATA="osm-rel-perf.data"
+PERF_REPORT="osm-rel-perf-report.txt"
+PERF_PID=""
+
+cleanup() {
+  if [ -n "$PERF_PID" ] && kill -0 "$PERF_PID" 2>/dev/null; then
+    kill -INT "$PERF_PID" 2>/dev/null || kill "$PERF_PID" 2>/dev/null || true
+    wait "$PERF_PID" 2>/dev/null || true
+    PERF_PID=""
+  fi
+}
+trap cleanup EXIT TERM INT
+
+rels_copy_active() {
+  $TESTPSQL -c "
+SELECT 1
+FROM pg_stat_activity
+WHERE application_name LIKE 'osm2pgsql%'
+  AND query ILIKE '%COPY%planet_osm_rels%'
+LIMIT 1"
+}
+
+echo "osm-rel-prof: waiting for planet_osm_rels COPY"
+while true; do
+  if [ "$(rels_copy_active)" = "1" ]; then
+    break
+  fi
+  sleep "$POLL_SEC"
+done
+
+echo "osm-rel-prof: relation phase detected, starting perf"
+rm -f "$PERF_DATA" "$PERF_REPORT"
+perf record -a -g -o "$PERF_DATA" &
+PERF_PID=$!
+
+while true; do
+  if [ "$(rels_copy_active)" != "1" ]; then
+    break
+  fi
+  # Bail if perf died unexpectedly
+  if ! kill -0 "$PERF_PID" 2>/dev/null; then
+    echo "osm-rel-prof: perf exited early" >&2
+    PERF_PID=""
+    exit 1
+  fi
+  sleep "$POLL_SEC"
+done
+
+echo "osm-rel-prof: planet_osm_rels COPY gone, stopping perf"
+kill -INT "$PERF_PID" 2>/dev/null || kill "$PERF_PID" 2>/dev/null || true
+wait "$PERF_PID" 2>/dev/null || true
+PERF_PID=""
+
+if [ -s "$PERF_DATA" ]; then
+  echo "osm-rel-prof: writing $PERF_REPORT"
+  if ! perf report -i "$PERF_DATA" --stdio > "$PERF_REPORT" 2>&1; then
+    echo "osm-rel-prof: perf report failed" >&2
+  fi
+else
+  echo "osm-rel-prof: no perf data collected" >&2
+  exit 1
+fi
+
+echo "osm-rel-prof: done"

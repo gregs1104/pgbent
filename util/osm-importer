@@ -39,7 +39,16 @@ if [ -z "${SETCLIENTS}" ] ; then
   SETCLIENTS=2
 fi
 
-rm -f $NODES_FILE 
+rm -f $NODES_FILE
+
+# Optional relation-phase profiler (see util/osm-rel-prof). Off by default.
+RELPROF_PID=""
+if [ "${OSMRELPROF:-0}" = "1" ]; then
+  ../../../util/osm-rel-prof > osm-rel-prof.log 2>&1 &
+  RELPROF_PID=$!
+  echo "Started osm-rel-prof pid ${RELPROF_PID}"
+fi
+
 # When changing this, beware the usual style of commenting out any one line.
 # That doesn't work on this form of multi-line command.
 time osm2pgsql --create --slim -v \
@@ -48,4 +57,10 @@ time osm2pgsql --create --slim -v \
     --flat-nodes $NODES_FILE \
     --hstore --hstore-add-index \
     $PLANET_FILE
+
+# If the load ends before the profiler self-exits, tear it down.
+if [ -n "$RELPROF_PID" ]; then
+  kill "$RELPROF_PID" 2>/dev/null || true
+fi
+
 rm -f $NODES_FILE
