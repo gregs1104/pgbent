@@ -86,6 +86,41 @@ Do **not** open a new set just to flip `osm-sync-*`, `osm-mem-*`,
 `maintenance_work_mem`, or other GUCs on the baseline. Change the files, reload,
 keep running under the same `testset.info`.
 
+### Backfill into an earlier set (temporary set, then reassign)
+
+When adding runs that belong with an **older** published/comparison set (e.g.
+siren PG18 minimum-durability bridge into the set-70-era durable envelope) while
+you are already mid-stream on a later set:
+
+1. **`./newset '… temporary backfill …'`** — park the current work; new runs land
+   in this scratch batch.
+2. **Run and confirm** the backfill cells look accurate (hours, rates, GUCs in
+   `test_settings`, WAL volume, etc.).
+3. **Move the tests** into the target earlier set (no FK from `tests.set` →
+   `testset`; still do it carefully on that server only):
+
+```sql
+-- example: temp set 72 → historical set 70 on siren
+BEGIN;
+UPDATE tests SET set = 70 WHERE server = 'siren' AND set = 72;
+DELETE FROM testset WHERE server = 'siren' AND set = 72;
+COMMIT;
+```
+
+4. **`./newset '…'` again** for the batch you were already using (or the next
+   study), and keep adding there. The temporary `testset` row is gone; the
+   reassigned `tests` rows now report with the earlier set’s `info` / batch.
+
+Do **not** leave the temporary set around once the move is confirmed — assembly
+and study SQL key off `batch` / `batch_id`, and a leftover empty or half-moved
+set confuses both. Confirm row counts before/after the `UPDATE`. This is a
+**Greg-operated** results-DB edit on the source machine (then `./upload`); agents
+do not invent set-number surgery unless asked.
+
+**PG18 minimum-durability backfill on siren (2026-10-15):** Greg is running that
+bridge via this temporary-set → reassign path while PG19 work continues
+elsewhere.
+
 Rules for running studies in parallel:
 
 - **One active set per machine.** Runs go to whichever set was flagged last.
@@ -167,6 +202,15 @@ and short backfills, not on “mess around” corners. Siren remains useful for
 process notes and tight comparisons once a winner is known; it is a poor place
 to discover that a corner needs 1.5TB of WAL.
 
+**Lab CPU / thermal stability (roles flipped).** Treat hard power-off under OSM
+load as a **hardware** failure class, not a Postgres bug. Greg does not run the
+lab at full capacity over the summer for this reason.
+
+| Host | CPU | Notes |
+|------|-----|--------|
+| **siren** | **9950X** (was **9700X**) | As of 2026-10-15, powered off under load again. Long-stable on the 9700X; 9950X is the suspect under sustained heat. After initial PG19 results, may **roll the 9700X back into siren** and put the 9950X in a chassis with better cooling. Until then: do not lean on siren for unattended multi-day sweeps; crashed mid-load OSM runs are not repairable (delete incomplete tests — see above). |
+| **twilight** | **13600K** (was **14900K**) | Roles used to be reversed: the **14900K** made twilight the unstable box. Back on a cool-running **13600K** it is trouble-free again — preferred host for long PG19 matrices. |
+
 Other machines:
 
 - **abbey** — Mac Studio on Homebrew. PG17 on the 2026 planet finished (sets 8–10);
@@ -220,9 +264,11 @@ disk headroom, not on siren’s 2TB squeeze.
 Greg collects the missing bridge cell(s) on **siren** himself — typically
 **PG18 fast/minimal on 100GB·30min** next to existing durable PG18 on that
 envelope (set 70 era) — so the report can show the best possible from that
-old version for the PG19 story. Agent work stays on the PG19 twilight matrix;
-do not farm the PG18 regression backfill there. Stop once the version
-comparison is tellable.
+old version for the PG19 story. Use the **temporary set → confirm → UPDATE
+`tests.set` → delete temp `testset`** workflow above so the bridge rows land in
+the earlier comparison set without blocking whatever set he was already using.
+Agent work stays on the PG19 twilight matrix; do not farm the PG18 regression
+backfill there. Stop once the version comparison is tellable.
 
 ### Study 2: checksum overhead
 
@@ -371,7 +417,7 @@ cluster.
 
 ### Recorded setup: siren, PostgreSQL 19 (2026-10-13)
 
-Taken from the `gsmith` and `postgres` shell histories. Failed typos are omitted. Older major versions stay installed; this setup does not remove PostgreSQL 18. On this host the benchmark drive is `/sk51` (same disk as the PG18 `main` cluster) and Debian assigned port **5437**.
+Taken from the `gsmith` and `postgres` shell histories. Failed typos are omitted. Older major versions stay installed; this setup does not remove PostgreSQL 18. On this host the benchmark drive is `/sk51` (same disk as the PG18 `main` cluster) and Debian assigned port **5437**. See **Siren hardware** above for 9950X power-off-under-load / possible 9700X rollback after initial PG19 results.
 
 As `gsmith`. The PGDG source line ends in the major version to install:
 
