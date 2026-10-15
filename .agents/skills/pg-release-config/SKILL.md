@@ -67,6 +67,24 @@ other study-critical GUCs) rather than `sourcefile LIKE '%conf.d%'`.
 When the Homebrew cluster major changes, migrate the results database with the
 upload-then-reload workflow in `pg-release-runs` before opening a new study set.
 
+**Brew PG restarts are a struggle.** `brew services restart postgresql@<N>` often
+claims success while the **old postmaster keeps running** (idle `gis` backends,
+metrics collectors, etc. hold it open). After folding durability or memory
+changes into `postgresql.conf`:
+
+1. `SHOW` the GUCs — if `sourcefile`/`sourceline` still point at the old values,
+   the restart did not take.
+2. Terminate backends, then stop for real: `pg_ctl -D … stop -m fast` (and/or
+   `brew services stop`), confirm no `postgres` left on that data directory.
+3. When flipping fast→durable, drop leftover `max_wal_senders = 0` from the
+   folded `osm-sync-fast` block; `wal_level=replica` needs the default senders.
+4. Start with a valid locale (`LC_ALL=en_US.UTF-8`) or via `brew services start`
+   — bare `pg_ctl start` can die with `postmaster became multithreaded during
+   startup` / “Set the LC_ALL environment variable”.
+5. `SHOW fsync; SHOW wal_level;` again before starting the next OSM load.
+
+Abbey PG18 fast→durable (2026-10-15) hit all of the above.
+
 ### Homebrew Python (`dateutil` / `pgsysinfo`)
 
 pgbent needs the Python `dateutil` module (`import dateutil`); `./pgsysinfo` is the
