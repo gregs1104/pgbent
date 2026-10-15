@@ -147,7 +147,7 @@ One machine is configured by hand and is where the process gets written down. Fo
 Two other machines are active:
 
 - **abbey** is a Mac Studio on Homebrew. PG17 tests on the 2026 planet are finished (sets 8–10). It is moving to PostgreSQL 18; Homebrew has no `conf.d`, so settings from `conf/18/conf.d` are folded into the single `postgresql.conf` (see `pg-release-config`). Migrate the results DB with the upload-then-reload workflow below before opening a PG18 set. After brew Python updates, reinstall `dateutil` and confirm with `./pgsysinfo` (same skill, Homebrew Python note).
-- **court** is an NVIDIA DGX Spark (ARM64). As of 2026-10-14 it is on **DGX OS 7.6.0 / Ubuntu 24.04.5** with kernel **`7.0.0-1019-nvidia`**. That is the DGX OS 7 kernel update, not Ubuntu 26.04 (DGX OS 8 is a different line and is not supported on Spark yet). It is still on the PostgreSQL **16** launch configuration. Spbm power import works (test 13); set `DISKLIST="nvme0n1"` (not the default `sda`) or `iostat.csv` is empty — fix then `./metrics2csv recurse`. The hardware has been unreliable about booting; the force-restart procedure that worked last time has not been written down here yet.
+- **court** is an NVIDIA DGX Spark (ARM64). As of 2026-10-14 it is on **DGX OS 7.6.0 / Ubuntu 24.04.5** with kernel **`7.0.0-1019-nvidia`**. That is the DGX OS 7 kernel update, not Ubuntu 26.04 (DGX OS 8 is a different line and is not supported on Spark yet). Spbm power import works (test 13+); set `DISKLIST="nvme0n1"` (not the default `sda`) or `iostat.csv` is empty — fix then `./metrics2csv recurse`. **PG18 via PGDG arm64 is in progress** — see recorded setup below. Still on Ubuntu **postgresql-16** for active OSM loads until that cutover. The hardware has been unreliable about booting; the force-restart procedure that worked last time has not been written down here yet.
 
 ### Planned study: node cache vs shared_buffers (after identical PG19 baselines)
 
@@ -163,6 +163,82 @@ the rows via `test_settings`. Compare hours, `nodes_kips`, `index_kips`, and
 swap/iowait across the index transition (`watch util/progress`, `free -h`,
 `results.txt` leaving node processing). Promote a winner into `conf/19` only
 with a commit that cites the study.
+
+### Recorded setup: court, PostgreSQL 18 via PGDG (arm64, 2026-10-15)
+
+Court was on Ubuntu’s `postgresql-16` (not PGDG). Goal: install PG18 from
+[apt.postgresql.org](https://wiki.postgresql.org/wiki/Apt) the way twilight does
+on amd64, then cut pgbent over. **PGDG publishes `noble`/`arm64` packages** —
+`postgresql-18` 18.6 and `postgresql-18-postgis-3` 3.6.x are in the index.
+
+**Do not `apt install` while an OSM load is on PG16.** The install upgrades
+`postgresql-common` (257 Ubuntu → 293 PGDG) and refreshes `postgresql-16-postgis-3*`,
+which is unsafe under osm2pgsql. Add the repo anytime; install only when the
+cluster is idle (after `repeat-gis` finishes / `complete`).
+
+#### Already done (2026-10-15, mid set-3 load)
+
+As `gsmith` on court:
+
+```bash
+sudo install -d /usr/share/postgresql-common/pgdg
+sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail \
+  https://www.postgresql.org/media/keys/ACCC4CF8.asc
+# /etc/apt/sources.list.d/pgdg.list (twilight-style major pin):
+#   deb [arch=arm64 signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] \
+#     http://apt.postgresql.org/pub/repos/apt noble-pgdg main 18
+sudo apt-get update
+# Simulated only:
+#   sudo apt-get install -s postgresql-18 postgresql-18-postgis-3 \
+#     postgresql-18-postgis-3-scripts
+```
+
+Repo is live; packages resolve. Install was deferred until the running test ends.
+
+#### When told to fire up the new cluster
+
+1. Confirm idle: no `osm2pgsql` / `benchwarmer` / `repeat-gis`; `pg_lsclusters` shows only the quiet 16 cluster (or stop loads first).
+2. Install (creates `18/main`, typically next free port — confirm with `pg_lsclusters`):
+
+```bash
+sudo apt-get install -y postgresql-18 postgresql-18-postgis-3 \
+  postgresql-18-postgis-3-scripts
+pg_lsclusters
+```
+
+3. As `postgres`, pull pgbent so `conf/18` is present, then as `gsmith` deploy config
+   (copy, do not symlink — same as other Linux hosts):
+
+```bash
+# postgres
+cd ~/pgbent && git stash && git pull && git stash apply
+
+# gsmith
+cd /etc/postgresql/18/main/conf.d
+sudo cp ~postgres/pgbent/conf/18/conf.d/* .
+# Prefer durable for published comparisons once PG18 baseline is settled;
+# early cycle may use osm-sync-fast like other hosts — match the study.
+cd /etc/postgresql/18/main
+sudo vi pg_hba.conf   # trust block from ~postgres/pgbent/conf/pg-hba.trusted
+sudo systemctl start postgresql@18-main   # or pg_ctlcluster 18 main start
+```
+
+4. Point pgbent at the new port (`TESTPORT` / `RESULTPORT` in `config`), then:
+
+```bash
+# postgres, ~/pgbent
+util/newgis
+# SHOW shared_buffers / fsync / wal_level; confirm PostGIS
+./newset 'PG18'   # or the study description in use
+# optional: migrate results DB if results move with the major
+# (upload-then-reload — see Migrating the results database…)
+```
+
+5. Leave PG16 installed (twilight pattern) until PG18 OSM numbers look good; stop
+   `16/main` when nothing needs it so memory is free for the load.
+
+Reference: twilight’s `/etc/apt/sources.list.d/pgdg.list` pins `noble-pgdg main 19`
+(with 17/18 lines commented). Court uses the same file shape with `main 18`.
 
 ### Recorded setup: siren, PostgreSQL 19 (2026-10-13)
 
