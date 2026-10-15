@@ -148,7 +148,7 @@ Rules for running studies in parallel:
       util/pgbent_powermon (power sampling; set SUDODATA=1 in config)
       util/pgbent_perf (perf record/report for OSMRELPROF=1 relation profiling)
 - [ ] Update the `server` table row (cpu/mem/disk/OS) if hardware changed — submission reports the human-readable disk from it
-- [ ] Confirm osm2pgsql version: `osm2pgsql --version`; set SCRIPT in wl/osm-import to match (it still says osm2pgsql-1.6)
+- [ ] Confirm osm2pgsql version: `osm2pgsql --version`; set SCRIPT to match — but see **OSM stack freeze** below before upgrading packages
 - [ ] Planet + flat nodes paths: PLANET_FILE / NODES_FILE (defaults ~/osm/planet-latest.osm.pbf, nodes.db)
 ```
 
@@ -192,6 +192,21 @@ was recovered this way (404 kNodes/s); test **66** was still mid-load.
 not babysit the loads himself. Commit conf / skill / report changes in the repo
 first; the agent then pulls and executes on the target machine. Do not invent
 host-only steps that are not yet in the repo.
+
+### OSM stack freeze (hold regression points)
+
+Do **not** casually upgrade osm2pgsql / PostGIS / related loader packages mid
+cycle just because a newer build is available. Greg intentionally runs an older
+pinned OSM stack so throughput stays comparable across majors and hosts; the
+loader is part of the regression baseline, not “always latest.”
+
+Cadence: refresh the whole stack about **every two years**, aligned with the
+major **Debian/Ubuntu** schedule — and **this is that year** (2026 / PG19).
+Until a few clean PG19 collections are in on the current pins, leave
+`osm2pgsql` where it is (Linux fleet currently **1.11**; abbey may differ on
+Homebrew — do not “fix” the others up to match without an explicit cutover).
+After that data is in, upgrade to the new stack as its own deliberate step
+(newset / note in study text), not as drive-by `apt upgrade` during a matrix.
 
 **Where to explore.** Use **twilight** for PG19 study matrices (durability 2×2,
 checksums on/off, `shared_buffers` / node-cache sweeps, `maintenance_work_mem`).
