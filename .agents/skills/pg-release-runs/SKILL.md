@@ -680,10 +680,19 @@ found an 18.0 `maintenance_work_mem` crash. When something breaks:
 
 **Bug vs environment.** Separating a real Postgres/osm2pgsql defect from a lab
 glitch is hard and expensive. Prefer a second host and a stock-stable config
-before treating a crash as upstream news. Greg once publicly spent a **month**
-chasing a “crash bug” that was a motherboard overclock of a few percent —
-stable through weeks of light testing, lethal under the real load. Same class
-as siren’s 9950X power-off-under-load and twilight’s past 14900K instability:
-hardware/thermal/overclock ghosts look like software until they do not.
-Document suspected environment factors next to the finding; do not open a
-community bug on a single flaky box without that check.
+before treating a crash as upstream news. Hardware ghosts look like software
+until they do not — same class as siren’s 9950X power-off-under-load and
+twilight’s past 14900K instability. Document suspected environment factors
+next to the finding; do not open a community bug (or publish a “Postgres
+regression”) on a single flaky box without that check.
+
+Examples that burned real calendar time / reputation:
+
+- **Overclock** — publicly spent a **month** chasing a “crash bug” that was a
+  motherboard overclock of a few percent; survived weeks of light testing,
+  lethal under the real load.
+- **Early Intel SSD** — device bug set **maximum queue depth to 0**; published
+  numbers based on that setup later needed an **official retraction apology**.
+
+Storage firmware, queue depth, thermal limits, and “it passed a few weeks of
+basic soak” are not proof the platform is innocent.
