@@ -677,3 +677,13 @@ found an 18.0 `maintenance_work_mem` crash. When something breaks:
 2. Record the server, test number, version, and the study variable's value from `test_settings`.
 3. A finding may itself open a new study. Flag it with its own `newset`.
 4. Work around it in `conf/<N>` with the issue cited in the commit message (`pg-release-config`).
+
+**Bug vs environment.** Separating a real Postgres/osm2pgsql defect from a lab
+glitch is hard and expensive. Prefer a second host and a stock-stable config
+before treating a crash as upstream news. Greg once publicly spent a **month**
+chasing a “crash bug” that was a motherboard overclock of a few percent —
+stable through weeks of light testing, lethal under the real load. Same class
+as siren’s 9950X power-off-under-load and twilight’s past 14900K instability:
+hardware/thermal/overclock ghosts look like software until they do not.
+Document suspected environment factors next to the finding; do not open a
+community bug on a single flaky box without that check.

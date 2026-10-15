@@ -89,4 +89,5 @@ Prioritize **Python/Matplotlib** for new graphing work unless the task is explic
 ## Known issues
 
 - Solaris: `benchwarmer` may need `/usr/xpg4/bin/tail` instead of `tail`.
-- Crashed benchmarks can leave zombie OS stats processes (see [plotting.md](docs/plans/plotting.md) backlog).
+- Crashed benchmarks can leave zombie OS stats processes (see [plotting.md](docs/plans/plotting.md) backlog); clear via `pg-release-runs` (zombie `timed-os-stats` / `newgis`).
+- Lab hardware can impersonate software bugs (overclock, thermal power-off, flaky CPUs). Reproduce on a second machine before declaring an upstream regression — see `pg-release-runs` § Recording findings.
