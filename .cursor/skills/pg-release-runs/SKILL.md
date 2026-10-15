@@ -248,6 +248,27 @@ Other machines:
   progress** — see recorded setup below. Still on Ubuntu **postgresql-16** until
   cutover. Unreliable about booting; force-restart procedure not written down yet.
 
+## Near-term deadline (lab downtime)
+
+**By Monday (solar power upgrade — lab goes down):**
+
+1. **Basic PG19 verification** finished — enough clean durable (and planned
+   alternate) OSM loads to trust the major, not the full GUC matrix yet.
+2. **PG18 CPU vs power study at publication quality** — refresh/complete
+   `osm-power` (and relation-power as needed) with current fleet points
+   (including court Spark / abbey M-series / twilight·siren AMD·Intel as data
+   allows); graphs + getbent.io page worthy of citing. Prefer data already
+   collecting on the four boxes; agent has SSH to **abbey, court, twilight**
+   (not siren — Greg / hardware).
+
+Do **not** start the big twilight GUC exploration (durability 2×2 corners,
+checksums, buffers, …) until Fury TRIM is understood and this Monday bar is
+met. After the outage, resume the PG19 study sequence below.
+
+Fleet snapshot 2026-10-15 ~16:50 EDT: abbey test 67 durable; court test 16
+fast + `repeat-gis`; twilight test 2600 durable (restart after 2599); siren on
+PG18 minimum-durability backfill (Greg).
+
 ## PG19 study sequence
 
 Ordered topics for this cycle. Finish (or park with enough data to publish)
