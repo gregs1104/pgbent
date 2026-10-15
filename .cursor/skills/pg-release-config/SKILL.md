@@ -164,4 +164,5 @@ not compare PG19 fast-sync rows against that set as a version result.
 **First PG19 study** is durability / WAL volume vs throughput on the 100GB·30min
 envelope: full 2×2 on PG19 only; PG18 gets a backfill cell or two for the
 story, not a second matrix. See `pg-release-runs` study sequence (then
-`shared_buffers` / node cache, then `maintenance_work_mem`).
+**checksum overhead** deferred from PG18, then `shared_buffers` / node cache,
+then `maintenance_work_mem`).

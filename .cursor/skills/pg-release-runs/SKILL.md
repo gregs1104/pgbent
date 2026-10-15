@@ -159,13 +159,13 @@ first; the agent then pulls and executes on the target machine. Do not invent
 host-only steps that are not yet in the repo.
 
 **Where to explore.** Use **twilight** for PG19 study matrices (durability 2×2,
-`shared_buffers` / node-cache sweeps, `maintenance_work_mem`). It is not the
-fastest box, but it has more RAM and disk than the alternatives, so it tolerates
-WAL volume, swap pressure, and leftover clusters. **siren** and **abbey** run out
-of memory or disk regularly — keep them on known-safe configs and short
-backfills, not on “mess around” corners. Siren remains useful for process notes
-and tight comparisons once a winner is known; it is a poor place to discover
-that a corner needs 1.5TB of WAL.
+checksums on/off, `shared_buffers` / node-cache sweeps, `maintenance_work_mem`).
+It is not the fastest box, but it has more RAM and disk than the alternatives,
+so it tolerates WAL volume, swap pressure, and leftover clusters. **siren** and
+**abbey** run out of memory or disk regularly — keep them on known-safe configs
+and short backfills, not on “mess around” corners. Siren remains useful for
+process notes and tight comparisons once a winner is known; it is a poor place
+to discover that a corner needs 1.5TB of WAL.
 
 Other machines:
 
@@ -186,8 +186,9 @@ Ordered topics for this cycle. Finish (or park with enough data to publish)
 before opening the next; do not fan out a second matrix on PG18.
 
 1. **Durability and WAL volume vs throughput** (open now — first PG19 study)
-2. **Node cache vs `shared_buffers`** (after durable baselines match across hosts)
-3. **`maintenance_work_mem` sweep** (after memory packing is settled)
+2. **Checksum overhead** (`data_checksums` on vs off) — deferred from PG18
+3. **Node cache vs `shared_buffers`** (after durable baselines match across hosts)
+4. **`maintenance_work_mem` sweep** (after memory packing is settled)
 
 **Execution.** Once a study’s matrix is written down here (and any conf fragments
 are in git), Greg points the agent at **twilight** to run it. Repeat / validate
@@ -223,7 +224,24 @@ old version for the PG19 story. Agent work stays on the PG19 twilight matrix;
 do not farm the PG18 regression backfill there. Stop once the version
 comparison is tellable.
 
-### Study 2: node cache vs shared_buffers
+### Study 2: checksum overhead
+
+**Deferred from PG18** — planned then, pushed forward to deal with GIS bugs.
+PG18 defaulted `data_checksums` on for new clusters; the question never got a
+clean OSM grid.
+
+**Question.** What is the throughput / CPU / WAL cost of page checksums on the
+same durable medium-checkpoint baseline used after study 1? Rows already carry
+`data_checksums` via `test_settings` (`write_internals` / submission `csum`).
+
+**How to run it.** Checksums are **cluster-level** (initdb / `pg_checksums`), not
+a GUC flip on a live data directory. Prefer a second cluster on twilight (siren
+already had an `18-nocheck` pattern) with checksums off, same `conf/19` otherwise,
+same planet load, 3–5 repeats. Compare against checksums-on baselines from study
+1 — do not retune durability or memory in this matrix. Publish via study SQL
+keyed on `csum` / `data_checksums`.
+
+### Study 3: node cache vs shared_buffers
 
 Do **not** open this until study 1 has a durable baseline worth keeping and the
 participating servers share that durable `conf/19` plus the same one-point OSM
@@ -242,13 +260,13 @@ transition. Replicate only interesting corners on other hosts; avoid packing
 experiments on siren/abbey until twilight shows they fit. Promote a winner into
 `conf/19` only with a commit that cites the study.
 
-### Study 3: maintenance_work_mem
+### Study 4: maintenance_work_mem
 
-Open only after study 2 has picked a memory packing (or confirmed the current
+Open only after study 3 has picked a memory packing (or confirmed the current
 one). Sweep additional `maintenance_work_mem` values on **twilight** under that
 fixed durable + buffer/cache baseline — one GUC at a time, same set — watching
 index-phase throughput and whether larger values revive the PG18-era
-parallel-maintenance pain. Do not mix this sweep with durability or
+parallel-maintenance pain. Do not mix this sweep with durability, checksums, or
 `shared_buffers` changes.
 
 ### Recorded setup: court, PostgreSQL 18 via PGDG (arm64, 2026-10-15)
