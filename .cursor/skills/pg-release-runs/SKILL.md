@@ -555,7 +555,21 @@ touch complete        # (in STATEDIR) stop after the current run finishes
 `watch util/progress` follows `repeat-gis` through its transitions: newgis, recovery sleep, and the next `runset`. It always shows the latest set's newest test, so one dashboard can stay open for the whole loop. This was verified on siren. On macOS, `watch` comes from Homebrew (`brew install watch`).
 
 - A planet load takes roughly 3–5 hours on desktop hardware. `RECOVERY=3600` gives an hour of cooldown between runs.
-- `util/newgis` recreates `gis` with extensions and runs `pgbent_tune`. If it fails, `repeat-gis` stops and removes the pid files. A failed `dropdb` means connections are still open, so investigate that before starting again. Don't force it.
+- `util/newgis` recreates `gis` with extensions and runs `pgbent_tune`. If it fails, `repeat-gis` stops and removes the pid files. A failed `dropdb` means connections are still open — usually **zombie `timed-os-stats` collectors** left from a crashed OSM/`benchwarmer` (they keep a `psql` session on `gis` via `util/metric-query.sql`). Clear them, then retry:
+
+```bash
+# as postgres, from ~/pgbent — kill by PID (do not pkill -f a pattern that
+# appears in your own script line or you suicide the SSH session)
+pgrep -u postgres -af './timed-os-stats'    # vmstat/iostat/meminfo/power/psql
+for pid in $(pgrep -u postgres -f './timed-os-stats'); do kill $pid; done
+# terminate any remaining gis backends
+psql -p "$TESTPORT" -d postgres -c \
+  "SELECT pg_terminate_backend(pid) FROM pg_stat_activity
+   WHERE datname='gis' AND pid <> pg_backend_pid();"
+util/newgis
+```
+
+Confirm `pgrep` shows no collectors and `pg_stat_activity` has no `gis` rows before `dropdb`. `pgbent_tune` at the end of `newgis` may sit in `fstrim -av` for a long time on multi-TB hosts — that is normal; `gis` is already usable once extensions are created. Twilight 2026-10-15 after test 2599: idle metric `psql` from 08:00 blocked `newgis` until collectors were killed.
 - After each `runset`, `repeat-gis` reads the latest test's `tps`. A blank or zero TPS means the run failed, often because the disk filled, and the loop stops instead of starting another load.
 - Configured `max_wal_size` is 100GB. That plus the planet database barely fits a 2TB drive, so a 2TB host has to move the previous major's cluster off that disk first. 256GB `max_wal_size` will not fit on 2TB. A 4TB host does not need that disk shuffle.
 - A crashed run can leave orphaned OS stats collectors (`timed-os-stats`, iostat, vmstat). Check `ps` before restarting.
