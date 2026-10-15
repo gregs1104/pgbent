@@ -8,18 +8,22 @@ nav_order: 5
 
 # Published results snapshots
 
-Freeze what the [Streamlit results explorer](https://pgbent.streamlit.app/) shows into static Markdown tables on getbent.io—one subdirectory per PostgreSQL major version (starting with **pg18/**).
+Freeze published study tables into static Markdown on getbent.io—one
+subdirectory per PostgreSQL major version (starting with **pg18/**).
 
-This is **documentation of published results**, not a replacement for Streamlit. The explorer code stays; PG 19 and later publish live on Streamlit first, then get snapshotted here when a cycle is done.
+**PG18** published live on [Streamlit](https://pgbent.streamlit.app/) first,
+then snapshotted here. **PG19** skips hosted Streamlit (no sponsor / no paid
+hosting): the deliverable is **study SQL** plus static pages and graphs under
+`docs/results-summary/pg<N>/`. Explorer code may remain for local use; do not
+treat re-enabling Streamlit Cloud as part of this cycle.
 
-## Two publication paths
+## Publication paths
 
 | Path | Role |
 |------|------|
-| **Streamlit** (`explorer/submission-explore.py`) | Live, interactive explorer |
-| **Results summary** (`docs/results-summary/pg<N>/`) | Static snapshot on getbent.io |
-
-Shared SQL for the live app: `explorer/submission_studies.py`.
+| **Results summary** (`docs/results-summary/pg<N>/`) | **Primary for PG19** — static pages on getbent.io |
+| **Study SQL** (`reports/*.sql` and/or `explorer/submission_studies.py`) | Query that defines each study |
+| **Streamlit** (`explorer/submission-explore.py`) | PG18 path / optional local; not hosted for PG19 |
 
 ## Snapshot from the live site (no database)
 
@@ -45,22 +49,30 @@ Writes `docs/results-summary/pg18/<study-id>.md` for all seven sections:
 
 Review tables, commit, and link from getbent.io `/results-summary/pg18/`.
 
-## Optional: snapshot from results database
+## Snapshot from results database (preferred for PG19)
 
-If you still have read access to the `submission` view:
+With read access to the `submission` view:
 
 ```bash
-python3 explorer/archive-results.py --pg 18
+python3 explorer/archive-results.py --pg 19
 ```
 
-Same output layout; uses `submission_studies.py` SQL directly.
+Same output layout when studies are registered in `submission_studies.py`.
+Otherwise export each study’s SQL result into
+`docs/results-summary/pg<N>/<study>.md` by hand (or from `reports/*.sql`).
 
 ## Workflow (PG 18)
 
 1. [x] Run `snapshot-streamlit.py` (or `archive-results.py` if DB available)
 2. [x] Review and commit `docs/results-summary/pg18/*.md`
 3. [x] Link from docs index / tuning pages
-4. [x] Optionally pause Streamlit Cloud hosting until the next release cycle—**keep all explorer code** for PG 19
+4. [x] Pause Streamlit Cloud hosting — explorer code kept; **PG19 does not resume hosting**
+
+## Workflow (PG 19)
+
+1. [ ] Per study: write SQL → graph → page under `docs/results-summary/pg19/`
+2. [ ] Prefer `archive-results.py` or direct SQL export; do not require Streamlit Cloud
+3. [ ] Link from docs index / tuning pages when the cycle closes
 
 ## Milestones
 

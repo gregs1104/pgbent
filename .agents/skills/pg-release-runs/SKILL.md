@@ -38,9 +38,20 @@ so assembly can match on `batch`.
 
 ## Opening a study
 
+**Method (since 8.2 vs 8.3).** Map a workload **grid**, run each cell **3–5 times**,
+graph means with **error bars**. Original axes were scale × clients
+(`SETTIMES` / `runset`). Anything capturable to a text file and imported can
+be an axis or plotted metric — power normalized across hardware is the
+template; durability GUCs, `shared_buffers`, and `maintenance_work_mem` are
+discrete points on the same idea, split in reports via `test_settings`. A
+study that stops at one run per corner is unfinished. **Last step:** write a
+query that shows the study (see `pg-release-publish`). For PG19 that is SQL +
+static getbent.io pages — not a hosted Streamlit app.
+
 ```
 Study: <topic>
-- [ ] Write down the question and the one variable being changed (GUC, node cache, etc.)
+- [ ] Write down the question and the grid axes (GUC, node cache, scale, …)
+- [ ] Plan 3–5 repeats per cell (OSM: repeat-gis / complete; pgbench: SETTIMES)
 - [ ] Confirm the active set is still the right batch (same major version, same planet, same non-GUC context)
 - [ ] Choose the participating machines and the shared conf/<N> baseline
 - [ ] On each machine: apply the setting → reload/restart → run the workload (same set)
@@ -142,27 +153,103 @@ Not repairable: incomplete loads (no overall line, `nodes.db` still present,
 tiny `dbsize`) — delete those test rows/dirs instead. Abbey set 11 test **64**
 was recovered this way (404 kNodes/s); test **66** was still mid-load.
 
-One machine is configured by hand and is where the process gets written down. For this cycle that machine is **siren**, and only Greg works on it. A second machine, usually an easier build, receives only what has been committed and pulled. For this cycle that machine is **twilight**. Do not invent steps on the second machine that are not yet in the repo.
+**Who runs studies.** Greg defines the matrix and points an agent at a host; he does
+not babysit the loads himself. Commit conf / skill / report changes in the repo
+first; the agent then pulls and executes on the target machine. Do not invent
+host-only steps that are not yet in the repo.
 
-Two other machines are active:
+**Where to explore.** Use **twilight** for PG19 study matrices (durability 2×2,
+`shared_buffers` / node-cache sweeps, `maintenance_work_mem`). It is not the
+fastest box, but it has more RAM and disk than the alternatives, so it tolerates
+WAL volume, swap pressure, and leftover clusters. **siren** and **abbey** run out
+of memory or disk regularly — keep them on known-safe configs and short
+backfills, not on “mess around” corners. Siren remains useful for process notes
+and tight comparisons once a winner is known; it is a poor place to discover
+that a corner needs 1.5TB of WAL.
 
-- **abbey** is a Mac Studio on Homebrew. PG17 tests on the 2026 planet are finished (sets 8–10). It is moving to PostgreSQL 18; Homebrew has no `conf.d`, so settings from `conf/18/conf.d` are folded into the single `postgresql.conf` (see `pg-release-config`). Migrate the results DB with the upload-then-reload workflow below before opening a PG18 set. After brew Python updates, reinstall `dateutil` and confirm with `./pgsysinfo` (same skill, Homebrew Python note).
-- **court** is an NVIDIA DGX Spark (ARM64). As of 2026-10-14 it is on **DGX OS 7.6.0 / Ubuntu 24.04.5** with kernel **`7.0.0-1019-nvidia`**. That is the DGX OS 7 kernel update, not Ubuntu 26.04 (DGX OS 8 is a different line and is not supported on Spark yet). Spbm power import works (test 13+); set `DISKLIST="nvme0n1"` (not the default `sda`) or `iostat.csv` is empty — fix then `./metrics2csv recurse`. **PG18 via PGDG arm64 is in progress** — see recorded setup below. Still on Ubuntu **postgresql-16** for active OSM loads until that cutover. The hardware has been unreliable about booting; the force-restart procedure that worked last time has not been written down here yet.
+Other machines:
 
-### Planned study: node cache vs shared_buffers (after identical PG19 baselines)
+- **abbey** — Mac Studio on Homebrew. PG17 on the 2026 planet finished (sets 8–10);
+  moving to PostgreSQL 18. No `conf.d`; fold `conf/18/conf.d` into the single
+  `postgresql.conf` (see `pg-release-config`). Migrate results with upload-then-reload
+  before a PG18 set. After brew Python updates, reinstall `dateutil` and confirm
+  with `./pgsysinfo`. Capacity-constrained; not the exploration host.
+- **court** — NVIDIA DGX Spark (ARM64). As of 2026-10-14: **DGX OS 7.6.0 /
+  Ubuntu 24.04.5**, kernel **`7.0.0-1019-nvidia`**. Spbm power works (test 13+);
+  `DISKLIST="nvme0n1"` or `iostat.csv` is empty. **PG18 via PGDG arm64 in
+  progress** — see recorded setup below. Still on Ubuntu **postgresql-16** until
+  cutover. Unreliable about booting; force-restart procedure not written down yet.
 
-Do **not** open this until all four servers (siren, twilight, abbey, court) are on PostgreSQL 19 with the same durable `conf/19` baseline and the same one-point OSM load (`osm2pgsql-1.11`, 5 clients, same `scale` / `OSMNODECACHE`).
+## PG19 study sequence
+
+Ordered topics for this cycle. Finish (or park with enough data to publish)
+before opening the next; do not fan out a second matrix on PG18.
+
+1. **Durability and WAL volume vs throughput** (open now — first PG19 study)
+2. **Node cache vs `shared_buffers`** (after durable baselines match across hosts)
+3. **`maintenance_work_mem` sweep** (after memory packing is settled)
+
+**Execution.** Once a study’s matrix is written down here (and any conf fragments
+are in git), Greg points the agent at **twilight** to run it. Repeat / validate
+on other hosts only after twilight shows which corners matter — and prefer
+known-safe settings on siren/abbey so they do not OOM or fill the disk mid-matrix.
+
+### Study 1: durability / WAL volume vs throughput
+
+**Question.** On the medium-frequency checkpoint envelope (`max_wal_size=100GB`,
+`checkpoint_timeout=30min`), how much of the fast→durable gap is **WAL volume**
+(`wal_level` / FPW) versus **sync waits** (`fsync` / `synchronous_commit`)?
+Bundled `osm-sync-fast` vs `osm-sync-durable` changes all four at once.
+
+**PG19 — full exploration on twilight.** Keep memory / node-cache fixed. Run the
+durability 2×2 on that envelope (same set; rows told apart by `test_settings`):
+
+| | sync on (`fsync` / `synchronous_commit` / FPW defaults) | sync off |
+|---|---|---|
+| `wal_level=replica` | current durable | fat WAL, no sync waits |
+| `wal_level=minimal` | thin WAL, durable waits | current fast |
+
+Optional fifth corner: replica + fsync on + FPW off, only if WAL bytes still
+need explaining. Prefer corner configs as named `conf/19/conf.d` fragments
+(or temporary overrides) over editing the bundled fast/durable pair in place
+without recording which knobs flipped. Fat-WAL corners belong on twilight’s
+disk headroom, not on siren’s 2TB squeeze.
+
+**PG18 — backfill on siren (Greg).** Do not reopen a PG18 durability matrix.
+Greg collects the missing bridge cell(s) on **siren** himself — typically
+**PG18 fast/minimal on 100GB·30min** next to existing durable PG18 on that
+envelope (set 70 era) — so the report can show the best possible from that
+old version for the PG19 story. Agent work stays on the PG19 twilight matrix;
+do not farm the PG18 regression backfill there. Stop once the version
+comparison is tellable.
+
+### Study 2: node cache vs shared_buffers
+
+Do **not** open this until study 1 has a durable baseline worth keeping and the
+participating servers share that durable `conf/19` plus the same one-point OSM
+load (`osm2pgsql-1.11`, 5 clients, same `scale` / `OSMNODECACHE`). Prefer all
+four (siren, twilight, abbey, court) on PG19 when practical; do not block the
+memory study forever on court if the others already match.
 
 **Question.** The PG17 OSM config was a local maximum: high memory use that delivered peak throughput. Parallel GIN / index work in PG18 destabilized that peak (see the final PG18 retune commit). On 128GB hosts the node-cache phase packs `osm2pgsql` RSS (~60GB at scale 75000), `shared_buffers` (48GB in `osm-mem-128`), and shared memory into RAM and spills into the default ~15GB swap. When the loader enters the index phase it **drops the node cache**; Postgres pages that were pushed out are not pulled back automatically, then `maintenance_work_mem` × parallel maintenance workers allocates on top. Suspect the fix is to shrink **either** the osm2pgsql node cache (`scale` / `OSMNODECACHE` in `params`) **or** `shared_buffers` (`osm-mem-*`), not to keep chasing the PG17 packing.
 
-**How to run it.** When the topic opens, `./newset` with a shared description
-prefix on every participating machine (that batch becomes the study handle for
-assembly). Inside the study, change one variable at a time (`osm-mem-*` tier or
-`scale` / `OSMNODECACHE`), keep durability durable, and let report SQL separate
-the rows via `test_settings`. Compare hours, `nodes_kips`, `index_kips`, and
-swap/iowait across the index transition (`watch util/progress`, `free -h`,
-`results.txt` leaving node processing). Promote a winner into `conf/19` only
-with a commit that cites the study.
+**How to run it.** Explore the matrix on **twilight** first (agent-driven once
+Greg points at it). `./newset` with a shared description prefix; change one
+variable at a time (`osm-mem-*` tier or `scale` / `OSMNODECACHE`), keep
+durability durable, and let report SQL separate rows via `test_settings`.
+Compare hours, `nodes_kips`, `index_kips`, and swap/iowait across the index
+transition. Replicate only interesting corners on other hosts; avoid packing
+experiments on siren/abbey until twilight shows they fit. Promote a winner into
+`conf/19` only with a commit that cites the study.
+
+### Study 3: maintenance_work_mem
+
+Open only after study 2 has picked a memory packing (or confirmed the current
+one). Sweep additional `maintenance_work_mem` values on **twilight** under that
+fixed durable + buffer/cache baseline — one GUC at a time, same set — watching
+index-phase throughput and whether larger values revive the PG18-era
+parallel-maintenance pain. Do not mix this sweep with durability or
+`shared_buffers` changes.
 
 ### Recorded setup: court, PostgreSQL 18 via PGDG (arm64, 2026-10-15)
 

@@ -52,6 +52,8 @@ Document the results-database hierarchy: how **server → test set → script �
 
 Document how pgbent thinks about tests as a **five-dimensional space**, with **test set** holding configuration constant while exploring the grid. Defer a standalone docs page until there is UI to demonstrate; capture the model here for now.
 
+**Founding idea (8.2 vs 8.3).** Map a workload grid, run each cell **3–5 times**, and graph means with **error bars**. The original axes were **scale × clients**. Anything you can capture to a text file and import can become an axis or a plotted metric later — power sampling normalized across hardware is the modern example (`pgbent_powermon` → `test_metrics_data`). GUCs and durability knobs are the same idea: discrete points on a face of the space, told apart in SQL (`test_settings`), not by inventing a new product.
+
 Dimensions:
 
 1. **Client** — `tests.clients`
@@ -63,6 +65,7 @@ Dimensions:
 - [ ] **Parameter space and pivots** — test set as comparison slice; default 2D face (client × scale) in `webreport`; SQL `GROUP BY` as manual pivot around one axis; ranges/partitions across a dimension
   - Existing: `docs/intro.md` (client × scale only); `limited_webreport`, `reports/compromise_params.sql`; implementation direction in [goals.md](goals.md) § Parameter-space explorer
   - Future home: section under Results internals or extension of intro/results (not `docs/benchmark-space.md` until warranted)
+  - Include: origin story above; repeats/`SETTIMES`; metrics-as-axes (power, WAL rates, …)
 
 ### Basic log format
 

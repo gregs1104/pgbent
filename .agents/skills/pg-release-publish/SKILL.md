@@ -2,12 +2,11 @@
 name: pg-release-publish
 description: >-
   Assemble and publish pgbent studies for a PostgreSQL release cycle such as
-  PG19: turn newset-flagged test sets collected on several machines into study
-  SQL, add the study to the live Streamlit explorer, graph it with
-  reports/*.py --pg N, write its getbent.io page, and snapshot the cycle into
-  docs/results-summary/pg<N>/ when the release is finished. Use when a study's
-  data is in (via upload/download) and needs assembling, or when closing out
-  a release cycle.
+  PG19: turn newset-flagged test sets into study SQL, graph with reports/*.py
+  --pg N, write getbent.io pages under docs/results-summary/pg<N>/, and close
+  the cycle with static snapshots. Use when a study's data is in (via
+  upload/download) and needs assembling, or when closing out a release cycle.
+  PG19 does not use hosted Streamlit.
 disable-model-invocation: true
 ---
 
@@ -16,13 +15,27 @@ disable-model-invocation: true
 A release starts with no published studies. Each study is opened with `newset`
 on some number of machines (see `pg-release-runs`). Once enough of those machines
 have uploaded, the study is assembled and published on its own schedule, alongside
-others still collecting. When the cycle ends, all published studies are snapshotted
-into static pages.
+others still collecting. When the cycle ends, published studies live as static
+pages on getbent.io.
 
-PG18 is the reference. It ended with seven studies: OSM leaderboard, power,
-network, checkpoint, and dirty memory, plus pgbench build and SELECT. They were added
-one at a time between October 2025 and January 2026. Treat them as **examples
-to reuse when a topic recurs**, not as a template every release must fill.
+**Last step of every study:** write a **query** that shows the result grid
+(means across the 3–5 repeats, axes the study mapped). That SQL is the analysis
+artifact. Graphs and Markdown pages consume it; there is no separate product
+layer required.
+
+**PG19 publication path:** study SQL → `reports/*.py` / Markdown under
+`docs/results-summary/pg<N>/` → getbent.io. **Do not** stand up or pay for
+Streamlit Cloud hosting this cycle (no sponsor). Explorer code
+(`explorer/submission-explore.py`, `submission_studies.py`) may stay for
+optional local runs or PG18 reuse; registering a study in the live app and
+re-enabling https://pgbent.streamlit.app/ is **out of scope** unless Greg
+explicitly asks.
+
+PG18 is the reference for *what a study looks like*. It ended with seven
+studies (OSM leaderboard, power, network, checkpoint, dirty memory, plus
+pgbench build and SELECT), published via Streamlit then snapshotted. Treat
+those as **examples to reuse when a topic recurs**, not as a checklist every
+release must fill, and not as a requirement to host Streamlit again.
 
 ## Assemble one study
 
@@ -30,10 +43,10 @@ to reuse when a topic recurs**, not as a template every release must fill.
 Study: <slug>
 - [ ] 0. ./download on the assembly machine to pull in new uploads
 - [ ] 1. Find the study's sets in central submission
-- [ ] 2. Write the study SQL
-- [ ] 3. Register it in the explorer and snapshot list
-- [ ] 4. Graph it
-- [ ] 5. Write the page (can wait for cycle close)
+- [ ] 2. Write the study SQL (required — this is the deliverable)
+- [ ] 3. Graph it from that query / a Markdown table export
+- [ ] 4. Write the getbent.io page (can wait for cycle close)
+- [ ] (optional, local only) Register in explorer/submission_studies.py if useful for ad-hoc browsing
 ```
 
 ### 0. Pull new data
@@ -66,8 +79,13 @@ different descriptions, select those sets explicitly by `(server, batch_id)` pai
 
 ### 2. Study SQL
 
-Add an entry to `STUDIES` in `explorer/submission_studies.py`, with `title`,
-`description`, and `sql` ending in `{pg_filter}`. Copy the closest PG18 study:
+This is the **required** finish for the study. Prefer a file under `reports/`
+(e.g. `reports/osm-<topic>.sql`) or a `STUDIES` entry in
+`explorer/submission_studies.py` if you already use that harness — either way
+the query must be runnable against the central `submission` / results views and
+stable enough to feed graphs and a Markdown table.
+
+Copy the closest PG18 pattern:
 
 | Pattern | Example | Selection |
 |---------|---------|-----------|
@@ -77,25 +95,13 @@ Add an entry to `STUDIES` in `explorer/submission_studies.py`, with `title`,
 | All runs of a script | `pgbench-build`, `pgbench-select` | `script LIKE ':-i%'` / `script='select'` |
 
 For a multi-machine study, select by `batch` prefix (or explicit server/batch_id
-pairs) rather than relying only on `category IS NULL`. The live explorer calls
-`study_sql(id)` **without** a version filter, so the SQL itself must exclude other
-releases' runs. Check the result with `python3 explorer/archive-results.py --pg <N> --study <slug>`.
+pairs) rather than relying only on `category IS NULL`. Exclude other majors in
+the SQL (or via `--pg` / a filter fragment) so PG18 rows do not pollute PG19
+tables. Export a Markdown/CSV table for the page (`archive-results.py` if the
+study is registered locally; otherwise `$RESULTPSQL -c` / `\copy` from the
+query file).
 
-### 3. Register
-
-All four of these must agree, and the radio order must match the snapshot list order:
-
-- `STUDIES` in `explorer/submission_studies.py`
-- `explorer/submission-explore.py`: a fetch function, plus a label and caption in the `st.radio` list
-  and a dispatch branch in `builtin_query()`
-- `STUDIES` list in `explorer/snapshot-streamlit.py` (`(id, radio label, description)`)
-- (cycle close) the link in `docs/results-summary/pg<N>/index.md`
-
-Run the explorer locally with `explorer/run` (`streamlit run explorer/submission-explore.py`).
-The hosted app is https://pgbent.streamlit.app/ (Streamlit Cloud, paused between
-releases). Credentials go through `st.connection` and are kept out of git.
-
-### 4. Graph
+### 3. Graph
 
 **A recurring topic** reuses the existing script with `--pg`. That picks
 `docs/results-summary/pg<N>/<study>.md`, writes `docs/images/pg<N>-<name>.png`,
@@ -131,7 +137,7 @@ Review points when reusing PG18 scripts:
 - Regression check: running without `--pg` must reproduce the committed `docs/images/pg18-*.png`
   byte for byte (`git status docs/images` stays clean).
 
-### 5. Study page
+### 4. Study page
 
 Model it on `docs/results-summary/pg18/osm-power.md`:
 
@@ -140,19 +146,24 @@ Model it on `docs/results-summary/pg18/osm-power.md`:
 3. Image embed: `![alt]({{ '/images/pg<N>-<name>.png' | relative_url }})`
 4. One paragraph per chart naming the leaders with **bold** numbers taken from the table
 5. Which machines and sets took part (the `batch` descriptions)
-6. A "Regenerate:" line giving the exact `reports/*.py --pg <N>` command
-7. The snapshot provenance line, then the table
+6. A "Regenerate:" line giving the exact query / `reports/*.py --pg <N>` command
+7. Provenance, then the table from the study SQL
 
 Where the same topic ran last release, compare like with like (same CPU, same
 config). That comparison is the regression result.
 
 ## Close out the cycle
 
+Prefer DB → Markdown (no hosted Streamlit):
+
 ```bash
-pip install -r explorer/requirements-snapshot.txt && playwright install chromium
-python3 explorer/snapshot-streamlit.py --pg <N>          # every study in its STUDIES list
-# or, with results DB access:
-python3 explorer/archive-results.py --pg <N>
+# With results DB access — preferred for PG19:
+python3 explorer/archive-results.py --pg <N>   # if studies are in submission_studies.py
+# else: export each reports/*.sql result into docs/results-summary/pg<N>/<study>.md by hand
+
+# Legacy PG18 path only (requires a live Streamlit app — not planned for PG19):
+# pip install -r explorer/requirements-snapshot.txt && playwright install chromium
+# python3 explorer/snapshot-streamlit.py --pg <N>
 ```
 
 **Snapshots overwrite study pages.** If pages already carry hand-written prose,
@@ -161,13 +172,14 @@ images, or extra tables (PG18's `osm-power.md` has a hand-added
 into a scratch directory (`--output <dir>`) and merge the tables by hand.
 
 ```
-- [ ] Snapshot every published study; re-run graphs with --pg <N> from the snapshot tables
+- [ ] Every study has runnable SQL and a static page/table under docs/results-summary/pg<N>/
+- [ ] Re-run graphs with --pg <N> from those tables
 - [ ] pg<N>/index.md lists exactly the studies that ran; renumber nav_order so the newest release sorts first
 - [ ] docs/results-summary/index.md: add a row for <N>
 - [ ] docs/index.md hero image / results links, README.md results link
 - [ ] Tuning-model pages (docs/model/*.md) embed pg<N> charts where a topic was rerun
 - [ ] docs/plans/results-snapshot.md: add a "Workflow (PG <N>)" checklist
-- [ ] Ask whether to clear the explorer's study list for <N+1> (its studies are now static pages); pause Streamlit hosting
+- [ ] Do not resume Streamlit Cloud unless Greg asks; explorer code can remain unused
 - [ ] Commit "Mark PG<N> results finished."; seed conf/<N+1> from final conf/<N> (pg-release-config)
 ```
 

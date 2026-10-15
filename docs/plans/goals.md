@@ -120,7 +120,7 @@ gnuplot `webreport` output and older majors still matter for published studies.
 
 ## Confidence UI
 
-Regression and comparison UI that quantifies run-to-run variation on the workload grid—not just average TPS/latency per cell.
+Regression and comparison UI that quantifies run-to-run variation on the workload grid—not just average TPS/latency per cell. This is the original product idea from the PostgreSQL **8.2 vs 8.3** comparisons: map a grid, repeat each cell **3–5 times**, graph with **error bars**. Axes started as scale × clients; any text-file capture that lands in the results DB (power, disk, WAL rates, GUC labels via `test_settings`) can be an axis or a series.
 
 - [ ] **Repeated grid runs** — standard workflow already re-runs each (scale × clients) point multiple times; surface that history instead of collapsing to a single number
   - Existing: `SETTIMES=3` in `config`; `runset` loop `for (( t=1; t<=$SETTIMES; t++ ))`; each repetition is a separate row in `tests` for the same set/scale/clients

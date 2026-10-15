@@ -160,3 +160,8 @@ set — durable and fast-sync runs live in the same batch and are told apart by
 Postgres defaults once fast-sync is off. PG18 set 70 on siren
 (`New planet 2026-08-13`) is the matching 2026-planet durable reference. Do
 not compare PG19 fast-sync rows against that set as a version result.
+
+**First PG19 study** is durability / WAL volume vs throughput on the 100GB·30min
+envelope: full 2×2 on PG19 only; PG18 gets a backfill cell or two for the
+story, not a second matrix. See `pg-release-runs` study sequence (then
+`shared_buffers` / node cache, then `maintenance_work_mem`).
