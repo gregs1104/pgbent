@@ -569,7 +569,18 @@ psql -p "$TESTPORT" -d postgres -c \
 util/newgis
 ```
 
-Confirm `pgrep` shows no collectors and `pg_stat_activity` has no `gis` rows before `dropdb`. `pgbent_tune` at the end of `newgis` may sit in `fstrim -av` for a long time on multi-TB hosts — that is normal; `gis` is already usable once extensions are created. Twilight 2026-10-15 after test 2599: idle metric `psql` from 08:00 blocked `newgis` until collectors were killed.
+Confirm `pgrep` shows no collectors and `pg_stat_activity` has no `gis` rows before `dropdb`. `pgbent_tune` at the end of `newgis` may sit in `fstrim -av` for a long time on multi-TB hosts; `gis` is already usable once extensions are created. Twilight 2026-10-15 after test 2599: idle metric `psql` from 08:00 blocked `newgis` until collectors were killed.
+
+**Twilight Fury TRIM (open question).** On twilight’s **4TB Fury** NVMe mounts
+(`fury0`/`fury1`/`fury2`), `fstrim -av` from `pgbent_tune` routinely takes a
+**very** long time (tens of minutes; seen trimming ~1.9 TiB reported on a Fury
+volume). Greg has a personal note to dig into **why** (discard behavior, mount
+options, firmware, whether weekly fstrim + per-`newgis` trim is redundant, etc.).
+**Get to the bottom of that before launching the big PG19 GUC exploration
+matrix on twilight** — otherwise every `newgis` between corners burns a long
+TRIM tax. Until resolved: expect the wait, do not treat a stuck-looking
+`pgbent_tune` as a hung newgis if `gis` already answers, and prefer not to
+stack back-to-back newgis cycles when debugging TRIM itself.
 - After each `runset`, `repeat-gis` reads the latest test's `tps`. A blank or zero TPS means the run failed, often because the disk filled, and the loop stops instead of starting another load.
 - Configured `max_wal_size` is 100GB. That plus the planet database barely fits a 2TB drive, so a 2TB host has to move the previous major's cluster off that disk first. 256GB `max_wal_size` will not fit on 2TB. A 4TB host does not need that disk shuffle.
 - A crashed run can leave orphaned OS stats collectors (`timed-os-stats`, iostat, vmstat). Check `ps` before restarting.
