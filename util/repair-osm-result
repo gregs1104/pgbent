@@ -1,0 +1,95 @@
+#!/bin/bash
+# Rebuild OSM artifacts + TPS for a finished run whose post-process died
+# (e.g. Homebrew Python crash in metrics2csv / csv2gnuplot).
+#
+# Usage (from the pgbent checkout):
+#   util/repair-osm-result <test> <server> [--metrics]
+#
+# Requires results/<server>/<test>/results.txt with a completed osm2pgsql
+# summary ("osm2pgsql took … overall").  Does not re-run the load.
+#
+# Steps:
+#   1. Parse results.txt → results.json (util/pgbench-init-parse)
+#   2. UPDATE tests.artifacts for that exact server/test (not art-import's
+#      "latest start_time" heuristic)
+#   3. Recompute OSM TPS (kNodes/s) when tps is null/0
+#   4. With --metrics, run ./metrics2csv for that test (OS/power import)
+#
+# Skip incomplete loads (no overall line, nodes.db still present, tiny DB).
+
+set -euo pipefail
+
+if [ $# -lt 2 ]; then
+  echo "Usage: util/repair-osm-result <test> <server> [--metrics]" >&2
+  exit 1
+fi
+
+TESTNUM="$1"
+SERVER="$2"
+DO_METRICS=0
+if [ "${3:-}" = "--metrics" ]; then
+  DO_METRICS=1
+fi
+
+. ./config
+. ./params
+
+RESULTPSQL="psql -X -h $RESULTHOST -U $RESULTUSER -p $RESULTPORT -d $RESULTDB"
+BASEDIR="${BASEDIR:-$(pwd)}"
+DIR="results/${SERVER}/${TESTNUM}"
+
+if [ ! -d "$DIR" ]; then
+  echo "Missing result directory $DIR" >&2
+  exit 1
+fi
+if [ ! -s "$DIR/results.txt" ]; then
+  echo "Missing or empty $DIR/results.txt" >&2
+  exit 1
+fi
+
+if ! grep -a -q 'osm2pgsql took .* overall' "$DIR/results.txt"; then
+  echo "No completed osm2pgsql summary in $DIR/results.txt — not repairable" >&2
+  exit 1
+fi
+
+SCRIPT=`$RESULTPSQL -Atqc "SELECT script FROM tests WHERE server='${SERVER}' AND test=${TESTNUM}"`
+if [ -z "$SCRIPT" ]; then
+  echo "No tests row for server=${SERVER} test=${TESTNUM}" >&2
+  exit 1
+fi
+
+echo "Repairing ${SERVER}/${TESTNUM} script=${SCRIPT}"
+pushd "$DIR" >/dev/null
+
+"$BASEDIR/util/pgbench-init-parse" results.txt "$SCRIPT" > results.json
+if [ ! -s results.json ] || [ "$(cat results.json)" = "{}" ]; then
+  echo "Parse produced empty JSON — check script name vs log format" >&2
+  popd >/dev/null
+  exit 1
+fi
+echo "Wrote results.json: $(cat results.json)"
+
+# Bind artifacts to this server/test only (see util/art-import.sql footgun).
+$RESULTPSQL -v ON_ERROR_STOP=1 <<EOF
+\\set content \`cat results.json\`
+UPDATE tests SET artifacts = :'content'
+WHERE server = '${SERVER}' AND test = ${TESTNUM};
+UPDATE tests SET tps = round(
+  (artifacts->'node_count')::numeric / (artifacts->'overall')::numeric / 1000, 0)
+WHERE server = '${SERVER}' AND test = ${TESTNUM}
+  AND script LIKE 'osm%'
+  AND (tps IS NULL OR tps = 0);
+EOF
+
+$RESULTPSQL -c "SELECT test, script, round(tps::numeric,1) AS tps,
+  round((artifacts->'overall')::numeric/3600,2) AS hours,
+  round((artifacts->'node_count')::numeric/1e9,2) AS nodes_B
+FROM tests WHERE server='${SERVER}' AND test=${TESTNUM}"
+
+if [ "$DO_METRICS" -eq 1 ]; then
+  echo "Re-importing metrics via metrics2csv"
+  "$BASEDIR/metrics2csv" "$TESTNUM" "$SERVER"
+fi
+
+popd >/dev/null
+echo "Done ${SERVER}/${TESTNUM}"

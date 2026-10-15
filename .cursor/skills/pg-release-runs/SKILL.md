@@ -92,6 +92,11 @@ Rules for running studies in parallel:
       The server's checkout will not have `conf/<N>` until this pull. `config` and `params` are dirty on every host, so stash first and apply after.
 - [ ] Install PostgreSQL <N> (plus PostGIS, hstore for OSM) and deploy conf/<N>/conf.d
 - [ ] Edit ./config: TESTHOST/TESTPORT/TESTDB, RESULTHOST/RESULTDB, SERVERNAME, DISKLIST, ARCHIVE
+- [ ] **Linux `DISKLIST`** — set to the database disk device name(s) as they appear in
+      `iostat` / `lsblk` (no `/dev/` prefix). Default in `config` is `DISKLIST="sda"`.
+      NVMe hosts need something like `DISKLIST="nvme0n1"`. Wrong or stale values mean
+      `metrics2csv` / `csv2gnuplot` produce no `iostat.csv`, so disk metrics never land
+      in `test_metrics_data` (seen on court until corrected). Darwin ignores this.
 - [ ] Install sudo helpers in /usr/local/bin with NOPASSWD rules (see each script header):
       util/pgbent_tune (governor=performance, readahead 4096, fstrim)
       util/pgbent_powermon (power sampling; set SUDODATA=1 in config)
@@ -104,12 +109,45 @@ Rules for running studies in parallel:
 `SERVERNAME` defaults to the hostname. It is part of every study key, so keep it stable for the whole cycle.
 It must not contain `-`, because `download` parses the server name from the archive filename.
 
+If a setup mistake (wrong `DISKLIST`, missing power import path, etc.) is fixed after runs
+already finished, re-import from the on-disk logs without re-running the workload:
+
+```bash
+./metrics2csv recurse   # from the pgbent checkout; walks results/<server>/<test>/
+```
+
+That regenerates CSVs (including `iostat.csv` once `DISKLIST` matches) and reloads
+`test_metrics_data` for every result directory. Safe only when no test is actively
+writing those directories.
+
+### Repair a finished OSM run with missing artifacts / TPS
+
+When the load completed (`results.txt` has `osm2pgsql took … overall`) but
+post-process died (Homebrew Python `init_sys_streams` / `Bad file descriptor`
+during Darwin `metrics2csv`, empty `results.json`, null `tps`), rebuild without
+re-running osm2pgsql:
+
+```bash
+# from the pgbent checkout on that server
+util/repair-osm-result <test> <server>           # artifacts + TPS only
+util/repair-osm-result <test> <server> --metrics # also re-run metrics2csv
+```
+
+`repair-osm-result` parses `results/<server>/<test>/results.txt`, writes
+`results.json`, updates **that** `tests` row (unlike `util/art-import.sql`, which
+targets the latest `start_time` and can hit the wrong test), then sets OSM TPS
+to kNodes/s. Add `--metrics` once the Python/`DISKLIST` issues are fixed.
+
+Not repairable: incomplete loads (no overall line, `nodes.db` still present,
+tiny `dbsize`) — delete those test rows/dirs instead. Abbey set 11 test **64**
+was recovered this way (404 kNodes/s); test **66** was still mid-load.
+
 One machine is configured by hand and is where the process gets written down. For this cycle that machine is **siren**, and only Greg works on it. A second machine, usually an easier build, receives only what has been committed and pulled. For this cycle that machine is **twilight**. Do not invent steps on the second machine that are not yet in the repo.
 
 Two other machines are active:
 
 - **abbey** is a Mac Studio on Homebrew. PG17 tests on the 2026 planet are finished (sets 8–10). It is moving to PostgreSQL 18; Homebrew has no `conf.d`, so settings from `conf/18/conf.d` are folded into the single `postgresql.conf` (see `pg-release-config`). Migrate the results DB with the upload-then-reload workflow below before opening a PG18 set. After brew Python updates, reinstall `dateutil` and confirm with `./pgsysinfo` (same skill, Homebrew Python note).
-- **court** is an NVIDIA DGX Spark (ARM64). As of 2026-10-14 it is on **DGX OS 7.6.0 / Ubuntu 24.04.5** with kernel **`7.0.0-1019-nvidia`**. That is the DGX OS 7 kernel update, not Ubuntu 26.04 (DGX OS 8 is a different line and is not supported on Spark yet). It is still on the PostgreSQL **16** launch configuration and was running an OSM load after the reboot. The hardware has been unreliable about booting; the force-restart procedure that worked last time has not been written down here yet.
+- **court** is an NVIDIA DGX Spark (ARM64). As of 2026-10-14 it is on **DGX OS 7.6.0 / Ubuntu 24.04.5** with kernel **`7.0.0-1019-nvidia`**. That is the DGX OS 7 kernel update, not Ubuntu 26.04 (DGX OS 8 is a different line and is not supported on Spark yet). It is still on the PostgreSQL **16** launch configuration. Spbm power import works (test 13); set `DISKLIST="nvme0n1"` (not the default `sda`) or `iostat.csv` is empty — fix then `./metrics2csv recurse`. The hardware has been unreliable about booting; the force-restart procedure that worked last time has not been written down here yet.
 
 ### Planned study: node cache vs shared_buffers (after identical PG19 baselines)
 
