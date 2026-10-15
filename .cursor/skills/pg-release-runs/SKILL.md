@@ -193,6 +193,15 @@ not babysit the loads himself. Commit conf / skill / report changes in the repo
 first; the agent then pulls and executes on the target machine. Do not invent
 host-only steps that are not yet in the repo.
 
+**Why the metrics kit is painful on purpose.** New-release weeks always look like
+this lab: broken post-process, zombie collectors, TRIM waits, mid-load failures.
+Second-by-second first-party metrics (`iostat` / `vmstat` / `timed-os-stats` /
+`metric-query.sql` DB size, …) into `test_metrics_data` are how you see *what*
+happened (e.g. twilight 2599’s ~220GB `pg_db_size` cliff when `planet_osm_line`
+was rewritten). Delegating that layer to other tools historically lost
+granularity and trust. Keep the simple collectors; fix their edges — do not
+replace them with an opaque stack mid-cycle. See `AGENTS.md` § Architecture.
+
 ### OSM stack freeze (hold regression points)
 
 Do **not** casually upgrade osm2pgsql / PostGIS / related loader packages mid

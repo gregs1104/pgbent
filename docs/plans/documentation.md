@@ -71,15 +71,24 @@ Dimensions:
 
 Document what pgbent writes during a run and how it lands in the results DB.
 
+**Why first-party collectors.** Metrics are owned in-process (`iostat`, `vmstat`,
+`timed-os-stats`, small SQL such as DB size / client counts every second), not
+delegated to an external APM. Experiments that handed metrics off lost
+second-level troubleshooting and left Greg unsure which traces to trust. Release
+weeks always mean a lot of lab firefighting; that granularity is how failures
+like a mid-import table rewrite (DB size cliff in ~5s) get diagnosed. Document
+this design choice alongside the formats.
+
 - [ ] **Queries** — pgbench log lines, latency samples, custom SQL capture format
   - Existing: `timing` table (CSV staging), `tests` summary columns; `export-latency-metric.sql` as OHLC export sketch
 - [ ] **Capture automation and process pruning** — how collectors start/stop, zombie cleanup on crash
-  - Existing: `benchwarmer`, `metrics2csv`, `util/pgbent_powermon`; known issue in [plotting.md](plotting.md) backlog
+  - Existing: `benchwarmer`, `metrics2csv`, `util/pgbent_powermon`; known issue in [plotting.md](plotting.md) backlog; zombie `timed-os-stats` note in `pg-release-runs`
 
 ### Metric import ideas
 
 - [ ] Patterns for bringing external metrics into `test_metrics_data` (formats, naming, registration in `metrics_info`)
   - Existing: `init/metrics_map.csv`, `metrics_info` prefix/multiplier model, `metview.py` query as consumer example
+  - Prefer extending the simple collector path over replacing it with a black-box agent
 
 ### Database metrics suggestions
 
