@@ -83,7 +83,7 @@ Prioritize **Python/Matplotlib** for new graphing work unless the task is explic
 
 - Do not rewrite shell orchestration in Python unless requested.
 - Do not guess schema; read `init/resultdb.sql` or query the DB.
-- Do not expand `metview.py` to graph every metric by default without checking the metview plan (minimal vs verbose is planned).
+- Do not expand `metview.py` to graph every metric by default without checking the metview plan (priority-range filter + stacked CPU/memory compositions). Do not invent ad-hoc stacks or hard-coded “important metric” name lists outside that design — use `metrics_info.visibility` / decode `vis`.
 
 ## Known issues
 

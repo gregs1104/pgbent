@@ -280,52 +280,76 @@ sudo apt-get update
 #     postgresql-18-postgis-3-scripts
 ```
 
-Repo is live; packages resolve. Install was deferred until the running test ends.
+Repo was live; packages resolved. Install deferred until idle, then completed
+**2026-10-15**:
 
-#### When told to fire up the new cluster
+- `apt-get install` PGDG `postgresql-18` 18.6 + PostGIS 3.6.4 (also refreshed
+  `postgresql-common` / PG16 PostGIS). **`pg_createcluster 18 main --start`**
+  was required — package install did not auto-create the cluster
+  (`create_main_cluster` off in createcluster.conf).
+- Port **5433** (`16/main` remains **5432** for the results DB).
+- Deployed `conf/18/conf.d` by copy (fast-sync active in tree: `fsync=off`,
+  `wal_level=minimal`, `shared_buffers=48GB`, `max_wal_size=100GB`,
+  `checkpoint_timeout=30min`). `pg_hba` matched 16’s trust LAN block.
+- `config`: `TESTPORT=5433`, `RESULTPORT=5432` (results stay on 16),
+  `DISKLIST=nvme0n1`. `util/newgis` + PostGIS OK. `./newset 'PG18'`.
+- **Shrunk results cluster:** flipped `16/main` from `osm-mem-128` (48GB) to
+  `osm-mem-16` (`shared_buffers=1GB`) and restarted — see **Two majors in
+  parallel** below. Then `nohup util/repeat-gis` (test 16, `osm2pgsql-1.11`,
+  scale 75000); do **not** re-run `wl/osm-import` (it would `newset "OSM"`).
 
-1. Confirm idle: no `osm2pgsql` / `benchwarmer` / `repeat-gis`; `pg_lsclusters` shows only the quiet 16 cluster (or stop loads first).
-2. Install (creates `18/main`, typically next free port — confirm with `pg_lsclusters`):
+#### When told to fire up the new cluster (done on court 2026-10-15)
 
-```bash
-sudo apt-get install -y postgresql-18 postgresql-18-postgis-3 \
-  postgresql-18-postgis-3-scripts
-pg_lsclusters
-```
+Historical checklist (for the next Spark / similar host):
 
-3. As `postgres`, pull pgbent so `conf/18` is present, then as `gsmith` deploy config
-   (copy, do not symlink — same as other Linux hosts):
-
-```bash
-# postgres
-cd ~/pgbent && git stash && git pull && git stash apply
-
-# gsmith
-cd /etc/postgresql/18/main/conf.d
-sudo cp ~postgres/pgbent/conf/18/conf.d/* .
-# Prefer durable for published comparisons once PG18 baseline is settled;
-# early cycle may use osm-sync-fast like other hosts — match the study.
-cd /etc/postgresql/18/main
-sudo vi pg_hba.conf   # trust block from ~postgres/pgbent/conf/pg-hba.trusted
-sudo systemctl start postgresql@18-main   # or pg_ctlcluster 18 main start
-```
-
-4. Point pgbent at the new port (`TESTPORT` / `RESULTPORT` in `config`), then:
-
-```bash
-# postgres, ~/pgbent
-util/newgis
-# SHOW shared_buffers / fsync / wal_level; confirm PostGIS
-./newset 'PG18'   # or the study description in use
-# optional: migrate results DB if results move with the major
-# (upload-then-reload — see Migrating the results database…)
-```
-
-5. Leave PG16 installed (twilight pattern) until PG18 OSM numbers look good; stop
-   `16/main` when nothing needs it so memory is free for the load.
+1. Confirm idle: no `osm2pgsql` / `benchwarmer` / `repeat-gis`.
+2. `sudo apt-get install -y postgresql-18 postgresql-18-postgis-3 postgresql-18-postgis-3-scripts`
+3. If `pg_lsclusters` has no 18: `sudo pg_createcluster 18 main --start`
+4. Pull pgbent as postgres; `sudo cp ~postgres/pgbent/conf/18/conf.d/* /etc/postgresql/18/main/conf.d/`
+5. Trust `pg_hba` from `conf/pg-hba.trusted` / existing 16; restart 18
+6. `TESTPORT=<18 port>`, keep `RESULTPORT` on the results major; `util/newgis`; `./newset 'PG18'`
 
 Reference: twilight’s `/etc/apt/sources.list.d/pgdg.list` pins `noble-pgdg main 19`
 (with 17/18 lines commented). Court uses the same file shape with `main 18`.
+
+### Two majors in parallel (test + results)
+
+pgbent often keeps **two clusters online** on one host: the **test** major
+(OSM / pgbench, fat memory settings) and an older **results** major (just the
+`results` database). `config` splits them:
+
+| Knob | Role |
+|------|------|
+| `TESTPORT` | Active study cluster (`gis`, large `shared_buffers`) |
+| `RESULTPORT` | Results DB — usually the previous major; **do not** set this equal to `TESTPORT` while the old cluster still holds history |
+
+Leaving the results major on its old OSM memory tier (e.g. `osm-mem-128` →
+48GB) **doubles** the shared-memory bill next to a 48GB test cluster and can
+starve the load. After cutover, shrink the results cluster before starting
+OSM:
+
+```bash
+# on the results major's conf.d (example: court 16/main)
+cd /etc/postgresql/<results-major>/main/conf.d
+sudo mv osm-mem-128.conf osm-mem-128.off   # or whichever fat tier is active
+sudo mv osm-mem-16.off osm-mem-16.conf     # shared_buffers = 1GB
+sudo pg_ctlcluster <results-major> main restart
+psql -p <RESULTPORT> -c 'SHOW shared_buffers;'   # expect 1GB
+```
+
+`osm-mem-16.conf` in `conf/<N>/conf.d` is the intended “results babysitter”
+size (1GB). Keep other OSM-oriented GUCs on that cluster harmless; the point
+is not to retune results performance — only to stop it gobbling RAM.
+
+Also stop every major that is neither test nor results (`pg_lsclusters` /
+`systemctl stop postgresql@…`) so idle clusters are not sitting on memory.
+Siren’s pattern: results on 17, test on 19, everything else stopped. Court’s
+PG18 cutover (2026-10-15): results on **16:5432 @ 1GB**, test on **18:5433 @
+48GB**.
+
+Migrate results onto the new major only when ready (see **Migrating the
+results database** below); until then, `RESULTPORT` stays on the shrunk old
+cluster.
 
 ### Recorded setup: siren, PostgreSQL 19 (2026-10-13)
 
@@ -379,7 +403,10 @@ cd ~/pgbent
 util/newgis            # creates gis; pg_stat_statements, pg_buffercache, postgis, hstore; pgbent_tune
 ```
 
-Leave only two clusters online: the results database and the active one. On siren the results database is still the PostgreSQL 17 cluster (port 5433). Everything else stays installed and is stopped:
+Leave only two clusters online: the results database and the active one (see
+**Two majors in parallel** — shrink the results major’s `shared_buffers`). On
+siren the results database is still the PostgreSQL 17 cluster (port 5433).
+Everything else stays installed and is stopped:
 
 ```bash
 pg_lsclusters

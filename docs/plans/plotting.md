@@ -17,7 +17,8 @@ One plotting stack reading from the results database, without time-averaging awa
 ## Milestones
 
 - [x] `metview.py` — graph every metric for one test run ([metview.md](metview.md))
-- [ ] `metview.py` — default minimal metric set (TPS, latency, dirty memory); `--verbose` for all
+- [ ] `metview.py` — **priority range** (`metrics_info.visibility` / decode `vis`); default top band; drill-down requests the next band only (e.g. 5-6 after 7-9); see [metview.md](metview.md)
+- [ ] `metview.py` — **stacked groups** for CPU (user/system/idle/wait → 100%×cores) and Linux memory (free/cached/dirty/… → MemTotal); see [metview.md](metview.md) § Stacked metric groups
 - [ ] Latency plots with per-outlier markers (gnuplot cross-symbol equivalent in `plots/latency.plot`)
 - [ ] Replace `webreport` gnuplot output with Python (test-set comparison grids)
 - [ ] **Parameter-space explorer** — pivot UI over the five benchmark dimensions ([goals.md](goals.md)); successor to crosstab gnuplot + manual `GROUP BY` reports
