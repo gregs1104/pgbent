@@ -32,13 +32,15 @@ Do not mix unix and TCP in one set. `conn` must stay `sockets prepared` or `host
 
 ## Two board faces
 
-**Sockets** — `SOCKETS=1` (no `-h`). Unix domain, on-box, Phoronix-local shaped. This is the million-TPS cell.
+**Sockets** — `SOCKETS=1` (no `-h`). Unix domain, clients on the server. Modest desktops still clear ~1M TPS here; that is the internals/on-box cell, not how Phoronix’s multi-million DC numbers are made.
 
-**Networked** — `TESTHOST=localhost` or a LAN client (TCP). Unthrottled only on the leaderboard. Localhost TCP is **not** a substitute for the Mbps sweep.
+**Networked** — remote (or LAN) TCP client, server not running pgbench. **The millions on OpenBenchmarking come from this face.** Somewhere **above 10Gb/s**, a dedicated client can push the server harder than co-located sockets, because the server is not also burning cores on pgbench workers. The crossover is around **~1000 clients**. Phoronix has that grade of DC hardware. This lab was measuring that on the **2× EPYC 7702** when that box stopped powering on—do not invent the crossover from desktop SETCLIENTS.
+
+Unthrottled networked cells on the leaderboard. Localhost TCP is **not** a substitute for a remote client or for the Mbps sweep.
 
 ## One-shot mapping study
 
-Publish unix prepared vs host prepared on the same boxes (1-client and full clients, 90s, power on) so “1M TPS on the server” is not confused with what a client sees. After that page exists, the board stays two unthrottled faces.
+Publish unix prepared vs host/remote prepared on the same boxes (1-client and full clients, 90s, power on) so on-box TPS is not confused with a network client. After that page exists, the board stays two unthrottled faces. The 10Gb+ / ~1000-client crossover waits on 2S (or equivalent) hardware coming back—not on twilight/siren desktops.
 
 ## Rate sweep (not a ranking)
 
@@ -55,7 +57,7 @@ Cable the pair once. Control rates with **`tc`** (TBF/HTB/CAKE) on the path pack
 | abbey | M-series watts; Greg workstation, not public Mac QA |
 | court (Spark) | ARM/Spark watts; build-animal later; OSM PG19 stretch still first |
 
-Do **not** wait on the 2× EPYC 7702 (down) or the planned 14900KS chassis. Those can join later as extra single-socket / 2S rows. Archive `PGQuickTest-Prepared.csv` Phoronix Multi-only rows are **placeholders** (`Jobs=4`, `Single=0`); new cells must not look measured the same way unless they are.
+Do **not** wait on the 2× EPYC 7702 (down) or the planned 14900KS chassis to ship the desktop sockets/networked board and the siren→twilight `tc` sweep. The 7702 is specifically the box for the **>10Gb / ~1000-client** crossover; keep that cell parked until it (or a replacement 2S) powers on. Archive `PGQuickTest-Prepared.csv` Phoronix Multi-only rows are **placeholders** (`Jobs=4`, `Single=0`); new cells must not look measured the same way unless they are.
 
 ## Publication
 
