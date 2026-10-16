@@ -152,6 +152,13 @@ Suspects, ordered by that clue:
    collectors — not “whatever `brew` `python3` is today.” Still worth trying
    if hangover fixes don’t stick; brew may just be more sensitive to bad FDs.
 
+Web search so far turned up no similar complaints (`init_sys_streams` /
+`Bad file descriptor` after Darwin collector teardown). That is weak
+negative evidence: this path is niche (Homebrew Python + `setsid` collectors
++ `kill_pg` SIGKILL + immediate post-process), and Stack Overflow volume has
+collapsed, so “nobody posted it” no longer means much. Treat as
+instrument-locally, not “must be unique to our datetime hack.”
+
 Until that lands, keep using `repair-osm-result` rather than blocking OSM
 collection. Do not rewrite collectors mid-Monday bar; this is the follow-on
 once abbey 18 numbers are done.
