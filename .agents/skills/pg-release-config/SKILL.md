@@ -109,19 +109,32 @@ dies in Homebrew Python — empty `results.json`, null `tps` — recovered with
 seen: `init_sys_streams` / `Bad file descriptor` during Darwin `metrics2csv` /
 `csv2gnuplot`.
 
-**After abbey’s PG18 durable/fast cells are collected**, dig in. Leading
-suspects Greg wants checked:
+**After abbey’s PG18 durable/fast cells are collected**, dig in. Strongest
+clue so far: it only hiccups **as part of the live run**; `repair-osm-result`
+on the same files **always works**. That points at run-context state more
+than a pure parse bug in the scripts.
 
-1. **Datetime / `dateutil` path backfiring** — `csv2gnuplot` uses
+Suspects, ordered by that clue:
+
+1. **Collector-exit hangover** — post-process starts while `timed-os-stats` /
+   iostat/vmstat children are still dying or holding FDs. Fits
+   `init_sys_streams` / `Bad file descriptor` on Darwin: stdin/stdout/stderr
+   or inherited pipes from the collector teardown, not bad CSV. Repair runs
+   in a clean shell with collectors long gone — so it succeeds. First dig:
+   how `benchwarmer` / `osm-importer` kill and wait on collectors before
+   `metrics2csv` / `csv2gnuplot`; whether a short settle or explicit
+   `wait`/FD close would clear it.
+2. **Datetime / `dateutil` path backfiring** — `csv2gnuplot` uses
    `dateutil.parser.parse` then `time.mktime` on iostat/vmstat timestamps, plus
    a hard-coded gnuplot `set xtics 10` workaround for HH:MM:SS label overlap.
-   Worth proving whether that parse path (or locale/TZ interaction on Darwin)
-   is what blows up mid-batch vs a clean import.
-2. **Homebrew Python itself** — brew’s interpreter has been fragile across
+   Less favored while repair-always-works holds, unless live runs feed
+   different/truncated stamps than the on-disk files repair reads.
+3. **Homebrew Python itself** — brew’s interpreter has been fragile across
    upgrades (`dateutil` vanishing under PEP 668, odd FD/stdio failures). Try
    another Python source for the post-process shebang path: **python.org /
    framework build**, **MacPorts**, or a dedicated **venv** pinned for pgbent
-   collectors — not “whatever `brew` `python3` is today.”
+   collectors — not “whatever `brew` `python3` is today.” Still worth trying
+   if hangover fixes don’t stick; brew may just be more sensitive to bad FDs.
 
 Until that lands, keep using `repair-osm-result` rather than blocking OSM
 collection. Do not rewrite collectors mid-Monday bar; this is the follow-on
