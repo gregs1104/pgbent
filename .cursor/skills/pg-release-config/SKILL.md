@@ -159,6 +159,14 @@ negative evidence: this path is niche (Homebrew Python + `setsid` collectors
 collapsed, so “nobody posted it” no longer means much. Treat as
 instrument-locally, not “must be unique to our datetime hack.”
 
+Stronger prior: this collector → `metrics2csv` / `csv2gnuplot` path is
+**over a decade old** and was never a problem before. So favor “something
+in the environment changed” (Homebrew Python / Darwin stdio sensitivity)
+over a brand-new logic bug in the scripts themselves. Sleep, wait, FD
+instrumentation, or a non-brew interpreter — one of those fixes should
+clear it; the decade of quiet use is why we dig the handoff/runtime, not
+rewrite the parsers first.
+
 Until that lands, keep using `repair-osm-result` rather than blocking OSM
 collection. Do not rewrite collectors mid-Monday bar; this is the follow-on
 once abbey 18 numbers are done.
