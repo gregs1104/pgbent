@@ -10,7 +10,7 @@ has_children: true
 
 Static snapshots of published benchmark studies—tables previously browsed on the [Streamlit explorer — down between releases](https://pgbent.streamlit.app/).
 
-Each major release gets a snapshot here when its cycle ends. PG 19 will publish on Streamlit first when the next round begins.
+Each major release gets a snapshot here when its cycle ends. The public ranking URL is **[Leaderboards]({{ '/leaderboards/' | relative_url }})** (OSM and pgbench SELECT). PostgreSQL 19 cells go there when testing finishes; this tree keeps the full study tables. Streamlit stays a local grid for comparing loaded versions—not the hosted site.
 
 ## By PostgreSQL version
 

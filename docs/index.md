@@ -8,6 +8,8 @@ layout: home
 
 As a performance regression tool, pgbent has helped catch packaging and integration issues across PostgreSQL releases 16–18. Years of trace history document how Postgres—and the hardware it runs on—has progressed in both software and storage performance.
 
+**[Leaderboards]({{ '/leaderboards/' | relative_url }})** — OSM planet load and pgbench SELECT rankings. Updated when new cells land; PostgreSQL 19 will be announced there.
+
 ![PostgreSQL 18 OSM load: throughput per watt by CPU]({{ '/images/pg18-osm-power-efficiency.png' | relative_url }})
 
 ## How it works
@@ -24,7 +26,7 @@ Shell scripts (`benchwarmer`, `runset`) orchestrate each run. Scale and client c
 - **Deep metrics collection** — One-second resolution sampling into a PostgreSQL results database, without monitor averaging that hides peak GB/s behavior.
 - **Human-readable internals** — Metrics grade how effectively each test stresses CPU and storage, useful for tuning training and regression diagnosis.
 - **Configuration capture** — Server hardware, OS details, and PostgreSQL settings recorded with every run.
-- **SQL and visual analysis** — Reports in the `reports/` directory; [PostgreSQL 18 results]({{ '/results-summary/pg18/' | relative_url }}) publish benchmark tables from Postgres 14–18 testing ([Streamlit explorer — down between releases](https://pgbent.streamlit.app/)).
+- **SQL and visual analysis** — Reports in the `reports/` directory; the [leaderboards]({{ '/leaderboards/' | relative_url }}) page is the public ranking; [PostgreSQL 18 results]({{ '/results-summary/pg18/' | relative_url }}) keep the full study tables.
 - **Easy to extend and audit** — Workloads are plain scripts; the metrics system is transparent shell and SQL.
 
 ## Workloads
@@ -67,7 +69,8 @@ pgbent workloads aim to reflect that reality. Databases have a broad set of use 
 
 ## Links
 
-- [PostgreSQL 18 results]({{ '/results-summary/pg18/' | relative_url }}) — published benchmark study tables ([Streamlit explorer — down between releases](https://pgbent.streamlit.app/))
+- [Leaderboards]({{ '/leaderboards/' | relative_url }}) — OSM and pgbench SELECT rankings
+- [PostgreSQL 18 results]({{ '/results-summary/pg18/' | relative_url }}) — full published study tables
 
 - TOC
 {:toc}

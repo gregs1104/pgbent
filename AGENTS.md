@@ -69,6 +69,7 @@ Plans live under `docs/plans/` in two categories:
 
 - [plotting.md](docs/plans/plotting.md) — gnuplot → Python (project-wide)
 - [metview.md](docs/plans/metview.md) — per-run metrics grapher
+- [pgbench-select.md](docs/plans/pgbench-select.md) — Phoronix-comparable SELECT + package power
 
 **Documentation** — topics to write for getbent.io when time allows:
 

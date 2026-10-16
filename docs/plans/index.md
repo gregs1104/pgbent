@@ -19,6 +19,7 @@ Living roadmaps for in-progress work. Aimed at maintainers and coding agents; no
 | [plotting.md](plotting.md) | gnuplot → Python migration (project-wide) |
 | [metview.md](metview.md) | Per-run metrics grapher |
 | [results-snapshot.md](results-snapshot.md) | Export Streamlit studies to static docs snapshots (PG18, …) |
+| [pgbench-select.md](pgbench-select.md) | Phoronix-comparable SELECT cells + package power |
 
 ## Plan types
 
@@ -26,6 +27,6 @@ Living roadmaps for in-progress work. Aimed at maintainers and coding agents; no
 |------|------|---------|
 | Documentation | [documentation.md](documentation.md) | Topics to write for the docs site when time allows |
 | Long-term goals | [goals.md](goals.md) | Directional ambitions; not active work by default |
-| Implementation | [plotting.md](plotting.md), [metview.md](metview.md), [results-snapshot.md](results-snapshot.md) | Code to build or migrate |
+| Implementation | [plotting.md](plotting.md), [metview.md](metview.md), [results-snapshot.md](results-snapshot.md), [pgbench-select.md](pgbench-select.md) | Code to build or migrate |
 
 Agent entry point: [AGENTS.md](../../AGENTS.md) at the repository root.
