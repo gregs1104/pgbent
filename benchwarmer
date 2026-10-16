@@ -297,10 +297,17 @@ fi
 
 # Create the tests record
 DBSIZE=`$TESTPSQL -A -t -c "select pg_database_size(current_database())"`
-TEST=`$RESULTPSQL -A -t -c "INSERT INTO tests (server,server_version,script,clients,workers,set,scale,dbsize,rate_limit,client_limit,multi,conn_method) VALUES('$SERVERNAME','$VERSION_TEXT','$SCRIPT','$CLIENTS','$NUM_WORKERS','$SET','$SCALE','$DBSIZE',$RATE, $CLIENT_LIMIT,$MULTI,'$CONNMETHOD') RETURNING test"`
+# -q drops the INSERT 0 1 tag; -t alone still prints it and the next
+# statement then tries to use "3115\nINSERT 0 1" as the test integer.
+TEST=`$RESULTPSQL -A -t -q -c "INSERT INTO tests (server,server_version,script,clients,workers,set,scale,dbsize,rate_limit,client_limit,multi,conn_method) VALUES('$SERVERNAME','$VERSION_TEXT','$SCRIPT','$CLIENTS','$NUM_WORKERS','$SET','$SCALE','$DBSIZE',$RATE, $CLIENT_LIMIT,$MULTI,'$CONNMETHOD') RETURNING test"`
 if [ "$?" -ne "0" ] || [ -z "$TEST" ]; then
   echo ERROR: INSERT INTO tests failed or returned no test number. Aborting.
   echo Do not fall back to max\(test\) — that reuses the last finished cell after a crash.
+  exit
+fi
+if ! [[ "$TEST" =~ ^[0-9]+$ ]]; then
+  echo ERROR: INSERT RETURNING was not a test integer: \"$TEST\"
+  echo psql command tags leaking into TEST will corrupt later inserts.
   exit
 fi
 
