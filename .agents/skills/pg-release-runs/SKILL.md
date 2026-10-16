@@ -180,9 +180,22 @@ util/repair-osm-result <test> <server> --metrics # also re-run metrics2csv
 ```
 
 `repair-osm-result` parses `results/<server>/<test>/results.txt`, writes
-`results.json`, updates **that** `tests` row (unlike `util/art-import.sql`, which
-targets the latest `start_time` and can hit the wrong test), then sets OSM TPS
-to kNodes/s. Add `--metrics` once the Python/`DISKLIST` issues are fixed.
+`results.json`, and fills **that** `tests` row. `util/art-import.sql` is
+write-once (exact `server`/`test`, never `{}`, never replace a populated
+cell) so repair is the path that can fill `{}` after a finished load.
+Then sets OSM TPS to kNodes/s. Add `--metrics` once the Python/`DISKLIST`
+issues are fixed.
+
+A hard power-off of the DUT also takes the **results cluster** (siren: PG17
+`:5433` on the same box). The old post-process used `max(test)` plus
+`art-import` on **latest start_time**, and a failed OSM parse is `{}`.
+That stamped `end_time=now()` **and replaced artifacts with `{}`** on the
+last good cell — siren **3047** (set 72) was not uploaded yet, so it is
+gone; **3083** was the later incomplete start. This is why durable became
+the default (fewer trips) and why upload archives exist. `benchwarmer`
+now `INSERT … RETURNING test`, will not close an incomplete OSM row, and
+will not import `{}`. Salvage: `grep overall results/<server>/<test>/results.txt`
+then `util/repair-osm-result` if the summary line survived.
 
 Not repairable: incomplete loads (no overall line, `nodes.db` still present,
 tiny `dbsize`) — delete those test rows/dirs instead. Abbey set 11 test **64**
@@ -228,11 +241,15 @@ to discover that a corner needs 1.5TB of WAL.
 
 **Lab CPU / thermal stability (roles flipped).** Treat hard power-off under OSM
 load as a **hardware** failure class, not a Postgres bug. Greg does not run the
-lab at full capacity over the summer for this reason.
+lab at full capacity over the summer for this reason. The post-PG18 plan was
+to retire this lab and move the workload onto approved **datacenter** iron;
+that did not happen. The farm is **Greg-owned** hardware now — do not assume a
+DC cutover, a company disk refresh, or that siren’s 2TB / 240mm limits are
+temporary corporate inventory. Finish the OSM/PG19 cells on these boxes.
 
 | Host | CPU | Notes |
 |------|-----|--------|
-| **siren** | **9950X** (was **9700X**) | Finish **PG19 beta grid points on this box**, then take it down for cooler retrofit — do not treat thermal trips as a reason to abandon the remaining cells. Cooler is a **240mm AIO** (undersized for 9950X; 9700X was stable). Workaround is the **room AC**, same as keeping the lab alive at **100°F** outside — not a CPU swap mid-grid. `wl/osm-import` `RECOVERY=3600` is an **informed** hour between planet loads (AIO/room heat dump); Greg expected another crash and wanted **`k10temp` live**. 2026-10-15 hard off; 2026-10-16 way ingest (`Node(10791148k …) Way(1133809k …) Relation(0)`); same-day restart still heat-soaked, `sensors` **Tctl 79°C / Tccd1 78.5 / Tccd2 42.6**, died in **Node** phase. Delete incomplete tests; thermal **starts as the host vanishing**. After the beta cells: **9700X back into siren**, 9950X into a larger-cooler chassis. Confirmed chip **`k10temp-pci-00c3`**: collect `sensors -u k10temp-*` (no sudo) → `Tctl_temp1_input` (package, vis 9) plus `Tccd1`/`Tccd2` (split, vis 5) — **do not average the CCDs**. Greg-only on the box — do not SSH. |
+| **siren** | **9950X** (was **9700X**) | Finish **PG19 beta grid points on this box**, then take it down for cooler retrofit — do not treat thermal trips as a reason to abandon the remaining cells. Cooler is a **240mm AIO** (undersized for 9950X; 9700X was stable). **9700X→9950X barely moved OSM**, as expected (second CCD idle); the buy was for **short pgbench / ~1M TPS** (perceptually important). OSM *might* improve on a 9950X **after a larger heatsink**, not in this chassis. Workaround is the **room AC**, same as keeping the lab alive at **100°F** outside — not a CPU swap mid-grid. `wl/osm-import` `RECOVERY=3600` is an **informed** hour between planet loads (AIO/room heat dump); Greg expected another crash and wanted **`k10temp` live**. 2026-10-15 hard off; 2026-10-16 way ingest (`Node(10791148k …) Way(1133809k …) Relation(0)`); same-day restart still heat-soaked, `sensors` **Tctl 79°C / Tccd1 78.5 / Tccd2 42.6**, died in **Node** phase. Later the same day, cooled+AC **cleared Nodes at peak Tctl 87°C**; Ways sat ~**77°C** for a while with intake ~**68°F** (room normally **71°F**), then **still died in Ways** — 3°F of AC was not enough for the rest of that pass. Delete incomplete tests; thermal **starts as the host vanishing**. After the beta cells: **9700X back into siren**, 9950X into a larger-cooler chassis. Confirmed chip **`k10temp-pci-00c3`**: collect `sensors -u k10temp-*` (no sudo) → `Tctl_temp1_input` (package, vis 9) plus `Tccd1`/`Tccd2` (split, vis 5) — **do not average the CCDs**. The split is the teaching sample: **Tccd2 stayed ~43°C while Tccd1/Tctl sat in the 80s** — the second CCD is not on the OSM critical path, so extra cores on that die do not help a struggling load (and dump all the watts onto one hot chiplet). Live samples work; shutdown looks like the **motherboard cutting power near 90°C Tctl**, before the 9950X hits Tjmax throttle. Greg-only on the box — do not SSH. |
 | **twilight** | **13600K** (was **14900K**) | Roles used to be reversed: the **14900K** made twilight the unstable box. Back on a cool-running **13600K** it is trouble-free again — preferred host for long PG19 matrices. |
 
 Other machines:
@@ -337,8 +354,13 @@ same as PG19 on that config. So the 18↔19 gap on the slim-WAL corner is
 The 4.05h cell stays (not an 18↔19 regression). **PG19 beta grid on siren
 comes first** — Greg is finishing those points on the 9950X with **room AC**
 (same summer-100°F workaround) and `RECOVERY=3600` before the chassis
-retrofit. PG18 extra repeats and temporary-set cleanup wait on that, not on
-a 9700X swap. Hard power-off is expected thermal, not a reason to stop.
+retrofit. **Crashes so far are the low-durability / thin-WAL corner**
+(CPU not stalled on sync, one CCD into the ~90°C board trip). High-WAL
+durable runs survived on the same knife edge without temps on the trace;
+Greg will **re-run some PG19 cells with k10temp** so that margin is
+visible, not as a new GUC study. PG18 extra repeats and temporary-set
+cleanup wait on the beta grid, not on a 9700X swap. Hard power-off is
+expected thermal, not a reason to stop.
 
 ### Study 2: checksum overhead
 
@@ -751,7 +773,8 @@ before treating a crash as upstream news. Hardware ghosts look like software
 until they do not — same class as siren’s 9950X hard power-off (2026-10-15
 and **again 2026-10-16**) and twilight’s past 14900K instability. Thermal
 problems **start by looking like the machine went down**, not like a tidy
-package-power cliff. Document suspected environment factors next to the
+package-power cliff. On siren that is a **board trip near 90°C Tctl**
+(k10temp now on the trace), not CPU throttle. Document suspected environment factors next to the
 finding; do not open a community bug (or publish a “Postgres regression”)
 on a single flaky box without that check.
 
