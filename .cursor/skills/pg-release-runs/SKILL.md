@@ -265,11 +265,13 @@ Do **not** start the big twilight GUC exploration (durability 2×2 corners,
 checksums, buffers, …) until Fury TRIM is understood and this Monday bar is
 met. After the outage, resume the PG19 study sequence below.
 
-Fleet snapshot 2026-10-15 ~16:50 EDT: abbey test 67 durable; court test 16
-fast + `repeat-gis`; twilight test 2600 durable (restart after 2599) with a
-`wait-then-repeat` helper so `repeat-gis` starts only after the current
-runset/osm exits (starting `repeat-gis` immediately would `newgis` under the
-live load); siren on PG18 minimum-durability backfill (Greg).
+Fleet notes (update as needed):
+
+- **Do not** use `pgrep -f` patterns that appear in the waiter’s own
+  `bash -c '...'` string — twilight’s Oct 15 `wait-then-repeat` matched
+  itself forever and never started `repeat-gis` after 2600 finished.
+- Starting `repeat-gis` under a live OSM load would `newgis` mid-import; only
+  attach a loop when idle, or wait on PIDs that cannot match the waiter.
 
 ## PG19 study sequence
 
