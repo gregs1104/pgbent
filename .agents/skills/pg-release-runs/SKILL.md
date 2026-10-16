@@ -432,6 +432,35 @@ Historical checklist (for the next Spark / similar host):
 Reference: twilight’s `/etc/apt/sources.list.d/pgdg.list` pins `noble-pgdg main 19`
 (with 17/18 lines commented). Court uses the same file shape with `main 18`.
 
+#### Court remaining runs: exercise `OSMRELPROF` / `pgbent_perf` (2026-10-16)
+
+Court’s Linux post-process path is fine (no Darwin/`init_sys_streams` hiccup).
+It is also the slowest box on this OSM cell, so the **other-durability**
+repeats will trail the fleet — use them to shake out relation-phase perf
+collection rather than waiting for a special profiling set.
+
+**Done on court 2026-10-16 (mid test 17):** installed
+`/usr/local/bin/pgbent_perf` from the checkout and added NOPASSWD for
+`postgres` in `/etc/sudoers.d/postgres`. `perf` 7.0.14 is present;
+`sudo -u postgres sudo -n pgbent_perf --version` works.
+
+**Not for the in-flight load:** test 17 already finished `planet_osm_rels`
+COPY / index before the helper landed; `OSMRELPROF` is still `0` in
+`wl/osm-import`. Between runs (after 17 finishes, before the durability
+flip / next `runset`):
+
+```bash
+# as postgres, in ~/pgbent
+# wl/osm-import: OSMRELPROF=0 → OSMRELPROF=1
+# then let repeat-gis / runset start the next load
+# expect results/<test>/osm-rel-perf.data, osm-rel-perf-report.txt, osm-rel-prof.log
+```
+
+Do not edit `wl/osm-import` while `benchwarmer` already holds a sourced copy
+for the current test — flip only in the idle gap. If `perf record` fails on
+Spark (permissions / PMU), the log in the results dir is the first place to
+look; fix helper/sudoers, do not block durability collection.
+
 ### Two majors in parallel (test + results)
 
 pgbent often keeps **two clusters online** on one host: the **test** major
