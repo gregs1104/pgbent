@@ -319,6 +319,11 @@ the earlier comparison set without blocking whatever set he was already using.
 Agent work stays on the PG19 twilight matrix; do not farm the PG18 regression
 backfill there. Stop once the version comparison is tellable.
 
+**Bridge result (2026-10-16):** siren PG18 **low-WAL / not durable** (fast/
+minimal on the medium-checkpoint envelope) came in at **4.05 hours** — the
+same as PG19 on that config. So the 18↔19 gap on the slim-WAL corner is
+≈none; tell the story with durability/WAL volume, not a major-version win.
+
 ### Study 2: checksum overhead
 
 **Deferred from PG18** — planned then, pushed forward to deal with GIS bugs.
