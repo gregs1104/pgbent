@@ -232,7 +232,7 @@ lab at full capacity over the summer for this reason.
 
 | Host | CPU | Notes |
 |------|-----|--------|
-| **siren** | **9950X** (was **9700X**) | As of 2026-10-15, powered off under load again. Long-stable on the 9700X; 9950X is the suspect under sustained heat. After initial PG19 results, may **roll the 9700X back into siren** and put the 9950X in a chassis with better cooling. Until then: do not lean on siren for unattended multi-day sweeps; crashed mid-load OSM runs are not repairable (delete incomplete tests — see above). |
+| **siren** | **9950X** (was **9700X**) | Finish **PG19 beta grid points on this box**, then take it down for cooler retrofit — do not treat thermal trips as a reason to abandon the remaining cells. Cooler is a **240mm AIO** (undersized for 9950X; 9700X was stable). Workaround is the **room AC**, same as keeping the lab alive at **100°F** outside — not a CPU swap mid-grid. `wl/osm-import` `RECOVERY=3600` is an **informed** hour between planet loads (AIO/room heat dump); Greg expected another crash and wanted **`k10temp` live**. 2026-10-15 hard off; 2026-10-16 way ingest (`Node(10791148k …) Way(1133809k …) Relation(0)`); same-day restart still heat-soaked, `sensors` **Tctl 79°C / Tccd1 78.5 / Tccd2 42.6**, died in **Node** phase. Delete incomplete tests; thermal **starts as the host vanishing**. After the beta cells: **9700X back into siren**, 9950X into a larger-cooler chassis. Confirmed chip **`k10temp-pci-00c3`**: **Tctl** tracks the hot CCD (**Tccd1**); **Tccd2** is the cool split — **do not average**. Greg-only on the box — do not SSH. |
 | **twilight** | **13600K** (was **14900K**) | Roles used to be reversed: the **14900K** made twilight the unstable box. Back on a cool-running **13600K** it is trouble-free again — preferred host for long PG19 matrices. |
 
 Other machines:
@@ -334,8 +334,11 @@ backfill there. Stop once the version comparison is tellable.
 minimal on the medium-checkpoint envelope) came in at **4.05 hours** — the
 same as PG19 on that config. So the 18↔19 gap on the slim-WAL corner is
 ≈none; tell the story with durability/WAL volume, not a major-version win.
-Greg will run **two more** repeats for a range, then temporary-set → reassign
-cleanup into the historical set; after that **siren is done for beta4**.
+The 4.05h cell stays (not an 18↔19 regression). **PG19 beta grid on siren
+comes first** — Greg is finishing those points on the 9950X with **room AC**
+(same summer-100°F workaround) and `RECOVERY=3600` before the chassis
+retrofit. PG18 extra repeats and temporary-set cleanup wait on that, not on
+a 9700X swap. Hard power-off is expected thermal, not a reason to stop.
 
 ### Study 2: checksum overhead
 
@@ -627,7 +630,7 @@ touch complete        # (in STATEDIR) stop after the current run finishes
 
 `watch util/progress` follows `repeat-gis` through its transitions: newgis, recovery sleep, and the next `runset`. It always shows the latest set's newest test, so one dashboard can stay open for the whole loop. This was verified on siren. On macOS, `watch` comes from Homebrew (`brew install watch`).
 
-- A planet load takes roughly 3–5 hours on desktop hardware. `RECOVERY=3600` gives an hour of cooldown between runs.
+- A planet load takes roughly 3–5 hours on desktop hardware. `wl/osm-import` sets `RECOVERY=3600` as an **informed** hour of cooldown (disk cache **and** thermal: 240mm AIO / room heat dump). On siren’s 9950X that hour is why a crash can be followed by a live `k10temp` look; it is not a guess that the box will stay up.
 - `util/newgis` recreates `gis` with extensions and runs `pgbent_tune`. If it fails, `repeat-gis` stops and removes the pid files. A failed `dropdb` means connections are still open — usually **zombie `timed-os-stats` collectors** left from a crashed OSM/`benchwarmer` (they keep a `psql` session on `gis` via `util/metric-query.sql`). Clear them, then retry:
 
 ```bash
@@ -745,10 +748,12 @@ found an 18.0 `maintenance_work_mem` crash. When something breaks:
 **Bug vs environment.** Separating a real Postgres/osm2pgsql defect from a lab
 glitch is hard and expensive. Prefer a second host and a stock-stable config
 before treating a crash as upstream news. Hardware ghosts look like software
-until they do not — same class as siren’s 9950X power-off-under-load and
-twilight’s past 14900K instability. Document suspected environment factors
-next to the finding; do not open a community bug (or publish a “Postgres
-regression”) on a single flaky box without that check.
+until they do not — same class as siren’s 9950X hard power-off (2026-10-15
+and **again 2026-10-16**) and twilight’s past 14900K instability. Thermal
+problems **start by looking like the machine went down**, not like a tidy
+package-power cliff. Document suspected environment factors next to the
+finding; do not open a community bug (or publish a “Postgres regression”)
+on a single flaky box without that check.
 
 Examples that burned real calendar time / reputation:
 
