@@ -323,6 +323,8 @@ backfill there. Stop once the version comparison is tellable.
 minimal on the medium-checkpoint envelope) came in at **4.05 hours** — the
 same as PG19 on that config. So the 18↔19 gap on the slim-WAL corner is
 ≈none; tell the story with durability/WAL volume, not a major-version win.
+Greg will run **two more** repeats for a range, then temporary-set → reassign
+cleanup into the historical set; after that **siren is done for beta4**.
 
 ### Study 2: checksum overhead
 
