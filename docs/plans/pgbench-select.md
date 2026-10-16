@@ -50,7 +50,7 @@ pgbench -S -T 10 -c 960 -j 128 -M prepared pgbench
 
 At **960 clients / 128 jobs**, sockets looked **capped below what the hardware should do**. That is the on-box client tax (pgbench workers on the server), which is why a dedicated networked client on a >10Gb link is the interesting next step. 10s probe, not the 90s board cell.
 
-**Kernel / death of `super`:** could not beat that 24.04 figure on **26.04** — TPS dropped a lot — then the box stopped powering on. Treat the 26.04 drop as **suspect slow thermal failure**, not a kernel regression, until the iron is back. Same class as early pgbent catching a bad **AIO fan in public**: TPS moved first. Reproduce on a second 2S before publishing a 24.04-vs-26.04 story. Do not invent this from desktop SETCLIENTS; `super` is down.
+**Kernel / death of `super`:** could not beat that 24.04 figure on **26.04** — TPS dropped a lot — then the box stopped powering on. Treat the 26.04 drop as **suspect slow thermal failure**, not a kernel regression, until the iron is back. Same class as early pgbent catching a bad **AIO fan in public**: TPS moved first. Published write-up of that method (memory speed vs TPS, plus the overclocking holiday-crash): [PostgreSQL 13 Benchmark: Memory Speed vs. TPS](https://www.crunchydata.com/blog/postgresql-13-benchmark-memory-speed-vs.-tps). Reproduce on a second 2S before publishing a 24.04-vs-26.04 story. Do not invent this from desktop SETCLIENTS; `super` is down.
 
 Unthrottled networked cells on the leaderboard for **TPS**, not for a combined power score. Localhost TCP is **not** a substitute for a remote client or for the Mbps sweep.
 

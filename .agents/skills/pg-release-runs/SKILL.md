@@ -761,7 +761,10 @@ Examples that burned real calendar time / reputation:
   hardware story. Same pattern as `super` (2× EPYC 7702): 960-client sockets
   SELECT on a **24.04** kernel (~1.53M TPS) could not be matched on **26.04**
   (big drop), then the server died — suspect slow thermal, not a kernel
-  verdict, until a second 2S reproduces.
+  verdict, until a second 2S reproduces. That line of work published as
+  [PostgreSQL 13 Benchmark: Memory Speed vs. TPS](https://www.crunchydata.com/blog/postgresql-13-benchmark-memory-speed-vs.-tps)
+  (also covers the overclocking/holiday-crash saga: a few percent CPU
+  overheat flipping a bit, chased as a once-per-day PG crash).
 
 Storage firmware, queue depth, thermal limits, and “it passed a few weeks of
 basic soak” are not proof the platform is innocent.
