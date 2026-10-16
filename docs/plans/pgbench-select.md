@@ -26,17 +26,17 @@ Public ranking: [Leaderboards]({{ '/leaderboards/' | relative_url }}) — two fa
 | Scale | 100 | Their advertised default; ~1.6GB |
 | Repeats | `SETTIMES=3` | |
 | Clients | **1** and full `SETCLIENTS` | Old single-core / multi-core pair |
-| Power | `SUDODATA=1`, working `pgbent_powermon` | `avg_package_watts` / `max_package_watts` on `submission` |
+| Power | `SUDODATA=1`, working `pgbent_powermon` | **Sockets cells only** for the watts ranking — one package, clients+server on the same box, complete accounting. Do not try to sum client and server RAPL across machines (enterprise metering; out of scope). |
 
 Do not mix unix and TCP in one set. `conn` must stay `sockets prepared` or `host prepared`.
 
 ## Two board faces
 
-**Sockets** — `SOCKETS=1` (no `-h`). Unix domain, clients on the server. Modest desktops still clear ~1M TPS here; that is the internals/on-box cell, not how Phoronix’s multi-million DC numbers are made.
+**Sockets** — `SOCKETS=1` (no `-h`). Unix domain, clients on the server. Modest desktops still clear ~1M TPS here; that is the internals/on-box cell, not how Phoronix’s multi-million DC numbers are made. **TPS vs watts lives here** because one `powermon` sees the whole load.
 
 **Networked** — remote (or LAN) TCP client, server not running pgbench. **The millions on OpenBenchmarking come from this face.** Somewhere **above 10Gb/s**, a dedicated client can push the server harder than co-located sockets, because the server is not also burning cores on pgbench workers. The crossover is around **~1000 clients**. Phoronix has that grade of DC hardware. This lab was measuring that on the **2× EPYC 7702** when that box stopped powering on—do not invent the crossover from desktop SETCLIENTS.
 
-Unthrottled networked cells on the leaderboard. Localhost TCP is **not** a substitute for a remote client or for the Mbps sweep.
+Unthrottled networked cells on the leaderboard for **TPS**, not for a combined power score. Localhost TCP is **not** a substitute for a remote client or for the Mbps sweep.
 
 ## One-shot mapping study
 
@@ -62,7 +62,7 @@ Do **not** wait on the 2× EPYC 7702 (down) or the planned 14900KS chassis to sh
 ## Publication
 
 - Newset name along the lines of `SELECT sockets prepared` / `SELECT host prepared` (PG19 when that major is the test cluster).
-- Scatter like OSM power: TPS vs max package W, two markers per CPU (1 client / full).
+- Scatter like OSM power: TPS vs max package W on **sockets** cells, two markers per CPU (1 client / full).
 - `/leaderboards/` SELECT section + versioned snapshot tables. Streamlit stays a local grid, not the hosted site.
 
 ## Out of scope
