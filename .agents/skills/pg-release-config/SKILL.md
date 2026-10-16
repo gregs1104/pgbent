@@ -22,7 +22,9 @@ Switch a variant by renaming files, never by editing them in place.
 | `network.conf` | `listen_addresses`, `max_connections`, parallel worker counts, comparability toggles |
 | `osm-general.conf` | WAL size, checkpoints, bgwriter, autovacuum off |
 | `osm-mem-{16,32,64,128}` | Memory tiers; exactly one is `.conf` |
-| `osm-sync-fast` / `osm-sync-durable` | Durability; exactly one is `.conf`. **PG19 default is durable** |
+| `osm-wal-replica` / `osm-wal-minimal` | WAL volume; exactly one is `.conf`. **PG19 default is replica** |
+| `osm-fsync-on` / `osm-fsync-off` | Sync waits; exactly one is `.conf`. **PG19 default is on** |
+| `osm-fpw-on` / `osm-fpw-off` | Full-page writes; exactly one is `.conf`. **PG19 default is on** |
 | `README.md` | Deploy instructions |
 
 ## Start a cycle
@@ -43,9 +45,10 @@ cd /etc/postgresql/<N>/main/conf.d && sudo cp ~postgres/pgbent/conf/<N>/conf.d/*
 ```
 
 A symlink from `/etc/postgresql/<N>/main/conf.d` into the pgbent checkout
-failed on systemd's permission setup; leave that approach alone and copy after
-each `git pull` of config changes. Reload or restart the cluster so the new
-files are read.
+failed on systemd's permission setup; leave that approach alone. **Copy is
+the isolation:** `git pull` never changes the running cluster. The cost is
+noticing a conf change in the repo and copying by hand, then reload or
+restart so the new files are read.
 
 After deploying, verify no file was silently skipped:
 
@@ -76,8 +79,8 @@ changes into `postgresql.conf`:
    the restart did not take.
 2. Terminate backends, then stop for real: `pg_ctl -D … stop -m fast` (and/or
    `brew services stop`), confirm no `postgres` left on that data directory.
-3. When flipping fast→durable, drop leftover `max_wal_senders = 0` from the
-   folded `osm-sync-fast` block; `wal_level=replica` needs the default senders.
+3. When flipping `osm-wal-minimal` → replica, drop leftover `max_wal_senders = 0`
+   from the folded block; `wal_level=replica` needs the default senders.
 4. Start with a valid locale (`LC_ALL=en_US.UTF-8`) or via `brew services start`
    — bare `pg_ctl start` can die with `postmaster became multithreaded during
    startup` / “Set the LC_ALL environment variable”.
@@ -229,28 +232,22 @@ Larger WAL (256GB, 60 min) is faster but may not fit on 2TB drives. 100GB / 30 m
 
 ## Durability default (PG19)
 
-The published baseline is **production durability** (`osm-sync-durable.conf`:
-`fsync`/`synchronous_commit`/`full_page_writes` on, `wal_level=replica`).
-Fast-sync (`osm-sync-fast.conf`: all of those off, `wal_level=minimal`) is a
-study variant, not the cycle default. The speed gain is too small to justify
-publishing a non-production config.
+The published baseline is **production durability**: `wal_level=replica`,
+`fsync` / `synchronous_commit` on, `full_page_writes` on. Those are **three
+independent pairs** in `conf/19/conf.d` (`osm-wal-*`, `osm-fsync-*`,
+`osm-fpw-*`). Default files are the `.conf` side of each pair. Conf 16–18
+keep the bundled `osm-sync-fast` / `osm-sync-durable` pair.
 
-`conf/19` in git is durable as of `d33ba0a` (`osm-sync-durable.conf` active,
-`osm-sync-fast.off`). Siren and twilight were still finishing their last
-fast-sync loads when that landed; after those hit `complete` (aim for **at
-least three runs** on a config before judging it), pull on each host and
-**copy** into `/etc/postgresql/19/main/conf.d`, then confirm
-`SHOW fsync; SHOW wal_level;` → `on` / `replica`. Stay on the existing PG19
-set — durable and fast-sync runs live in the same batch and are told apart by
-`test_settings`.
+Abbey PG18 set 11 showed a **severe** bundled penalty (fast 7.45h / 404
+kNodes/s vs durable 11.1h / 270). Some systems are WAL-volume driven; abbey
+is suspected **Darwin fsync**. Further PG19 testing flips WAL level and fsync
+separately (FPW held on unless WAL bytes still need explaining). A `git pull`
+on siren is fine; do **not** copy into `/etc/postgresql/19/main/conf.d` (or
+reload) until the current PG19 grid cells finish.
 
-`osm-sync-durable.conf` only sets `wal_level=replica`; durability comes from
-Postgres defaults once fast-sync is off. PG18 set 70 on siren
-(`New planet 2026-08-13`) is the matching 2026-planet durable reference. Do
-not compare PG19 fast-sync rows against that set as a version result.
+`SHOW fsync; SHOW wal_level; SHOW full_page_writes;` after each flip. Stay
+on the existing PG19 set — corners are told apart by `test_settings`.
 
 **First PG19 study** is durability / WAL volume vs throughput on the 100GB·30min
-envelope: full 2×2 on PG19 only; PG18 gets a backfill cell or two for the
-story, not a second matrix. See `pg-release-runs` study sequence (then
-**checksum overhead** deferred from PG18, then `shared_buffers` / node cache,
-then `maintenance_work_mem`).
+envelope: 2×2 (`osm-wal-*` × `osm-fsync-*`, FPW on) on PG19 only. See
+`pg-release-runs`.
