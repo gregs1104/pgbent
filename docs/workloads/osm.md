@@ -14,5 +14,5 @@ The osm2pgsql loading program populates the entire Open Street Map planet data s
 
 ![osm2pgsql workload](/images/twilight-1494-read-write.png)
 
-For a few years now, the most interesting benchmark results have been the Open Street Map tests, published as [blog entries](https://www.crunchydata.com/blog/loading-the-world-openstreetmap-import-in-under-4-hours), [talks](https://www.youtube.com/watch?v=BCMnu7xay2Y), or [social media posts](https://x.com/postgresperf/status/1858905975446556876).  That runs via the pgbent's artibrary workload interface script.  It's classic shell scripting work, there's no use of pgbench.
+pgbench grids ran out of work that could saturate modern SSD ([PG13 random-read check](https://www.crunchydata.com/blog/postgresql-13-upgrade-and-performance-check-on-ubuntu-debian)); the planet load is the write/checkpoint gear change. The series is on [Greg Smith’s Crunchy author page](https://www.crunchydata.com/blog/author/greg-smith). Recent OSM results: [Loading the World](https://www.crunchydata.com/blog/loading-the-world-openstreetmap-import-in-under-4-hours), [talk](https://www.youtube.com/watch?v=BCMnu7xay2Y), [social](https://x.com/postgresperf/status/1858905975446556876). That runs via pgbent's arbitrary workload interface. Classic shell scripting; no pgbench.
 

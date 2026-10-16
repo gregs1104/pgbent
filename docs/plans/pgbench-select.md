@@ -75,6 +75,10 @@ Cable the pair once. Control rates with **`tc`** (TBF/HTB/CAKE) on the path pack
 
 Do **not** wait on `super` / 2× EPYC 7702 (down) or the planned 14900KS chassis to ship the desktop sockets/networked board and the siren→twilight `tc` sweep. `super` is the box for the **960-client sockets ceiling vs >10Gb networked** follow-up; keep that cell parked until it powers on. Archive `PGQuickTest-Prepared.csv` Phoronix Multi-only rows are **placeholders** (`Jobs=4`, `Single=0`); new cells must not look measured the same way unless they are.
 
+## Public trail (pgbench → OSM)
+
+The switch of gears is already public on [Greg Smith’s Crunchy blog index](https://www.crunchydata.com/blog/author/greg-smith): pgbench grids until they could **saturate SSD** ([PG13, 1.6GB/s random reads](https://www.crunchydata.com/blog/postgresql-13-upgrade-and-performance-check-on-ubuntu-debian)), memory-speed vs TPS and the overclocking saga ([same series](https://www.crunchydata.com/blog/postgresql-13-benchmark-memory-speed-vs.-tps)), then OSM as the bulk-write / checkpoint stress ([Loading the World](https://www.crunchydata.com/blog/loading-the-world-openstreetmap-import-in-under-4-hours)). SELECT on this leaderboard is the Phoronix-shaped remnant of that first era, with watts; OSM is what you run when pgbench cannot fill the drive.
+
 ## Publication
 
 - Newset name along the lines of `SELECT sockets prepared` / `SELECT host prepared` (PG19 when that major is the test cluster).
