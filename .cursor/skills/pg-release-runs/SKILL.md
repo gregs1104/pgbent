@@ -757,6 +757,11 @@ Examples that burned real calendar time / reputation:
   lethal under the real load.
 - **Early Intel SSD** — device bug set **maximum queue depth to 0**; published
   numbers based on that setup later needed an **official retraction apology**.
+- **AIO fan** — failed in public on early pgbent; **TPS moved first**, then the
+  hardware story. Same pattern as `super` (2× EPYC 7702): 960-client sockets
+  SELECT on a **24.04** kernel (~1.53M TPS) could not be matched on **26.04**
+  (big drop), then the server died — suspect slow thermal, not a kernel
+  verdict, until a second 2S reproduces.
 
 Storage firmware, queue depth, thermal limits, and “it passed a few weeks of
 basic soak” are not proof the platform is innocent.
