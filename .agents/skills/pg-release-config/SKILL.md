@@ -120,10 +120,26 @@ Suspects, ordered by that clue:
    iostat/vmstat children are still dying or holding FDs. Fits
    `init_sys_streams` / `Bad file descriptor` on Darwin: stdin/stdout/stderr
    or inherited pipes from the collector teardown, not bad CSV. Repair runs
-   in a clean shell with collectors long gone — so it succeeds. First dig:
-   how `benchwarmer` / `osm-importer` kill and wait on collectors before
-   `metrics2csv` / `csv2gnuplot`; whether a short settle or explicit
-   `wait`/FD close would clear it.
+   in a clean shell with collectors long gone — so it succeeds.
+
+   Handoff today (`benchwarmer`): `kill_pg` SIGKILLs the collector process
+   groups (no `wait`), then a pile of SQL/`art-import` work, then
+   `metrics2csv` / `csv2gnuplot`. No explicit settle before Python.
+
+   **Two digs when abbey 18 is done** (prefer instrument; sleep is fine as A/B):
+
+   - **Sleep and hope** — cheap empirical test: `sleep 2` (or 5) right after
+     the `kill_pg` block (~L382–398) and/or immediately before
+     `metrics2csv` (~L616). If live runs stop crashing, hangover is confirmed
+     even if the root cause is still fuzzy; leave the sleep (or replace with
+     a real `wait`) until something cleaner lands.
+   - **Instrument to catch it exactly** — before invoking `metrics2csv`, log:
+     whether any `timed-os-stats` / iostat/vmstat PIDs remain (`pgrep`/`ps`);
+     Darwin `lsof -p $$` (or python’s `os.fstat` on 0/1/2) for broken
+     stdin/out/err; wrap the Python entry so `Bad file descriptor` /
+     `init_sys_streams` dumps FD state + traceback to the test dir. That
+     tells sleep-vs-wait-vs-FD-reset without guessing.
+
 2. **Datetime / `dateutil` path backfiring** — `csv2gnuplot` uses
    `dateutil.parser.parse` then `time.mktime` on iostat/vmstat timestamps, plus
    a hard-coded gnuplot `set xtics 10` workaround for HH:MM:SS label overlap.
