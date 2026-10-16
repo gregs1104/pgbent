@@ -101,6 +101,32 @@ sudo pip3 install dateutils --break-system-packages
 (`--break-system-packages` is a trailing pip option; putting it before `install`
 fails.) Re-run that after brew Python updates when `pgsysinfo` starts ImportErroring.
 
+### Planned: abbey post-process Python crash (after PG18 numbers)
+
+OSM loads on abbey often finish (`osm2pgsql took … overall`) but post-process
+dies in Homebrew Python — empty `results.json`, null `tps` — recovered with
+`util/repair-osm-result` (and `--metrics` when brew Python cooperates). Symptom
+seen: `init_sys_streams` / `Bad file descriptor` during Darwin `metrics2csv` /
+`csv2gnuplot`.
+
+**After abbey’s PG18 durable/fast cells are collected**, dig in. Leading
+suspects Greg wants checked:
+
+1. **Datetime / `dateutil` path backfiring** — `csv2gnuplot` uses
+   `dateutil.parser.parse` then `time.mktime` on iostat/vmstat timestamps, plus
+   a hard-coded gnuplot `set xtics 10` workaround for HH:MM:SS label overlap.
+   Worth proving whether that parse path (or locale/TZ interaction on Darwin)
+   is what blows up mid-batch vs a clean import.
+2. **Homebrew Python itself** — brew’s interpreter has been fragile across
+   upgrades (`dateutil` vanishing under PEP 668, odd FD/stdio failures). Try
+   another Python source for the post-process shebang path: **python.org /
+   framework build**, **MacPorts**, or a dedicated **venv** pinned for pgbent
+   collectors — not “whatever `brew` `python3` is today.”
+
+Until that lands, keep using `repair-osm-result` rather than blocking OSM
+collection. Do not rewrite collectors mid-Monday bar; this is the follow-on
+once abbey 18 numbers are done.
+
 ## Baseline vs study variants
 
 `conf/<N>` is the shared baseline every machine runs. A study that varies a
