@@ -117,9 +117,9 @@ set confuses both. Confirm row counts before/after the `UPDATE`. This is a
 **Greg-operated** results-DB edit on the source machine (then `./upload`); agents
 do not invent set-number surgery unless asked.
 
-**PG18 minimum-durability backfill on siren (2026-10-15):** Greg is running that
-bridge via this temporary-set → reassign path while PG19 work continues
-elsewhere.
+**PG18 minimum-durability backfill on siren:** stopped 2026-10-16 (Ways
+deaths). The temporary-set → reassign path remains the way to land a later
+bridge cell into an older comparison set.
 
 Rules for running studies in parallel:
 
@@ -249,7 +249,7 @@ temporary corporate inventory. Finish the OSM/PG19 cells on these boxes.
 
 | Host | CPU | Notes |
 |------|-----|--------|
-| **siren** | **9950X** (was **9700X**) | Finish **PG19 beta grid points on this box** before touching hardware — do not treat thermal trips as a reason to abandon the remaining cells. This build **has no rear case fan**; that may be enough of the crash story (hot air staying in the chassis) that a fan is the first fix **after** the grid, not a cooler retrofit or 9700X swap mid-run. Cooler is a **240mm AIO** (undersized for 9950X; 9700X was stable). **9700X→9950X barely moved OSM**, as expected (second CCD idle); the buy was for **short pgbench / ~1M TPS** (perceptually important). OSM *might* improve on a 9950X **after a larger heatsink**, not in this chassis. Workaround is the **room AC**, same as keeping the lab alive at **100°F** outside — not a CPU swap mid-grid. `wl/osm-import` `RECOVERY=3600` is an **informed** hour between planet loads (AIO/room heat dump); Greg expected another crash and wanted **`k10temp` live**. 2026-10-15 hard off; 2026-10-16 way ingest (`Node(10791148k …) Way(1133809k …) Relation(0)`); same-day restart still heat-soaked, `sensors` **Tctl 79°C / Tccd1 78.5 / Tccd2 42.6**, died in **Node** phase. Later the same day, cooled+AC **cleared Nodes at peak Tctl 87°C**; Ways sat ~**77°C** for a while with intake ~**68°F** (room normally **71°F**), then **still died in Ways** — 3°F of AC was not enough for the rest of that pass. Delete incomplete tests; thermal **starts as the host vanishing**. After the beta cells: **rear case fan first** (might stop the trips by itself); **9700X back into siren** / 9950X into a larger-cooler chassis only if it still dies. Confirmed chip **`k10temp-pci-00c3`**: collect `sensors -u k10temp-*` (no sudo) → `Tctl_temp1_input` (package, vis 9) plus `Tccd1`/`Tccd2` (split, vis 5) — **do not average the CCDs**. The split is the teaching sample: **Tccd2 stayed ~43°C while Tccd1/Tctl sat in the 80s** — the second CCD is not on the OSM critical path, so extra cores on that die do not help a struggling load (and dump all the watts onto one hot chiplet). Live samples work; shutdown looks like the **motherboard cutting power near 90°C Tctl**, before the 9950X hits Tjmax throttle. Greg-only on the box — do not SSH. |
+| **siren** | **9950X** (was **9700X**) | **2026-10-16 evening — parked.** Died in **Ways** again. Do **not** retry PG18 low-durability / thin-WAL on this chassis; that corner is what trips the board, and those cells get re-run after the WAL vs fsync split anyway. Downloaded set **70** (PG18.3 durable) vs set **71** (PG19 fast 2974/2975/3009/3010 and durable 3011–3013) is enough for the 18↔19 regression; twilight 117 vs 118 and abbey 11 fill the rest of the fleet. Next hardware try is still the **rear case fan** (this build has none) — not more OSM until then. This build **has no rear case fan**; that may be enough of the crash story (hot air staying in the chassis) that a fan is the first fix, not a cooler retrofit or 9700X swap mid-park. Cooler is a **240mm AIO** (undersized for 9950X; 9700X was stable). **9700X→9950X barely moved OSM**, as expected (second CCD idle); the buy was for **short pgbench / ~1M TPS** (perceptually important). OSM *might* improve on a 9950X **after a larger heatsink**, not in this chassis. Workaround is the **room AC**, same as keeping the lab alive at **100°F** outside — not a CPU swap mid-grid. `wl/osm-import` `RECOVERY=3600` is an **informed** hour between planet loads (AIO/room heat dump); Greg expected another crash and wanted **`k10temp` live**. 2026-10-15 hard off; 2026-10-16 way ingest (`Node(10791148k …) Way(1133809k …) Relation(0)`); same-day restart still heat-soaked, `sensors` **Tctl 79°C / Tccd1 78.5 / Tccd2 42.6**, died in **Node** phase. Later the same day, cooled+AC **cleared Nodes at peak Tctl 87°C**; Ways sat ~**77°C** for a while with intake ~**68°F** (room normally **71°F**), then **still died in Ways** — 3°F of AC was not enough for the rest of that pass. Delete incomplete tests; thermal **starts as the host vanishing**. After the beta cells: **rear case fan first** (might stop the trips by itself); **9700X back into siren** / 9950X into a larger-cooler chassis only if it still dies. Confirmed chip **`k10temp-pci-00c3`**: collect `sensors -u k10temp-*` (no sudo) → `Tctl_temp1_input` (package, vis 9) plus `Tccd1`/`Tccd2` (split, vis 5) — **do not average the CCDs**. The split is the teaching sample: **Tccd2 stayed ~43°C while Tccd1/Tctl sat in the 80s** — the second CCD is not on the OSM critical path, so extra cores on that die do not help a struggling load (and dump all the watts onto one hot chiplet). Live samples work; shutdown looks like the **motherboard cutting power near 90°C Tctl**, before the 9950X hits Tjmax throttle. Greg-only on the box — do not SSH. |
 | **twilight** | **13600K** (was **14900K**) | Roles used to be reversed: the **14900K** made twilight the unstable box. Back on a cool-running **13600K** it is trouble-free again — preferred host for long PG19 matrices. |
 
 Other machines:
@@ -258,8 +258,8 @@ Other machines:
   **2026-10-16 — PG18 set 11 parked.** Four finished `osm2pgsql-2.0` cells, loop
   idle (`runset complete` 16:15): fast 64/66 (7.43h/404, 7.49h/400) and durable
   67/68 (11.17h/268, 11.10h/270). Two tight repeats per bundled corner is enough
-  for now; do not start another load. Last `./upload` on the box is still
-  **2026-10-14** — 64–68 are not in the archive yet; upload before walking away.
+  for now; do not start another load. Uploaded **2026-10-16**
+  (`abbey-20261016-172359.tar.gz`); set 11 is in the assembly DB on decade.
   No `conf.d`; fold `conf/18/conf.d` into the single `postgresql.conf`
   (see `pg-release-config`). After brew Python updates, reinstall `dateutil`
   and confirm with `./pgsysinfo`. Capacity-constrained; not the exploration host.
@@ -267,10 +267,9 @@ Other machines:
   Ubuntu 24.04.5**, kernel **`7.0.0-1019-nvidia`**. Spbm power works (test 13+);
   `DISKLIST="nvme0n1"` or `iostat.csv` is empty. **PG18 set 4:** fast 16/17
   (7.81h/384, 7.74h/387) then durable 18 (8.68h/346) — about **+12% / −10%**
-  vs abbey’s bundled **+49% / −33%**. Need **a second durable cell** before
-  PG19 cutover (two tight repeats is enough, as on abbey; one is not).
-  Cool-down `sleep 3600` after 18, then that second load; do **not**
-  `touch complete` until it finishes. Then **one PG19 OSM** (Monday bar).
+  vs abbey’s bundled **+49% / −33%**. Second durable **test 19** is running
+  (`osm2pgsql` since 21:45 UTC 2026-10-16); `complete` is armed so the loop
+  stops after that cell. Overnight wrap, then **one PG19 OSM** (Monday bar).
   Unreliable about booting; force-restart procedure not written down yet.
 
 ## Near-term deadline (lab downtime)
@@ -301,13 +300,11 @@ Do **not** start the big twilight GUC exploration (durability 2×2 corners,
 checksums, buffers, …) until Fury TRIM is understood and this Monday bar is
 met. After the outage, resume the PG19 study sequence below.
 
-**2026-10-16 — twilight parked.** The current twilight set had enough finished
-cells to wrap. Greg killed the leftover loop and is `./upload`ing. **Do not
-start more twilight loads** (no `repeat-gis`, no newset, no agent SSH to
-resume the matrix). Attention is **siren**: keep the PG19 beta grid alive
-(durable, pull quiet-RETURNING `09be5f8`, delete aborted 3115, `k10temp` on
-the trace, **do not open the case** until those cells land). Twilight’s
-upload is the durable copy so a later crash cannot eat that set.
+**2026-10-16 — twilight parked.** Set 118 (`PG19 beta4`) is wrapped and in
+the assembly DB (`twilight-20261016-163051.tar.gz`): fast 2593–2595
+(~4.8h / 623–628) and durable 2596, 2597, 2600, 2601 (~5.05h / 586–597),
+about **+6%**. **Do not start more twilight loads.** Court is the only live
+OSM loop; siren/abbey/twilight stay down.
 
 Fleet notes (update as needed):
 
@@ -351,10 +348,9 @@ once and cannot answer that. PG19 splits them:
 | `osm-fsync-on` / `osm-fsync-off` | `fsync` + `synchronous_commit` | on |
 | `osm-fpw-on` / `osm-fpw-off` | full-page writes | on |
 
-**PG19 2×2** (same set; `test_settings`; **FPW held on**). Do not start this
-while siren’s current grid is live. Twilight when unparked is the Linux
-comparison; abbey is the Mac fsync-suspect (set 11 is enough to park, not a
-third bundled repeat).
+**PG19 2×2** (same set; `test_settings`; **FPW held on**). Siren is parked
+(Ways deaths). Twilight when unparked is the Linux comparison; abbey is the
+Mac fsync-suspect (set 11 is enough to park, not a third bundled repeat).
 
 | | `osm-fsync-on` | `osm-fsync-off` |
 |---|---|---|
@@ -366,32 +362,17 @@ siren’s 2TB squeeze. `git pull` on siren does not change GUCs (conf.d is a
 copy). Do not `cp` into `/etc/postgresql/19/main/conf.d` until its PG19 cells
 finish.
 
-**PG18 — backfill on siren (Greg).** Do not reopen a PG18 durability matrix.
-Greg collects the missing bridge cell(s) on **siren** himself — typically
-**PG18 fast/minimal on 100GB·30min** next to existing durable PG18 on that
-envelope (set 70 era) — so the report can show the best possible from that
-old version for the PG19 story. Use the **temporary set → confirm → UPDATE
-`tests.set` → delete temp `testset`** workflow above so the bridge rows land in
-the earlier comparison set without blocking whatever set he was already using.
-Agent work does **not** stay on the twilight matrix while siren is the live
-box (twilight parked 2026-10-16). Do not farm PG18 regression backfill on
-twilight. Stop once the version comparison is tellable.
+**PG18 — backfill on siren: stopped 2026-10-16.** Do not retry PG18
+fast/minimal / thin-WAL on siren (Ways deaths, 240mm + no rear fan). Those
+corners are re-run after the WAL vs fsync split, not by burning more bundled
+cells on this chassis. Agent work does **not** stay on twilight (parked) or
+on siren OSM until the fan.
 
-**Bridge result (2026-10-16):** siren PG18 **low-WAL / not durable** (fast/
-minimal on the medium-checkpoint envelope) came in at **4.05 hours** — the
-same as PG19 on that config. So the 18↔19 gap on the slim-WAL corner is
-≈none; tell the story with durability/WAL volume, not a major-version win.
-The 4.05h cell stays (not an 18↔19 regression). **PG19 beta grid on siren
-comes first** — Greg is finishing those points on the 9950X with **room AC**
-(same summer-100°F workaround) and `RECOVERY=3600` **before opening the
-case** (no rear fan on this build; that is the first hardware try after
-the cells land, not a mid-grid retrofit). **Crashes so far are the low-durability / thin-WAL corner**
-(CPU not stalled on sync, one CCD into the ~90°C board trip). High-WAL
-durable runs survived on the same knife edge without temps on the trace;
-Greg will **re-run some PG19 cells with k10temp** so that margin is
-visible, not as a new GUC study. PG18 extra repeats and temporary-set
-cleanup wait on the beta grid, not on a 9700X swap. Hard power-off is
-expected thermal, not a reason to stop.
+**18↔19 from data already on decade.** Siren set **70** PG18.3 durable
+(2970–2973, 4.45–4.52 h / 663–673) vs set **71** PG19 durable (3011–3013,
+4.34–4.44 h / 675–690) and PG19 fast (2974/2975/3009/3010, 4.03–4.17 h /
+719–744). Twilight 117 (PG18.3 fast) vs 118 (PG19 fast+durable). Abbey set
+11 is PG18 only (Mac). Court is still on its second PG18 durable overnight.
 
 ### Study 2: checksum overhead
 
@@ -512,11 +493,10 @@ Expect `osm-rel-perf.data` / report / `osm-rel-prof.log` under each new test
 dir. If `perf record` fails on Spark (permissions / PMU), fix from that log;
 do not block durability collection.
 
-**Monday bar — one PG19 run on court.** PG18 durable cell **18** landed
-(8.68h / 346 vs fast ~7.8h / 385). A **second durable** is in cooldown then
-`runset` — two matching cells can skip a third (abbey-style); do not cut
-over on a single durable. After that pair: 19 (PGDG) and **one** clean OSM
-load before the solar outage. Goal is “basic
+**Monday bar — one PG19 run on court.** PG18 durable **18** landed (8.68h /
+346 vs fast ~7.8h / 385). Second durable **19** is in flight, `complete`
+armed. After that pair: cut over to 19 (PGDG) and **one** clean OSM load
+before the solar outage. Two matching durables can skip a third. Goal is “basic
 functional integration tested on DGX Spark / ARM64” — few outsiders have
 that box. Profile under 19 is probably identical to the x86 loopers; nice
 if the one run has `OSMRELPROF=1`, not required for the claim. Do not burn
