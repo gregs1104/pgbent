@@ -34,13 +34,26 @@ Do not mix unix and TCP in one set. `conn` must stay `sockets prepared` or `host
 
 **Sockets** — `SOCKETS=1` (no `-h`). Unix domain, clients on the server. Modest desktops still clear ~1M TPS here; that is the internals/on-box cell, not how Phoronix’s multi-million DC numbers are made. **TPS vs watts lives here** because one `powermon` sees the whole load.
 
-**Networked** — remote (or LAN) TCP client, server not running pgbench. **The millions on OpenBenchmarking come from this face.** Somewhere **above 10Gb/s**, a dedicated client can push the server harder than co-located sockets, because the server is not also burning cores on pgbench workers. The crossover is around **~1000 clients**. Phoronix has that grade of DC hardware. This lab was measuring that on the **2× EPYC 7702** when that box stopped powering on—do not invent the crossover from desktop SETCLIENTS.
+**Networked** — remote (or LAN) TCP client, server not running pgbench. **The millions on OpenBenchmarking come from this face** once the link is in the DC class (**above ~10Gb/s**): a dedicated client can push the server harder than co-located sockets, because the server is not also burning cores on pgbench workers.
+
+PTS `clients` options are **1, 50, 100, 250, 500, 800, 1000, 5000**. The OpenBenchmarking default widget is often scale 100 / **800** clients / read-only (they chart latency there). The multi-million TPS placeholders in `PGQuickTest-Prepared.csv` are **not** that 800/1000 cell — they are **16–128 clients** (about core count on those SKUs) and `Jobs=4`.
+
+**Sockets ceiling on this lab’s 2S (`super`, 2× EPYC 7702), from logs — not a Phoronix row:**
+
+```text
+pgbench -S -T 10 -c 960 -j 128 -M prepared pgbench
+# PG 17.9, scale 100, unix/on-box
+# 14.7M xacts in 10s → tps = 1,533,003 (without initial connection time)
+# initial connection time = 538 ms
+```
+
+At **960 clients / 128 jobs**, sockets looked **capped below what the hardware should do**. That is the on-box client tax (pgbench workers on the server), which is why a dedicated networked client on a >10Gb link is the interesting next step. 10s probe, not the 90s board cell. Do not invent this from desktop SETCLIENTS; `super` is down.
 
 Unthrottled networked cells on the leaderboard for **TPS**, not for a combined power score. Localhost TCP is **not** a substitute for a remote client or for the Mbps sweep.
 
 ## One-shot mapping study
 
-Publish unix prepared vs host/remote prepared on the same boxes (1-client and full clients, 90s, power on) so on-box TPS is not confused with a network client. After that page exists, the board stays two unthrottled faces. The 10Gb+ / ~1000-client crossover waits on 2S (or equivalent) hardware coming back—not on twilight/siren desktops.
+Publish unix prepared vs host/remote prepared on the same boxes (1-client and full clients, 90s, power on) so on-box TPS is not confused with a network client. After that page exists, the board stays two unthrottled faces. Repeating the **960-client sockets cap vs networked** comparison waits on `super` (or equivalent 2S) — not on twilight/siren desktops.
 
 ## Rate sweep (not a ranking)
 
@@ -57,7 +70,7 @@ Cable the pair once. Control rates with **`tc`** (TBF/HTB/CAKE) on the path pack
 | abbey | M-series watts; Greg workstation, not public Mac QA |
 | court (Spark) | ARM/Spark watts; build-animal later; OSM PG19 stretch still first |
 
-Do **not** wait on the 2× EPYC 7702 (down) or the planned 14900KS chassis to ship the desktop sockets/networked board and the siren→twilight `tc` sweep. The 7702 is specifically the box for the **>10Gb / ~1000-client** crossover; keep that cell parked until it (or a replacement 2S) powers on. Archive `PGQuickTest-Prepared.csv` Phoronix Multi-only rows are **placeholders** (`Jobs=4`, `Single=0`); new cells must not look measured the same way unless they are.
+Do **not** wait on `super` / 2× EPYC 7702 (down) or the planned 14900KS chassis to ship the desktop sockets/networked board and the siren→twilight `tc` sweep. `super` is the box for the **960-client sockets ceiling vs >10Gb networked** follow-up; keep that cell parked until it powers on. Archive `PGQuickTest-Prepared.csv` Phoronix Multi-only rows are **placeholders** (`Jobs=4`, `Single=0`); new cells must not look measured the same way unless they are.
 
 ## Publication
 
