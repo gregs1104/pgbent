@@ -297,15 +297,10 @@ fi
 
 # Create the tests record
 DBSIZE=`$TESTPSQL -A -t -c "select pg_database_size(current_database())"`
-$RESULTPSQL -q -c "insert into tests (server,server_version,script,clients,workers,set,scale,dbsize,rate_limit,client_limit,multi,conn_method) values('$SERVERNAME','$VERSION_TEXT','$SCRIPT','$CLIENTS','$NUM_WORKERS','$SET','$SCALE','$DBSIZE',$RATE, $CLIENT_LIMIT,$MULTI,'$CONNMETHOD')"
-TEST=`$RESULTPSQL -A -t -c "select max(test) from tests WHERE server='${SERVERNAME}'"`
-if [ "$?" -ne "0" ]; then
-  echo ERROR  Can\'t read from tests table.  Was the test data installed?
-  exit
-fi
-
-if [ -z "$TEST" ]; then
-  echo ERROR:  Attempt to get a test number returned \"$TEST\", aborting
+TEST=`$RESULTPSQL -A -t -c "INSERT INTO tests (server,server_version,script,clients,workers,set,scale,dbsize,rate_limit,client_limit,multi,conn_method) VALUES('$SERVERNAME','$VERSION_TEXT','$SCRIPT','$CLIENTS','$NUM_WORKERS','$SET','$SCALE','$DBSIZE',$RATE, $CLIENT_LIMIT,$MULTI,'$CONNMETHOD') RETURNING test"`
+if [ "$?" -ne "0" ] || [ -z "$TEST" ]; then
+  echo ERROR: INSERT INTO tests failed or returned no test number. Aborting.
+  echo Do not fall back to max\(test\) — that reuses the last finished cell after a crash.
   exit
 fi
 
@@ -382,8 +377,18 @@ echo Script $SCRIPT executing for $CLIENTS concurrent users... 1>&2
 $BENCHBIN $SCRIPTOPT -s $SCALE $TESTHOSTPARAM -p $TESTPORT -U $TESTUSER $TESTDB > results.txt 2>&1 &
 P=$!
 wait $P
-$RESULTPSQL -q -c "UPDATE tests SET end_time=now() WHERE server='${SERVERNAME}' AND test='${TEST}'"
-$RESULTPSQL -q -c "UPDATE tests SET start_latency=start_time, end_latency=end_time WHERE server='${SERVERNAME}' AND tests.test='$TEST';"
+# Incomplete OSM (killed / thermal trip) has no overall line. Closing the
+# row here used to stamp end_time=now() and then art-import {} onto the
+# last good test when max(test) was reused.
+OSM_DONE=1
+if [[ "$SCRIPT" == osm* ]] && ! grep -a -q 'osm2pgsql took .* overall' results.txt ; then
+  OSM_DONE=0
+  echo "OSM load did not finish; leaving end_time and artifacts on test ${TEST} unchanged"
+fi
+if [ "$OSM_DONE" -eq 1 ]; then
+  $RESULTPSQL -q -c "UPDATE tests SET end_time=now() WHERE server='${SERVERNAME}' AND test='${TEST}'"
+  $RESULTPSQL -q -c "UPDATE tests SET start_latency=start_time, end_latency=end_time WHERE server='${SERVERNAME}' AND tests.test='$TEST';"
+fi
 
 ../../../kill_pg "${PSQLMET}"
 if [ "$OSDATA" -eq "1" ]; then
@@ -452,7 +457,11 @@ $RESULTPSQL -c "\copy test_buffercache FROM 'buffercache.csv' WITH DELIMITER ','
 # for the pgbench init case and osm2pgsql.
 
 $BASEDIR/util/pgbench-init-parse results.txt "${SCRIPT}" > results.json
-$RESULTPSQL -f $BASEDIR/util/art-import.sql
+if [ "$OSM_DONE" -eq 1 ] && [ -s results.json ] && [ "$(cat results.json)" != "{}" ]; then
+  $RESULTPSQL -v server="${SERVERNAME}" -v test="${TEST}" -f $BASEDIR/util/art-import.sql
+else
+  echo "Skipping artifacts import (empty parse or incomplete OSM)"
+fi
 
 # Export less time sensitive database statistics from pgbench into results database
 

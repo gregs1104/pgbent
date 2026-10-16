@@ -1,10 +1,21 @@
+\set ON_ERROR_STOP on
+\if :{?server}
+\else
+\echo art-import.sql requires -v server= and -v test=
+\quit 1
+\endif
+\if :{?test}
+\else
+\echo art-import.sql requires -v server= and -v test=
+\quit 1
+\endif
+
 \set content `cat results.json`
--- Assume latest test by start time gets the update.
--- end_time isn't used because it's not set on failed runs.
-UPDATE tests SET artifacts=:'content' 
-FROM 
-(SELECT server,test
- FROM tests 
- ORDER BY start_time DESC LIMIT 1
-) AS t1 
-WHERE tests.test=t1.test AND tests.server=t1.server;
+-- Bind to this benchwarmer's server/test. Write-once: a populated cell is
+-- as durable as an upload archive. Failed OSM parses emit {} and used to
+-- land on the last good row (latest start_time / max(test) reuse).
+UPDATE tests SET artifacts = :'content'::jsonb
+WHERE server = :'server'
+  AND test = :test
+  AND :'content'::jsonb <> '{}'::jsonb
+  AND (artifacts IS NULL OR artifacts = '{}'::jsonb);
