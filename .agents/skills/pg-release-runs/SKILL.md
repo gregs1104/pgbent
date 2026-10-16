@@ -254,12 +254,23 @@ Other machines:
 
 1. **Basic PG19 verification** finished — enough clean durable (and planned
    alternate) OSM loads to trust the major, not the full GUC matrix yet.
-2. **PG18 CPU vs power study at publication quality** — refresh/complete
+2. **Court Spark: at least one PG19 OSM run** — basic functional integration
+   on a platform few people can touch. One clean load is enough to say it
+   was tested there before the lab goes down; full profile/matrix later.
+   Fit it after the in-flight PG18 durable cell if the clock allows (~8h
+   class on court); do not starve item 3 for a second repeat.
+3. **PG18 CPU vs power study at publication quality** — refresh/complete
    `osm-power` (and relation-power as needed) with current fleet points
    (including court Spark / abbey M-series / twilight·siren AMD·Intel as data
    allows); graphs + getbent.io page worthy of citing. Prefer data already
-   collecting on the four boxes; agent has SSH to **abbey, court, twilight**
-   (not siren — Greg / hardware).
+   collecting on the four boxes. Agent SSH: **abbey, court, twilight**.
+   **siren** is Greg-only on the box (tight 2TB layout — do not SSH or change
+   it); still in the review loop via data Greg pulls over (`download` /
+   results DB) — pair-programming split across the farm, not a blind spot.
+   Normally this is “buy a larger disk”; as of late 2025 fast 4TB pricing and
+   availability make limping cheaper. Lab expansion was **July 2025** on purpose:
+   early price rise read as the start of a swing boom (not luck) — do not
+   “fix” the squeeze by retuning WAL upward.
 
 Do **not** start the big twilight GUC exploration (durability 2×2 corners,
 checksums, buffers, …) until Fury TRIM is understood and this Monday bar is
@@ -432,34 +443,26 @@ Historical checklist (for the next Spark / similar host):
 Reference: twilight’s `/etc/apt/sources.list.d/pgdg.list` pins `noble-pgdg main 19`
 (with 17/18 lines commented). Court uses the same file shape with `main 18`.
 
-#### Court remaining runs: exercise `OSMRELPROF` / `pgbent_perf` (2026-10-16)
+#### Court: `OSMRELPROF` on durable PG18; stretch = PG19 (2026-10-16)
 
 Court’s Linux post-process path is fine (no Darwin/`init_sys_streams` hiccup).
-It is also the slowest box on this OSM cell, so the **other-durability**
-repeats will trail the fleet — use them to shake out relation-phase perf
-collection rather than waiting for a special profiling set.
+It is the slowest box on this OSM cell, so durable repeats trail the fleet —
+good place to shake out relation-phase perf collection.
 
-**Done on court 2026-10-16 (mid test 17):** installed
-`/usr/local/bin/pgbent_perf` from the checkout and added NOPASSWD for
-`postgres` in `/etc/sudoers.d/postgres`. `perf` 7.0.14 is present;
-`sudo -u postgres sudo -n pgbent_perf --version` works.
+**Done on court 2026-10-16:** installed `/usr/local/bin/pgbent_perf` + NOPASSWD;
+after fast test 17 (`complete`), flipped to durable (`fsync=on`,
+`wal_level=replica`), set `OSMRELPROF=1`, restarted `repeat-gis` (same set).
+Expect `osm-rel-perf.data` / report / `osm-rel-prof.log` under each new test
+dir. If `perf record` fails on Spark (permissions / PMU), fix from that log;
+do not block durability collection.
 
-**Not for the in-flight load:** test 17 already finished `planet_osm_rels`
-COPY / index before the helper landed; `OSMRELPROF` is still `0` in
-`wl/osm-import`. Between runs (after 17 finishes, before the durability
-flip / next `runset`):
-
-```bash
-# as postgres, in ~/pgbent
-# wl/osm-import: OSMRELPROF=0 → OSMRELPROF=1
-# then let repeat-gis / runset start the next load
-# expect results/<test>/osm-rel-perf.data, osm-rel-perf-report.txt, osm-rel-prof.log
-```
-
-Do not edit `wl/osm-import` while `benchwarmer` already holds a sourced copy
-for the current test — flip only in the idle gap. If `perf record` fails on
-Spark (permissions / PMU), the log in the results dir is the first place to
-look; fix helper/sudoers, do not block durability collection.
+**Monday bar — one PG19 run on court.** After the current PG18 durable
+(+ `OSMRELPROF`) cell, cut over to 19 (PGDG, same dual-major pattern) and
+land **a single** clean OSM load before the solar outage. Goal is “basic
+functional integration tested on DGX Spark / ARM64” — few outsiders have
+that box. Profile under 19 is probably identical to the x86 loopers; nice
+if the one run has `OSMRELPROF=1`, not required for the claim. Do not burn
+the weekend on court repeats or block twilight’s matrix / PG18 power publish.
 
 ### Two majors in parallel (test + results)
 
