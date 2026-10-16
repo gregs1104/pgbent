@@ -1,0 +1,4 @@
+Timestamp,Value,Metric
+2026-10-16 12:21:00.000003,79.000,Tctl_temp1_input
+2026-10-16 12:21:00.000005,78.500,Tccd1_temp2_input
+2026-10-16 12:21:00.000007,42.600,Tccd2_temp3_input

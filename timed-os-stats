@@ -131,7 +131,7 @@ def linux_meminfo(interval=1):
         time.sleep(interval)
 
 def usage():
-    sys.stderr.write("Usage:  %s [vmstat | iostat | meminfo | power | psql]\n" % sys.argv[0])
+    sys.stderr.write("Usage:  %s [vmstat | iostat | meminfo | power | sensors | psql]\n" % sys.argv[0])
     sys.stderr.write("Supported platforms are Linux and Darwin\n")
     sys.stderr.write("meminfo is only available on linux\n")
     sys.exit(1)
@@ -173,6 +173,11 @@ if __name__=='__main__':
             linux_meminfo(1)
         elif cmd=='power':
             capture("sudo /usr/local/bin/pgbent_powermon")
+        elif cmd=='sensors':
+            # AMD k10temp (siren 9950X): Tctl / Tccd1 / Tccd2. No sudo.
+            # Intel package temp stays in turbostat (PkgTmp); Spark temps
+            # already ride along in pgbent_powermon sensors -u spbm-*.
+            capture("while true; do sensors -u 'k10temp-*'; sleep 1; done")
         else:
             usage()
 

@@ -38,7 +38,9 @@ if [ "$OS" = "Linux" ] ; then
             exit 1
         fi
 
-    # Intel / AMD x86_64 telemetry via turbostat
+    # Intel / AMD x86_64 telemetry via turbostat (watts; Intel also PkgTmp).
+    # AMD package temperature is k10temp, collected separately by
+    # timed-os-stats sensors — not mixed into this log.
     elif [[ "$ARCH" == "x86_64" ]]; then
         IGNORE_LIST="IRQ,POLL,POLL%,IPC,C1,C2,C1%,C2%,SMI,C1ACPI,C2ACPI,C3ACPI,C1ACPI%,C2ACPI%,C3ACPI%,CPU%c1,CPU%c6,CPU%c7,CoreThr,Totl%C0,Any%C0,GFX%C0,CPUGFX%,Pkg%pc2,Pkg%pc3,Pkg%pc6,Pkg%pc8,Pk%pc10,CPU%LPI,SYS%LPI,PKG_%,RAM_%,TSC_MHz"
 

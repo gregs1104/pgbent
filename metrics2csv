@@ -43,6 +43,10 @@ if [ -s "meminfo.log" ] ; then
     else
       ../../../csv2gnuplot -i power.log -d power -s "PkgWatt" -t "power" -o power
     fi
+    if [ -s "sensors.log" ] ; then
+      echo "Processing k10temp sensors log server ${H} test $TESTNUM"
+      ../../../util/power-sensors-parse sensors.log sensors.csv
+    fi
     ../../../dirty-plot < meminfo.log > dirtydata.txt
 else
     # Assume Darwin for now, eventually others?
@@ -61,6 +65,9 @@ $RESULTPSQL -c "\copy tmp_metric_import FROM 'vmstat.csv' WITH CSV HEADER"
 $RESULTPSQL -c "\copy tmp_metric_import FROM 'iostat.csv' WITH CSV HEADER"
 if [ -f "power.csv" ] ; then
   $RESULTPSQL -c "\copy tmp_metric_import FROM 'power.csv' WITH CSV HEADER"
+fi
+if [ -f "sensors.csv" ] ; then
+  $RESULTPSQL -c "\copy tmp_metric_import FROM 'sensors.csv' WITH CSV HEADER"
 fi
 if [ -f "meminfo.csv" ] ; then
   $RESULTPSQL -c "\copy tmp_metric_import FROM 'meminfo.csv' WITH CSV HEADER"

@@ -43,7 +43,8 @@ def parse_sensors_to_narrow_csv(input_stream, output_stream):
 
 if __name__ == "__main__":
     # Default matches power-darwin-parse: read power.log, write power.csv.
-    # Optional arg is an alternate input path (e.g. regress/power-sensors.log).
+    # Optional args: input path, output path (sensors.log → sensors.csv).
     infile = sys.argv[1] if len(sys.argv) > 1 else "power.log"
-    with open(infile, "r") as inp, open("power.csv", "w", newline="") as out:
+    outfile = sys.argv[2] if len(sys.argv) > 2 else "power.csv"
+    with open(infile, "r") as inp, open(outfile, "w", newline="") as out:
         parse_sensors_to_narrow_csv(inp, out)

@@ -23,6 +23,7 @@ SKIPINIT=0
 TABBED=0
 
 # Set OSDATA to 1 to collect OS data using vmstat and iostat
+# (Linux also meminfo, and k10temp via sensors when that chip exists)
 OSDATA=1
 
 # sudo data includes power and requires sudoer helper scripts to enable

@@ -232,7 +232,7 @@ lab at full capacity over the summer for this reason.
 
 | Host | CPU | Notes |
 |------|-----|--------|
-| **siren** | **9950X** (was **9700X**) | Finish **PG19 beta grid points on this box**, then take it down for cooler retrofit — do not treat thermal trips as a reason to abandon the remaining cells. Cooler is a **240mm AIO** (undersized for 9950X; 9700X was stable). Workaround is the **room AC**, same as keeping the lab alive at **100°F** outside — not a CPU swap mid-grid. `wl/osm-import` `RECOVERY=3600` is an **informed** hour between planet loads (AIO/room heat dump); Greg expected another crash and wanted **`k10temp` live**. 2026-10-15 hard off; 2026-10-16 way ingest (`Node(10791148k …) Way(1133809k …) Relation(0)`); same-day restart still heat-soaked, `sensors` **Tctl 79°C / Tccd1 78.5 / Tccd2 42.6**, died in **Node** phase. Delete incomplete tests; thermal **starts as the host vanishing**. After the beta cells: **9700X back into siren**, 9950X into a larger-cooler chassis. Confirmed chip **`k10temp-pci-00c3`**: **Tctl** tracks the hot CCD (**Tccd1**); **Tccd2** is the cool split — **do not average**. Greg-only on the box — do not SSH. |
+| **siren** | **9950X** (was **9700X**) | Finish **PG19 beta grid points on this box**, then take it down for cooler retrofit — do not treat thermal trips as a reason to abandon the remaining cells. Cooler is a **240mm AIO** (undersized for 9950X; 9700X was stable). Workaround is the **room AC**, same as keeping the lab alive at **100°F** outside — not a CPU swap mid-grid. `wl/osm-import` `RECOVERY=3600` is an **informed** hour between planet loads (AIO/room heat dump); Greg expected another crash and wanted **`k10temp` live**. 2026-10-15 hard off; 2026-10-16 way ingest (`Node(10791148k …) Way(1133809k …) Relation(0)`); same-day restart still heat-soaked, `sensors` **Tctl 79°C / Tccd1 78.5 / Tccd2 42.6**, died in **Node** phase. Delete incomplete tests; thermal **starts as the host vanishing**. After the beta cells: **9700X back into siren**, 9950X into a larger-cooler chassis. Confirmed chip **`k10temp-pci-00c3`**: collect `sensors -u k10temp-*` (no sudo) → `Tctl_temp1_input` (package, vis 9) plus `Tccd1`/`Tccd2` (split, vis 5) — **do not average the CCDs**. Greg-only on the box — do not SSH. |
 | **twilight** | **13600K** (was **14900K**) | Roles used to be reversed: the **14900K** made twilight the unstable box. Back on a cool-running **13600K** it is trouble-free again — preferred host for long PG19 matrices. |
 
 Other machines:
@@ -636,7 +636,7 @@ touch complete        # (in STATEDIR) stop after the current run finishes
 ```bash
 # as postgres, from ~/pgbent — kill by PID (do not pkill -f a pattern that
 # appears in your own script line or you suicide the SSH session)
-pgrep -u postgres -af './timed-os-stats'    # vmstat/iostat/meminfo/power/psql
+pgrep -u postgres -af './timed-os-stats'    # vmstat/iostat/meminfo/power/sensors/psql
 for pid in $(pgrep -u postgres -f './timed-os-stats'); do kill $pid; done
 # terminate any remaining gis backends
 psql -p "$TESTPORT" -d postgres -c \
@@ -674,7 +674,7 @@ WHERE t.server = '<host>' ORDER BY t.test DESC LIMIT 5;
 - [ ] Run is in the intended study set (info = study description)
 - [ ] server_version shows PostgreSQL <N>.x
 - [ ] test_settings shows the study variable at the intended value
-- [ ] test_metrics_data rows exist (power rows too if SUDODATA=1)
+- [ ] test_metrics_data rows exist (power rows too if SUDODATA=1; `Tctl_temp1_input` on AMD hosts with k10temp)
 - [ ] Run appears in submission; OSM studies need non-null max_write_mbps
 - [ ] Spot-check graphs: python3 metview.py <server> <test>
 ```

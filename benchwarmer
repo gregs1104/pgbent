@@ -355,6 +355,12 @@ if [ "$OSDATA" -eq "1" ]; then
   if [ "$OS" = "Linux" ] ; then
     ./timed-os-stats meminfo > results/$SERVERNAME/$TEST/meminfo.log &
     MEMINFO=$!
+    # k10temp is readable without sudo; only start when that chip exists.
+    if command -v sensors >/dev/null 2>&1 && \
+       sensors -u 'k10temp-*' 2>/dev/null | grep -q temp1_input ; then
+      ./timed-os-stats sensors > results/$SERVERNAME/$TEST/sensors.log &
+      SENSORSSTAT=$!
+    fi
   fi
 fi
 
@@ -388,6 +394,9 @@ if [ "$OSDATA" -eq "1" ]; then
   ../../../kill_pg "${IOSTAT}"
   if [ "$OS" = "Linux" ] ; then
     ../../../kill_pg "${MEMINFO}"
+    if [ -n "$SENSORSSTAT" ] ; then
+      ../../../kill_pg "${SENSORSSTAT}"
+    fi
     # Find largest dirty memory value (which is in kB)
     max_dirty=`cat meminfo.log | grep Dirty | awk '{print $4}' | sort -n | tail -n 1`
   fi

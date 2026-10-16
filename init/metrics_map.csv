@@ -136,6 +136,12 @@ Linux,C3,Power,1,C3,integer,gauge,1,,bytes
 Linux,C3%,Power,1,C3,percent,gauge,5,,bytes
 Linux,CorWatt,Power,1,core,watts,gauge,5,,bytes
 Linux,PkgWatt,Power,1,package,watts,gauge,5,,bytes
+Linux,PkgTmp,Power,1,package temp,celsius,gauge,9,,bytes
+Linux,CoreTmp,Power,1,core temp,celsius,gauge,5,,bytes
+Linux,Tctl_temp1_input,Power,1,Tctl,celsius,gauge,9,,bytes
+Linux,Tccd1_temp2_input,Power,1,CCD1 temp,celsius,gauge,5,,bytes
+Linux,Tccd2_temp3_input,Power,1,CCD2 temp,celsius,gauge,5,,bytes
+Linux,tj_max_temp1_input,Power,1,package temp,celsius,gauge,9,,bytes
 Darwin,CPU_Power_mW,Power,0.001,core,watts,gauge,5,,bytes
 Darwin,Combined_Power_mW,Power,0.001,package,watts,gauge,5,,bytes
 Linux,Active,Linux Mem,0.000977,Active,megabytes,gauge,9,,megabytes
@@ -277,5 +283,11 @@ Linux,CorWatt,Power,1,core,watts,gauge,5,,watts
 Linux,PkgWatt,Power,1,package,watts,gauge,5,,watts
 Linux,soc_pkg_power2_input,Power,1,package,watts,gauge,9,,watts
 Linux,sys_total_power1_input,Power,1,package,watts,gauge,9,,watts
+Linux,PkgTmp,Power,1,package temp,celsius,gauge,9,,celsius
+Linux,CoreTmp,Power,1,core temp,celsius,gauge,5,,celsius
+Linux,Tctl_temp1_input,Power,1,Tctl,celsius,gauge,9,,celsius
+Linux,Tccd1_temp2_input,Power,1,CCD1 temp,celsius,gauge,5,,celsius
+Linux,Tccd2_temp3_input,Power,1,CCD2 temp,celsius,gauge,5,,celsius
+Linux,tj_max_temp1_input,Power,1,package temp,celsius,gauge,9,,celsius
 Darwin,CPU_Power_mW,Power,0.001,core,watts,gauge,5,,watts
 Darwin,Combined_Power_mW,Power,0.001,package,watts,gauge,5,,watts
