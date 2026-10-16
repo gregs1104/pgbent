@@ -1,0 +1,3 @@
+# Full-page writes off. Historical osm-sync-fast also set this; the PG19 2×2
+# holds FPW on unless WAL bytes still need explaining.
+full_page_writes = off

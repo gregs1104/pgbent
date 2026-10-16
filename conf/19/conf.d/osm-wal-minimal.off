@@ -1,0 +1,3 @@
+# WAL volume: thin WAL. max_wal_senders must be 0 at this wal_level.
+wal_level = minimal
+max_wal_senders = 0
