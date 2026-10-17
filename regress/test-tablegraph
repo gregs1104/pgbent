@@ -11,7 +11,7 @@ else
     ioheader="KB/t"
 fi
 
-rm -f disks.png disks.json iostat.png iostat.json vmstat.png vmstat.json dirtydata.txt iostat-darwin.json iostat-darwin.csv iostat-darwin-2.json iostat-darwin-2.csv vmstat-darwin.csv vmstat-darwin.json
+rm -f disks.png disks.json iostat.png iostat.json vmstat.png vmstat.json dirtydata.txt iostat-darwin.json iostat-darwin.csv iostat-darwin-2.json iostat-darwin-2.csv vmstat-darwin.csv vmstat-darwin.json power-tabs.csv power-tabs.png power-tabs.json power-csv.csv power-csv.png power-csv.json
 
 # Linux samples
 ../csv2gnuplot -i iostat.log -d iostat -s "Device" -t "pgbench disk" --disks="sdc" -o iostat
@@ -25,6 +25,13 @@ rm -f disks.png disks.json iostat.png iostat.json vmstat.png vmstat.json dirtyda
 
 # Generic table
 ../csv2gnuplot -i disktable.csv -d table -t "Disk Comparison" -o disks
+
+# Power: legacy tab-separated turbostat and comma-separated pgbent_powermon
+rm -f power-tabs.csv power-csv.csv
+../csv2gnuplot -i power-tabs.log -d power -s "PkgWatt" -t "power" -o power-tabs
+../csv2gnuplot -i power-csv.log -d power -s "PkgWatt" -t "power" -o power-csv
+grep -q ',PkgWatt$' power-tabs.csv
+grep -q ',PkgWatt$' power-csv.csv
 #!/bin/bash -e
 # Test csv2gnuplot script
 

@@ -280,6 +280,21 @@ def ds_gnuplotter(set_container, destination, title="", tsdata=True, ycolumn=1, 
     except:
         print ("Error while spawning gnuplot")
 
+def split_timed_row(row):
+    """Split a timed-os-stats line into [date, time, ...fields].
+
+    Legacy turbostat power logs are tab/space separated after the timestamp.
+    pgbent_powermon since the 2026 refresh emits comma-separated columns.
+    Both forms are in the results tree; detect commas only in the remainder
+    so iostat/vmstat whitespace rows are unchanged.
+    """
+    columns = row.split()
+    parts = row.strip().split(None, 2)
+    if len(parts) == 3 and "," in parts[2]:
+        return parts[:2] + [part for part in parts[2].split(",") if part != ""]
+    return columns
+
+
 def value_parse(value):
     """
     Convert string value into a float.
@@ -343,7 +358,7 @@ def statdata2gnuplot(in_file, output_file, graph_title, filt_text, header_signal
     gulp_next=False
 
     for row in in_file:
-        columns = row.split()
+        columns = split_timed_row(row)
 
         # Throw out Darwin lines like this right out
         # "Mach Virtual Memory Statistics: (page size of 4096 bytes)"
