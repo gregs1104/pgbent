@@ -1,12 +1,12 @@
 WITH
 best AS
   (SELECT
-    cpu,mem_gb,disk,server_ver,client,script,clients,conn,hours,nodes,nodes_kips,rel_kips,index_kips,fsync,wal_level,csum,max_wal_gb,db_gb,
+    cpu,mem_gb,disk,server_ver,client,script,clients,conn,hours,nodes,score_kips,overall_kips,index_kips,polygon_kips,line_kips,point_kips,node_kps,rel_ps,fsync,wal_level,csum,max_wal_gb,db_gb,
       wal_mbps,  chkp_mbph, avg_write_mbps, max_write_mbps, avg_read_mbps, max_read_mbps,avg_package_watts, max_package_watts,
     ROW_NUMBER()
     OVER(
         PARTITION BY cpu,mem_gb,server_ver,script,conn,clients,nodes,csum,fsync,wal_level,csum,max_wal_gb
-        ORDER BY nodes_kips DESC,index_kips DESC
+        ORDER BY score_kips DESC,overall_kips DESC,index_kips DESC
     )  AS r
     FROM submission
     WHERE
@@ -30,11 +30,11 @@ SELECT
     --tps,  
     hours AS hours,
     round(nodes/1000000000,1) AS nodes_m,
-    nodes_kips,rel_kips,index_kips,csum,fsync,wal_level,max_wal_gb,
+    score_kips,overall_kips,index_kips,polygon_kips,line_kips,point_kips,node_kps,rel_ps,csum,fsync,wal_level,max_wal_gb,
       wal_mbps AS wal, 
       round(chkp_mbph / 1024,2) AS chkp_gbph,
       avg_write_mbps AS avg_write, max_write_mbps AS max_write, avg_read_mbps AS avg_read, max_read_mbps AS max_read,
       round(avg_package_watts) AS avg_pkg,
       round(max_package_watts) AS max_pkg
 FROM best WHERE r=1
-ORDER BY nodes_kips DESC,index_kips DESC,script,db_gb;
+ORDER BY score_kips DESC,overall_kips DESC,index_kips DESC,script,db_gb;

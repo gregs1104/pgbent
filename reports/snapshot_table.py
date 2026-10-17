@@ -22,8 +22,21 @@ def _table_from_pipe_lines(lines: list[str]) -> list[dict[str, str]]:
         values = split_row(line)
         if len(values) != len(header):
             continue
-        rows.append(dict(zip(header, values)))
+        rows.append(_alias_kips_columns(dict(zip(header, values))))
     return rows
+
+
+def _alias_kips_columns(row: dict[str, str]) -> dict[str, str]:
+    """PG18 snapshots used nodes_kips for overall node_count/overall/1000."""
+    if "overall_kips" not in row and "nodes_kips" in row:
+        row["overall_kips"] = row["nodes_kips"]
+    if "nodes_kips" not in row and "overall_kips" in row:
+        row["nodes_kips"] = row["overall_kips"]
+    if "rel_ps" not in row and "rel_kips" in row:
+        row["rel_ps"] = row["rel_kips"]
+    if "rel_kips" not in row and "rel_ps" in row:
+        row["rel_kips"] = row["rel_ps"]
+    return row
 
 
 def parse_markdown_table(text: str) -> list[dict[str, str]]:

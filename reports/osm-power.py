@@ -51,7 +51,7 @@ SINGLE_CHART_LABEL_OVERRIDES: dict[str, dict[str, LabelOffset]] = {
         "R5 9600X": LabelOffset(8, 8),
         "NVIDIA P4242": LabelOffset(0, -12, ha="center", va="top"),
     },
-    "nodes_kips": {
+    "overall_kips": {
         "Apple M4 Max": LabelOffset(_marker_x_gap(-4), 6, ha="left", va="bottom"),
         "Apple M4 Max Studio": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
         "i5-13600K": LabelOffset(8, -10, va="top"),
@@ -93,11 +93,11 @@ def numeric(series: pd.Series) -> pd.Series:
 
 def prepare_power_df(rows: list[dict[str, str]]) -> pd.DataFrame:
     df = pd.DataFrame(rows)
-    for col in ("mem_gb", "nodes_kips", "index_kips", "max_pkg", "avg_pkg", "wal", "avg_write", "max_write", "avg_read", "max_read"):
+    for col in ("mem_gb", "overall_kips", "index_kips", "max_pkg", "avg_pkg", "wal", "avg_write", "max_write", "avg_read", "max_read"):
         if col in df.columns:
             df[col] = numeric(df[col])
     df = df.sort_values("max_pkg").reset_index(drop=True)
-    df["nodes_per_watt"] = df["nodes_kips"] / df["max_pkg"]
+    df["nodes_per_watt"] = df["overall_kips"] / df["max_pkg"]
     df["index_per_watt"] = df["index_kips"] / df["max_pkg"]
     return df
 
@@ -118,7 +118,7 @@ def plot_throughput_vs_power(df: pd.DataFrame, output: Path, pg: str, show: bool
         color = row_color(row)
         ax.plot(
             [row["max_pkg"], row["max_pkg"]],
-            [row["index_kips"], row["nodes_kips"]],
+            [row["index_kips"], row["overall_kips"]],
             color=color,
             linewidth=1.5,
             alpha=0.45,
@@ -126,7 +126,7 @@ def plot_throughput_vs_power(df: pd.DataFrame, output: Path, pg: str, show: bool
         )
         ax.scatter(
             row["max_pkg"],
-            row["nodes_kips"],
+            row["overall_kips"],
             marker="o",
             s=70,
             color=color,
@@ -142,7 +142,7 @@ def plot_throughput_vs_power(df: pd.DataFrame, output: Path, pg: str, show: bool
         )
         ax.annotate(
             row["cpu"],
-            xy=(row["max_pkg"], row["nodes_kips"]),
+            xy=(row["max_pkg"], row["overall_kips"]),
             xytext=(0, 8),
             textcoords="offset points",
             ha="center",
@@ -201,7 +201,7 @@ def plot_single_throughput_vs_power(
     plain_axis(ax)
 
     fig.tight_layout()
-    label_df = df[df["cpu"] != "NVIDIA P4242"] if metric_col == "nodes_kips" else df
+    label_df = df[df["cpu"] != "NVIDIA P4242"] if metric_col == "overall_kips" else df
     place_point_labels(
         ax,
         label_df["cpu"],
@@ -212,12 +212,12 @@ def plot_single_throughput_vs_power(
         overrides=SINGLE_CHART_LABEL_OVERRIDES.get(metric_col),
     )
     nvidia_rows = df[df["cpu"] == "NVIDIA P4242"]
-    if metric_col == "nodes_kips" and not nvidia_rows.empty:
+    if metric_col == "overall_kips" and not nvidia_rows.empty:
         nvidia = nvidia_rows.iloc[0]
         place_label_at_grid_bottom(
             ax,
             nvidia["max_pkg"],
-            nvidia["nodes_kips"],
+            nvidia["overall_kips"],
             nvidia["cpu"],
             row_color(nvidia),
             POINT_LABEL_FONTSIZE,
@@ -285,7 +285,7 @@ def main() -> int:
     plot_single_throughput_vs_power(
         df,
         args.total_output,
-        "nodes_kips",
+        "overall_kips",
         f"PostgreSQL {args.pg} OSM load: total throughput vs package power",
         show=args.show,
     )

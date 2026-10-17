@@ -117,7 +117,7 @@ Do not duplicate workload context on both title and axis.
 
 Working examples live in:
 
-- `SINGLE_CHART_LABEL_OVERRIDES` in `reports/osm-power.py` (`nodes_kips` / `index_kips`)
+- `SINGLE_CHART_LABEL_OVERRIDES` in `reports/osm-power.py` (`overall_kips` / `index_kips`)
 - `RELATION_SCATTER_LABEL_OVERRIDES` in `reports/osm-relation-power.py`
 
 Copy patterns from those dicts before inventing new layout logic.

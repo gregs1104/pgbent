@@ -69,7 +69,7 @@ def numeric(series: pd.Series) -> pd.Series:
 def prepare_checkpoint_df(rows: list[dict[str, str]]) -> pd.DataFrame:
     df = pd.DataFrame(rows)
     for col in (
-        "nodes_kips",
+        "overall_kips",
         "index_kips",
         "max_wal_gb",
         "timeout",
@@ -129,7 +129,7 @@ def plot_checkpoint(df: pd.DataFrame, output: Path, pg: str, show: bool = False)
         group = group.sort_values("chkp_mins")
         ax.plot(
             group["chkp_mins"],
-            group["nodes_kips"],
+            group["overall_kips"],
             color=WAL_COLORS[wal_level],
             alpha=0.25,
             linewidth=1.5,
@@ -148,7 +148,7 @@ def plot_checkpoint(df: pd.DataFrame, output: Path, pg: str, show: bool = False)
         subset = df[df["wal_level"] == wal_level]
         ax.scatter(
             subset["chkp_mins"],
-            subset["nodes_kips"],
+            subset["overall_kips"],
             marker=TOTAL_MARKERS[wal_level],
             s=70,
             color=WAL_COLORS[wal_level],
@@ -176,7 +176,7 @@ def plot_checkpoint(df: pd.DataFrame, output: Path, pg: str, show: bool = False)
         f"PG{pg} OSM load:  achieved checkpoint interval\n"
         "Tuned values 256GB WAL / 60 min interval"
     )
-    y_top = float(df["nodes_kips"].max())
+    y_top = float(df["overall_kips"].max())
     ax.set_ylim(140, y_top * 1.18)
     ax.grid(True, which="major", linestyle="--", alpha=0.4)
     ax.legend(
@@ -199,7 +199,7 @@ def plot_checkpoint(df: pd.DataFrame, output: Path, pg: str, show: bool = False)
         if not skip_i5_right:
             labels.append(series_label(row, "total"))
             xs.append(float(row["chkp_mins"]))
-            ys.append(float(row["nodes_kips"]))
+            ys.append(float(row["overall_kips"]))
             colors.append(WAL_COLORS[row["wal_level"]])
         if row["cpu"] == "R9 9950X":
             continue
@@ -283,7 +283,7 @@ def plot_checkpoint(df: pd.DataFrame, output: Path, pg: str, show: bool = False)
     )
     ax.text(
         1.0,
-        float(i5_right["nodes_kips"]),
+        float(i5_right["overall_kips"]),
         series_label(i5_right, "total"),
         transform=i5_total_trans,
         ha="right",

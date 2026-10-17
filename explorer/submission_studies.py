@@ -18,19 +18,19 @@ PG_VERSION_FILTER = """
 STUDIES: dict[str, dict[str, str]] = {
     "osm-leaderboard": {
         "title": "OSM Leaderboard",
-        "description": "Best OSM planet load per CPU/configuration (throughput and index build rate).",
+        "description": "Best OSM planet load per CPU/configuration, sorted by OSM score (relation + polygon + line).",
         "sql": """
 WITH
 best AS
   (SELECT
-    cpu,mem_gb,disk,server_ver,client,script,clients,conn,hours,nodes,nodes_kips,index_kips,csum,
+    cpu,mem_gb,disk,server_ver,client,script,clients,conn,hours,nodes,score_kips,overall_kips,index_kips,polygon_kips,line_kips,point_kips,node_kps,rel_ps,csum,
         w_p_g,p_m_w,
         fsync,wal_level,max_wal_gb,db_gb,
         wal_mbps,  chkp_mbph, avg_write_mbps, max_write_mbps, avg_read_mbps, max_read_mbps,avg_package_watts, max_package_watts,
     ROW_NUMBER()
     OVER(
         PARTITION BY cpu,mem_gb,server_ver,script,conn,clients,nodes,csum,fsync,wal_level,max_wal_gb,w_p_g,p_m_w
-        ORDER BY nodes_kips DESC,index_kips DESC
+        ORDER BY score_kips DESC,overall_kips DESC,index_kips DESC
     )  AS r
     FROM submission
     WHERE
@@ -46,7 +46,7 @@ SELECT
     substring(server_ver FROM 'PostgreSQL ([0-9]+)') AS ver,
     conn,
     hours AS hours,
-    nodes_kips,index_kips,csum,
+    score_kips,overall_kips,index_kips,polygon_kips,line_kips,point_kips,node_kps,rel_ps,csum,
     w_p_g,p_m_w,
     fsync,wal_level,max_wal_gb,
     wal_mbps AS wal,
@@ -56,7 +56,7 @@ SELECT
     round(avg_package_watts) AS avg_pkg,
     round(max_package_watts) AS max_pkg
 FROM best WHERE r=1
-ORDER BY nodes_kips DESC,index_kips DESC,script,db_gb;
+ORDER BY score_kips DESC,overall_kips DESC,index_kips DESC,script,db_gb;
 """,
     },
     "osm-network": {
@@ -66,12 +66,12 @@ ORDER BY nodes_kips DESC,index_kips DESC,script,db_gb;
 WITH
 best AS
   (SELECT
-    cpu,mem_gb,disk,server_ver,client,script,clients,conn,hours,nodes,nodes_kips,index_kips,fsync,wal_level,max_wal_gb,db_gb,
+    cpu,mem_gb,disk,server_ver,client,script,clients,conn,hours,nodes,score_kips,overall_kips,index_kips,polygon_kips,line_kips,point_kips,node_kps,rel_ps,fsync,wal_level,max_wal_gb,db_gb,
       wal_mbps, avg_write_mbps, max_write_mbps, avg_read_mbps, max_read_mbps,avg_package_watts, max_package_watts,
     ROW_NUMBER()
     OVER(
         PARTITION BY cpu,conn,client
-        ORDER BY nodes_kips DESC,index_kips DESC
+        ORDER BY score_kips DESC,overall_kips DESC,index_kips DESC
     )  AS r
     FROM submission
     WHERE
@@ -88,10 +88,10 @@ SELECT
     cpu AS server,
     substring(server_ver FROM 'PostgreSQL ([0-9]+)') AS ver,
     conn,
-    nodes_kips,index_kips,
+    score_kips,overall_kips,index_kips,polygon_kips,line_kips,point_kips,node_kps,rel_ps,
     wal_mbps AS wal_mbps
 FROM best WHERE r=1
-ORDER BY server,client,cpu,nodes_kips DESC;
+ORDER BY server,client,cpu,score_kips DESC,overall_kips DESC;
 """,
     },
     "osm-power": {
@@ -101,12 +101,12 @@ ORDER BY server,client,cpu,nodes_kips DESC;
 WITH
 best AS
   (SELECT
-    cpu,mem_gb,disk,server_ver,client,script,clients,conn,hours,nodes,nodes_kips,index_kips,fsync,wal_level,max_wal_gb,db_gb,
+    cpu,mem_gb,disk,server_ver,client,script,clients,conn,hours,nodes,score_kips,overall_kips,index_kips,polygon_kips,line_kips,point_kips,node_kps,rel_ps,fsync,wal_level,max_wal_gb,db_gb,
       wal_mbps, avg_write_mbps, max_write_mbps, avg_read_mbps, max_read_mbps,avg_package_watts, max_package_watts,
     ROW_NUMBER()
     OVER(
         PARTITION BY cpu,conn,client
-        ORDER BY nodes_kips DESC,index_kips DESC
+        ORDER BY score_kips DESC,overall_kips DESC,index_kips DESC
     )  AS r
     FROM submission
     WHERE
@@ -120,7 +120,7 @@ SELECT
     cpu,
     mem_gb,
     substring(server_ver FROM 'PostgreSQL ([0-9]+)') AS ver,
-    nodes_kips,index_kips,
+    score_kips,overall_kips,index_kips,polygon_kips,line_kips,point_kips,node_kps,rel_ps,
     CASE WHEN (avg_package_watts IS NULL) AND (NOT max_package_watts IS NULL) THEN 'est' ELSE '' END AS pwr_est,
     round(max_package_watts) AS max_pkg,
     round(avg_package_watts) AS avg_pkg,
@@ -134,7 +134,7 @@ SELECT
     END AS cpu_c
 FROM best WHERE r=1
   AND max_package_watts IS NOT null
-ORDER BY nodes_kips DESC,index_kips DESC,script,db_gb;
+ORDER BY score_kips DESC,overall_kips DESC,index_kips DESC,script,db_gb;
 """,
     },
     "osm-checkpoint": {
@@ -144,14 +144,14 @@ ORDER BY nodes_kips DESC,index_kips DESC,script,db_gb;
 WITH
 best AS
   (SELECT
-    cpu,server_ver,mem_gb,disk,client,script,clients,conn,hours,nodes,nodes_kips,index_kips,fsync,wal_level,max_wal_gb,db_gb,
+    cpu,server_ver,mem_gb,disk,client,script,clients,conn,hours,nodes,score_kips,overall_kips,index_kips,polygon_kips,line_kips,point_kips,node_kps,rel_ps,fsync,wal_level,max_wal_gb,db_gb,
     timeout,chkp_mins,timed_pct,chkp_mbph,clean_mbph,backend_mbph,cleaned_pct,
     max_dirty,hit_pct,hit_mbps,read_mbps,
     wal_mbps, avg_write_mbps, max_write_mbps, avg_read_mbps, max_read_mbps,avg_package_watts, max_package_watts,
     ROW_NUMBER()
     OVER(
         PARTITION BY cpu,conn,client,timeout,max_wal_gb
-        ORDER BY nodes_kips DESC,index_kips DESC
+        ORDER BY score_kips DESC,overall_kips DESC,index_kips DESC
     )  AS r
     FROM submission
     WHERE
@@ -163,7 +163,7 @@ best AS
 SELECT
     cpu,
     substring(server_ver FROM 'PostgreSQL ([0-9]+)') AS ver,
-    nodes_kips,index_kips,fsync,
+    score_kips,overall_kips,index_kips,polygon_kips,line_kips,point_kips,node_kps,rel_ps,fsync,
     wal_level,max_wal_gb,
     timeout,chkp_mins,timed_pct,
     chkp_mbph,
@@ -189,7 +189,7 @@ SELECT
     batch,
     hours,
     nodes,
-    nodes_kips,index_kips,
+    score_kips,overall_kips,index_kips,polygon_kips,line_kips,point_kips,node_kps,rel_ps,
     max_dirty,
     wal_mbps, avg_write_mbps, max_write_mbps
 FROM submission

@@ -3,8 +3,8 @@
 Graph OSM leaderboard results from a release's static snapshot (default PG18).
 
 Keeps one row per host-local server configuration (cpu, memory, disk) — the best
-nodes_kips run for that hardware, regardless of PostgreSQL version or tuning.
-Remote-client runs (non-host conn) are excluded.
+score_kips run when that column is present, otherwise overall_kips, regardless
+of PostgreSQL version or tuning. Remote-client runs (non-host conn) are excluded.
 
 Usage:
   python3 reports/osm-leaderboard.py
@@ -55,19 +55,25 @@ def config_label(row: pd.Series) -> str:
 
 def prepare_leaderboard_df(rows: list[dict[str, str]]) -> pd.DataFrame:
     df = pd.DataFrame(rows)
-    for col in ("mem_gb", "nodes_kips", "index_kips", "ver", "hours", "max_wal_gb"):
+    for col in ("mem_gb", "overall_kips", "score_kips", "index_kips", "ver", "hours", "max_wal_gb"):
         if col in df.columns:
             df[col] = numeric(df[col])
     df["disk"] = df["disk"].str.strip()
     df = df[df["conn"].astype(str).str.strip().str.lower() == "host"]
 
+    rank_cols = (
+        ["score_kips", "overall_kips", "index_kips"]
+        if "score_kips" in df.columns
+        else ["overall_kips", "index_kips"]
+    )
     best = (
-        df.sort_values(["nodes_kips", "index_kips"], ascending=False)
+        df.sort_values(rank_cols, ascending=False)
         .groupby(["cpu", "mem_gb", "disk"], as_index=False)
         .first()
     )
     best["label"] = best.apply(config_label, axis=1)
-    return best.sort_values("nodes_kips", ascending=True).reset_index(drop=True)
+    sort_col = "score_kips" if "score_kips" in best.columns else "overall_kips"
+    return best.sort_values(sort_col, ascending=True).reset_index(drop=True)
 
 
 def plain_axis(ax, y: bool = False, x: bool = True) -> None:
@@ -87,7 +93,7 @@ def plot_leaderboard(df: pd.DataFrame, output: Path, show: bool = False) -> None
 
     ax.barh(
         [i - bar_height / 2 for i in y],
-        df["nodes_kips"],
+        df["overall_kips"],
         height=bar_height,
         color=NODES_COLOR,
         label="Total (kNodes/s)",

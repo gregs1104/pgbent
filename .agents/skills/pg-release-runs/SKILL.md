@@ -405,7 +405,7 @@ memory study forever on court if the others already match.
 Greg points at it). `./newset` with a shared description prefix; change one
 variable at a time (`osm-mem-*` tier or `scale` / `OSMNODECACHE`), keep
 durability durable, and let report SQL separate rows via `test_settings`.
-Compare hours, `nodes_kips`, `index_kips`, and swap/iowait across the index
+Compare hours, `overall_kips`, `score_kips`, `index_kips`, and swap/iowait across the index
 transition. Replicate only interesting corners on other hosts; avoid packing
 experiments on siren/abbey until twilight shows they fit. Promote a winner into
 `conf/19` only with a commit that cites the study.
@@ -632,7 +632,7 @@ tail -f results/siren/2974/results.txt
 
 `./latest_set` shows only the active set. Mid-run the test row is there and TPS is still blank. On this run that was set 71, `osm2pgsql-1.11`, scale 75000, version 19, test 2974, 5 clients, with empty `tps`, `avg_latency`, `90%<`, and `max_latency`. After the run finishes, a blank TPS means the run failed. That holds for any test, not only OSM.
 
-Finished OSM loads are read in context from the results database. `reports/osm-speed.sql` returns three summaries: one row per test (hours and nodes/s), a phase breakdown (polygon, line, and point time, plus node, way, relation, and index rates), and the tuned settings (buffers, durability, checkpoint and WAL rates).
+Finished OSM loads are read in context from the results database. `reports/osm-speed.sql` returns three summaries: one row per test (hours, overall_kips, score_kips), a phase breakdown (polygon/line/point index kips scaled by node_count, plus node, way, relation, score, and index rates), and the tuned settings (buffers, durability, checkpoint and WAL rates). `score_kips` is the OSM scoreboard number: `node_count / (relation_seconds + polygon + line) / 1000`.
 
 ```bash
 ./latest_set

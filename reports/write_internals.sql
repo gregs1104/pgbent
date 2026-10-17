@@ -24,15 +24,23 @@ CREATE OR REPLACE VIEW write_internals AS
   tps,  avg_latency, percentile_90_latency, max_latency, rate_limit,
   round(extract(epoch from (tests.end_time - tests.start_time))/60/60,2) as hours,
 
+  -- OSM scoreboard: kNodes/s over relation load + polygon/line indexes.
+  -- Omits node/way (cache) and point/roads (short, noisy).
+  CASE WHEN jsonb_exists(artifacts, 'node_count')
+      AND jsonb_exists(artifacts, 'relation_seconds')
+      AND jsonb_exists(artifacts, 'planet_osm_polygon')
+      AND jsonb_exists(artifacts, 'planet_osm_line')
+      AND ((artifacts->'relation_seconds')::numeric
+         + (artifacts->'planet_osm_polygon')::numeric
+         + (artifacts->'planet_osm_line')::numeric) > 0
+    THEN round((artifacts->'node_count')::numeric / (
+              (artifacts->'relation_seconds')::numeric +
+              (artifacts->'planet_osm_polygon')::numeric +
+              (artifacts->'planet_osm_line')::numeric) / 1000, 0)
+    ELSE 0 END AS score_kips,
   CASE WHEN jsonb_exists(artifacts, 'node_count') AND jsonb_exists(artifacts, 'overall')
     THEN round((artifacts->'node_count')::numeric / (artifacts->'overall')::numeric / 1000,0)
-    ELSE 0 END AS nodes_kips,
-  CASE WHEN
-      jsonb_exists(artifacts, 'relation_count') AND
-      jsonb_exists(artifacts, 'relation_seconds')
-    THEN round((artifacts->'relation_count')::numeric /
-           (artifacts->'relation_seconds')::numeric,0)
-    ELSE 0 END AS rel_kips,
+    ELSE 0 END AS overall_kips,
   CASE WHEN
       jsonb_exists(artifacts, 'node_count') AND
       jsonb_exists(artifacts, 'planet_osm_polygon') AND
@@ -46,6 +54,27 @@ CREATE OR REPLACE VIEW write_internals AS
               (artifacts->'planet_osm_roads')::numeric)
               ,0)
     ELSE 0 END AS index_kips,
+  CASE WHEN jsonb_exists(artifacts, 'node_count') AND jsonb_exists(artifacts, 'planet_osm_polygon')
+    THEN round((artifacts->'node_count')::numeric / (artifacts->'planet_osm_polygon')::numeric / 1000,0)
+    ELSE 0 END AS polygon_kips,
+  CASE WHEN jsonb_exists(artifacts, 'node_count') AND jsonb_exists(artifacts, 'planet_osm_line')
+    THEN round((artifacts->'node_count')::numeric / (artifacts->'planet_osm_line')::numeric / 1000,0)
+    ELSE 0 END AS line_kips,
+  CASE WHEN jsonb_exists(artifacts, 'node_count') AND jsonb_exists(artifacts, 'planet_osm_point')
+    THEN round((artifacts->'node_count')::numeric / (artifacts->'planet_osm_point')::numeric / 1000,0)
+    ELSE 0 END AS point_kips,
+  CASE WHEN jsonb_exists(artifacts, 'node_count') AND jsonb_exists(artifacts, 'node_seconds')
+    THEN round((artifacts->'node_count')::numeric / 1000 / (artifacts->'node_seconds')::numeric,0)
+    ELSE 0 END AS node_kps,
+  CASE WHEN jsonb_exists(artifacts, 'way_count') AND jsonb_exists(artifacts, 'way_seconds')
+    THEN round((artifacts->'way_count')::numeric / 1000 / (artifacts->'way_seconds')::numeric,0)
+    ELSE 0 END AS way_kps,
+  CASE WHEN
+      jsonb_exists(artifacts, 'relation_count') AND
+      jsonb_exists(artifacts, 'relation_seconds')
+    THEN round((artifacts->'relation_count')::numeric /
+           (artifacts->'relation_seconds')::numeric,0)
+    ELSE 0 END AS rel_ps,
 
   (SELECT round(numeric_value / 1024 / 1024 / 1024,1) FROM test_settings WHERE
     test_settings.server=tests.server AND test_settings.test=tests.test AND

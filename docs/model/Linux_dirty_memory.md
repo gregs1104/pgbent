@@ -26,7 +26,7 @@ The performance study is in the [OSM Dirty Memory results]({{ '/results-summary/
 
 Since this test server is using a fast SSD, there is only a small performance win to caching large amounts of Dirty memory:
 
-Setting                  | max_dirty      | hours | nodes_kips | index_kips
+Setting                  | max_dirty      | hours | overall_kips | index_kips
 -------------------------|----------------|-------|------------|-----------
 Default ratios 10/20     | 14,405,595,136 | 3.14  | 710        | 310
 Dirty ratios 5/10        | 7,828,504,576  | 3.19  | 700        | 306

@@ -54,14 +54,14 @@ def format_dirty_label(bytes_val: float) -> str:
 
 def prepare_dirty_memory_df(rows: list[dict[str, str]]) -> pd.DataFrame:
     df = pd.DataFrame(rows)
-    for col in ("hours", "nodes", "nodes_kips", "index_kips", "max_dirty", "wal_mbps", "avg_write_mbps", "max_write_mbps"):
+    for col in ("hours", "nodes", "overall_kips", "index_kips", "max_dirty", "wal_mbps", "avg_write_mbps", "max_write_mbps"):
         df[col] = numeric(df[col])
 
     df = (
         df.groupby("batch", as_index=False)
         .agg(
             max_dirty=("max_dirty", "max"),
-            nodes_kips=("nodes_kips", "mean"),
+            overall_kips=("overall_kips", "mean"),
             index_kips=("index_kips", "mean"),
             hours=("hours", "mean"),
         )
@@ -79,7 +79,7 @@ def plot_dirty_memory(df: pd.DataFrame, output: Path, show: bool = False) -> Non
 
     ax.plot(
         df["max_dirty"],
-        df["nodes_kips"],
+        df["overall_kips"],
         marker="o",
         linewidth=2,
         color="#e4572e",
@@ -95,13 +95,13 @@ def plot_dirty_memory(df: pd.DataFrame, output: Path, show: bool = False) -> Non
     )
 
     ax.set_xscale("log")
-    y_top = float(df["nodes_kips"].max())
+    y_top = float(df["overall_kips"].max())
     ax.set_ylim(200, y_top * 1.32)
 
     xmin = df["max_dirty"].min()
     ax.annotate(
-        f"Smallest limit ({smallest['dirty_label']}) total ({int(smallest['nodes_kips'])} kNodes/s)",
-        xy=(xmin, smallest["nodes_kips"]),
+        f"Smallest limit ({smallest['dirty_label']}) total ({int(smallest['overall_kips'])} kNodes/s)",
+        xy=(xmin, smallest["overall_kips"]),
         xytext=(8, -22),
         textcoords="offset points",
         ha="left",
@@ -122,8 +122,8 @@ def plot_dirty_memory(df: pd.DataFrame, output: Path, show: bool = False) -> Non
     total_label_trans = offset_copy(ax.transData, fig=fig, x=-8, y=10, units="points")
     ax.text(
         default["max_dirty"],
-        default["nodes_kips"],
-        f"Default ({default['dirty_label']}) total ({int(default['nodes_kips'])} kNodes/s)",
+        default["overall_kips"],
+        f"Default ({default['dirty_label']}) total ({int(default['overall_kips'])} kNodes/s)",
         transform=total_label_trans,
         ha="right",
         va="bottom",

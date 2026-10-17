@@ -32,7 +32,7 @@ INSERT INTO submission (
     conn, client,
     script, clients, scale, nodes, db_gb,
     tps, avg_latency, percentile_90_latency, max_latency, rate_limit,
-    hours, nodes_kips,rel_kips,index_kips,
+    hours, score_kips, overall_kips, index_kips, polygon_kips, line_kips, point_kips, node_kps, way_kps, rel_ps,
     shared_gb, maint_gb, max_wal_gb,
     w_p_g,p_m_w,
     csum, fsync, wal_level, timeout,

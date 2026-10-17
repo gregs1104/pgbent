@@ -47,7 +47,7 @@ def numeric(series: pd.Series) -> pd.Series:
 
 def prepare_network_df(rows: list[dict[str, str]]) -> pd.DataFrame:
     df = pd.DataFrame(rows)
-    for col in ("nodes_kips", "index_kips", "wal_mbps"):
+    for col in ("overall_kips", "index_kips", "wal_mbps"):
         df[col] = numeric(df[col])
     df["conn_mbps"] = df["conn"].map(conn_mbps)
     return df
@@ -67,7 +67,7 @@ def plot_connection_speed(df: pd.DataFrame, output: Path, pg: str, show: bool = 
 
     ax.plot(
         remote["conn_mbps"],
-        remote["nodes_kips"],
+        remote["overall_kips"],
         marker="o",
         linewidth=2,
         color="#e4572e",
@@ -82,17 +82,17 @@ def plot_connection_speed(df: pd.DataFrame, output: Path, pg: str, show: bool = 
         label="Index (kNodes/s)",
     )
 
-    ax.axhline(i5_host["nodes_kips"], color="#e4572e", linestyle=":", linewidth=2.5, alpha=0.85)
+    ax.axhline(i5_host["overall_kips"], color="#e4572e", linestyle=":", linewidth=2.5, alpha=0.85)
     ax.axhline(i5_host["index_kips"], color="#4c78a8", linestyle=":", linewidth=2.5, alpha=0.85)
 
     ax.set_xscale("log")
-    y_top = max(float(remote["nodes_kips"].max()), float(i5_host["nodes_kips"]))
+    y_top = max(float(remote["overall_kips"].max()), float(i5_host["overall_kips"]))
     ax.set_ylim(0, y_top * 1.12)
 
     xmin = remote["conn_mbps"].min()
     ax.annotate(
-        f"i5 host-local total ({int(i5_host['nodes_kips'])} kNodes/s)",
-        xy=(xmin, i5_host["nodes_kips"]),
+        f"i5 host-local total ({int(i5_host['overall_kips'])} kNodes/s)",
+        xy=(xmin, i5_host["overall_kips"]),
         xytext=(8, -22),
         textcoords="offset points",
         ha="left",
@@ -113,8 +113,8 @@ def plot_connection_speed(df: pd.DataFrame, output: Path, pg: str, show: bool = 
     total_label_trans = offset_copy(ax.transData, fig=fig, x=-12, y=0, units="points")
     ax.text(
         10000,
-        at_10g["nodes_kips"],
-        f"10Gb/s remote total ({int(at_10g['nodes_kips'])} kNodes/s)",
+        at_10g["overall_kips"],
+        f"10Gb/s remote total ({int(at_10g['overall_kips'])} kNodes/s)",
         transform=total_label_trans,
         ha="right",
         va="center",

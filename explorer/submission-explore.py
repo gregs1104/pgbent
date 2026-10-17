@@ -147,11 +147,11 @@ def draw_perf_watt(df):
 
     st.info("PostgreSQL Open Street Map Loading: CPU Speed vs. Power")
     st.info("Loading speed in kNodes/sec")
-    st.bar_chart(horizontal=True,data=df,y=('nodes_kips'))
+    st.bar_chart(horizontal=True,data=df,y=('overall_kips'))
     st.info("CPU Maximum Watts")
     st.bar_chart(horizontal=True,data=df,y=('max_pkg'))
     st.info("Loading speed vs Power Consumption")
-    st.scatter_chart(data=df,x='max_pkg',y='nodes_kips',color='cpu_c')
+    st.scatter_chart(data=df,x='max_pkg',y='overall_kips',color='cpu_c')
 
     return
 
