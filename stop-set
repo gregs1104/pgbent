@@ -1,0 +1,138 @@
+#!/bin/bash
+# Stop the current set's automation, the OSM or pgbench workload, and
+# leftover metric collectors.  Does not stop PostgreSQL.
+#
+#   ./stop-set              kill the loop now; leave the aborted test row
+#   ./stop-set cleanup      also wipe the unfinished latest test
+#   ./stop-set cleanup 20   wipe a specific test number after the kill
+#
+# Kill supervisors before the workload so benchwarmer cannot wait on a
+# dead osm2pgsql/pgbench and then post-process / art-import {}.
+# Kill collectors by PID (and process group) — do not pkill -f a pattern
+# that appears on your own command line.
+
+source ./config
+source ./params
+
+CLEANUP=0
+CLEANUP_TEST=""
+if [ "$1" = "cleanup" ]; then
+  CLEANUP=1
+  CLEANUP_TEST="$2"
+elif [ -n "$1" ]; then
+  echo "Usage: $0 [cleanup [test]]"
+  exit 1
+fi
+
+RESULTPSQL="psql -X -h $RESULTHOST -U $RESULTUSER -p $RESULTPORT -d $RESULTDB"
+TESTPSQL_MAINT="psql -h $TESTHOST -U $TESTUSER -p $TESTPORT -d postgres"
+ME=$$
+
+# Snapshot the latest test before anything dies.
+LATEST=`$RESULTPSQL -Atqc "SELECT test FROM tests WHERE server='${SERVERNAME}' ORDER BY test DESC LIMIT 1"`
+LATEST_TPS=`$RESULTPSQL -Atqc "SELECT COALESCE(tps,0) FROM tests WHERE server='${SERVERNAME}' ORDER BY test DESC LIMIT 1"`
+echo "Latest test ${SERVERNAME}/${LATEST} tps=${LATEST_TPS}"
+
+is_self() {
+  local pid="$1"
+  [ "$pid" = "$ME" ] && return 0
+  [ "$pid" = "$PPID" ] && return 0
+  local args
+  args=`ps -p "$pid" -o args= 2>/dev/null` || return 1
+  case "$args" in
+    *stop-set*) return 0 ;;
+  esac
+  return 1
+}
+
+# Collect PIDs matching a pgrep -f pattern, skipping this script.
+pids_for() {
+  local pat="$1"
+  local pid
+  for pid in `pgrep -f "$pat" 2>/dev/null`; do
+    is_self "$pid" && continue
+    echo "$pid"
+  done
+}
+
+kill_pids() {
+  local sig="$1"
+  shift
+  local pid
+  for pid in "$@"; do
+    [ -z "$pid" ] && continue
+    is_self "$pid" && continue
+    if kill -0 "$pid" 2>/dev/null; then
+      echo "kill -$sig $pid  `ps -p "$pid" -o args= 2>/dev/null | cut -c1-120`"
+      kill -"$sig" "$pid" 2>/dev/null || true
+    fi
+  done
+}
+
+kill_groups() {
+  local pid
+  for pid in "$@"; do
+    [ -z "$pid" ] && continue
+    is_self "$pid" && continue
+    if kill -0 "$pid" 2>/dev/null; then
+      echo "kill_pg $pid  `ps -p "$pid" -o args= 2>/dev/null | cut -c1-120`"
+      ./kill_pg "$pid" 2>/dev/null || kill -9 "$pid" 2>/dev/null || true
+    fi
+  done
+}
+
+# 1) Supervisors — SIGKILL so runset/benchwarmer cannot finish the row.
+echo "== supervisors =="
+kill_pids 9 \
+  `pids_for 'util/repeat-gis'` \
+  `pids_for 'bash ./runset'` \
+  `pids_for '/bin/bash ./runset'` \
+  `pids_for './benchwarmer'` \
+  `pids_for 'util/newgis'`
+
+# 2) Workload binaries (OSM or pgbench).
+echo "== workload =="
+kill_pids 9 \
+  `pids_for 'util/osm-importer'` \
+  `pids_for 'util/osm-rel-prof'` \
+  `pids_for 'osm2pgsql'` \
+  `pids_for 'pgbench '`
+
+# 3) Collectors: timed-os-stats called setsid so kill_pg gets iostat/vmstat/psql children.
+echo "== collectors =="
+kill_groups `pids_for 'timed-os-stats'`
+
+# Leftover metric-query backends on the test database.
+if [ -n "$TESTDB" ]; then
+  echo "== terminate ${TESTDB} backends =="
+  $TESTPSQL_MAINT -c \
+    "SELECT pg_terminate_backend(pid) FROM pg_stat_activity
+     WHERE datname='${TESTDB}' AND pid <> pg_backend_pid();" 2>/dev/null || true
+fi
+
+rm -f "${STATEDIR}/complete" "${STATEDIR}/pgbent.pid"
+
+echo "== remaining =="
+LEFTOVER=`pgrep -af 'repeat-gis|./runset|./benchwarmer|osm-importer|osm-rel-prof|osm2pgsql|timed-os-stats|pgbench ' 2>/dev/null | grep -v stop-set | grep -v pgrep || true`
+if [ -n "$LEFTOVER" ]; then
+  echo "$LEFTOVER"
+else
+  echo "(none)"
+fi
+
+if [ "$CLEANUP" -eq 1 ]; then
+  if [ -z "$CLEANUP_TEST" ]; then
+    if [ -z "$LATEST" ]; then
+      echo "No tests to clean up"
+      exit 0
+    fi
+    if [ "$LATEST_TPS" != "0" ]; then
+      echo "Latest test ${LATEST} has tps=${LATEST_TPS}; not wiping a finished row"
+      echo "Pass an explicit test number to force: $0 cleanup ${LATEST}"
+      exit 0
+    fi
+    CLEANUP_TEST="$LATEST"
+  fi
+  echo "== cleanup_singlevalue ${CLEANUP_TEST} =="
+  ./cleanup_singlevalue "$CLEANUP_TEST"
+fi

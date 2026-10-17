@@ -661,6 +661,8 @@ OSM loop control:
 ```bash
 watch util/progress   # live dashboard: disk use, DB/WAL size, tail of current results.txt and nohup.out
 touch complete        # (in STATEDIR) stop after the current run finishes
+./stop-set            # kill the loop / workload / collectors now
+./stop-set cleanup    # same, and wipe the unfinished latest test
 ```
 
 `watch util/progress` follows `repeat-gis` through its transitions: newgis, recovery sleep, and the next `runset`. It always shows the latest set's newest test, so one dashboard can stay open for the whole loop. This was verified on siren. On macOS, `watch` comes from Homebrew (`brew install watch`).
@@ -669,14 +671,9 @@ touch complete        # (in STATEDIR) stop after the current run finishes
 - `util/newgis` recreates `gis` with extensions and runs `pgbent_tune`. If it fails, `repeat-gis` stops and removes the pid files. A failed `dropdb` means connections are still open — usually **zombie `timed-os-stats` collectors** left from a crashed OSM/`benchwarmer` (they keep a `psql` session on `gis` via `util/metric-query.sql`). Clear them, then retry:
 
 ```bash
-# as postgres, from ~/pgbent — kill by PID (do not pkill -f a pattern that
-# appears in your own script line or you suicide the SSH session)
-pgrep -u postgres -af './timed-os-stats'    # vmstat/iostat/meminfo/power/sensors/psql
-for pid in $(pgrep -u postgres -f './timed-os-stats'); do kill $pid; done
-# terminate any remaining gis backends
-psql -p "$TESTPORT" -d postgres -c \
-  "SELECT pg_terminate_backend(pid) FROM pg_stat_activity
-   WHERE datname='gis' AND pid <> pg_backend_pid();"
+# as postgres, from ~/pgbent
+./stop-set            # loop + osm2pgsql/pgbench + timed-os-stats (+ gis backends)
+# ./stop-set cleanup  # also wipe the aborted test row
 util/newgis
 ```
 
