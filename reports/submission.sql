@@ -7,7 +7,7 @@ CREATE TABLE submission_author (
 );
 
 INSERT INTO submission_author(submitter,email,affiliation) VALUES
-  ('Greg Smith','greg.smith@crunchydata.com','Crunchy Data');
+  ('Greg Smith','gregs1104@gmail.com','Delayed Groups Lab');
 
 DROP TABLE IF EXISTS submission;
 CREATE TABLE submission AS
