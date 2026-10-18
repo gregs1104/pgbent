@@ -6,10 +6,10 @@ Default: read a release's static snapshot (PG18) and write the matching PNG.
 
 `--from-db` runs `reports/osm-leaderboard.sql` against the results database,
 writes the ranked table into `docs/leaderboards.md`, plots the per-machine
-bar chart, score-vs-joules scatter, and Average vs Maximum disk and
-package-power traces for the score leader and the power-efficiency leader
-from `test_metrics_data`. That is the public-page path; it does not go
-through Streamlit.
+bar chart, score-vs-joules scatter, the three-metric system comparison,
+and Average vs Maximum disk and package-power traces for the score leader
+and the power-efficiency leader from `test_metrics_data`. That is the
+public-page path; it does not go through Streamlit.
 
 Usage:
   python3 reports/osm-leaderboard.py
@@ -34,13 +34,22 @@ from matplotlib.ticker import AutoMinorLocator, ScalarFormatter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from snapshot_table import load_snapshot_table
-from pg18_style import LEADERBOARD_LEGEND_FONTSIZE, LEADERBOARD_Y_LABEL_FONTSIZE, use_pg18_style
+from pg18_style import (
+    BAR_LABEL_FONTSIZE,
+    LEADERBOARD_LEGEND_FONTSIZE,
+    LEADERBOARD_Y_LABEL_FONTSIZE,
+    Y_LABEL_FONTSIZE,
+    use_pg18_style,
+)
 from release_paths import REPO_ROOT, add_pg_argument, image_path, snapshot_path
 from metric_series import fetch_disk_avg_max, fetch_power_avg_max, legend_avg_max, plot_avg_max
 from label_layout import LabelOffset, place_point_labels
 
 NODES_COLOR = "#e4572e"
 INDEX_COLOR = "#4c78a8"
+ENERGY_COLOR = "#2a9d8f"
+BAR_LABEL_INSIDE_COLOR = "#ffffff"
+BAR_LABEL_OUTSIDE_COLOR = "#333333"
 SCATTER_MARKER_SIZE = 90
 DEFAULT_CONN = "host=localhost dbname=results user=gsmith password=secret"
 SQL_PATH = REPO_ROOT / "reports" / "osm-leaderboard.sql"
@@ -51,12 +60,15 @@ POWER_IMAGE = REPO_ROOT / "docs" / "images" / "osm-leaderboard-power.png"
 EFF_DISK_IMAGE = REPO_ROOT / "docs" / "images" / "osm-leaderboard-efficiency-disk.png"
 EFF_POWER_IMAGE = REPO_ROOT / "docs" / "images" / "osm-leaderboard-efficiency-power.png"
 JOULES_IMAGE = REPO_ROOT / "docs" / "images" / "osm-leaderboard-joules.png"
+COMPARE_IMAGE = REPO_ROOT / "docs" / "images" / "osm-leaderboard-compare.png"
 TABLE_BEGIN = "<!-- osm-leaderboard-table:begin -->"
 TABLE_END = "<!-- osm-leaderboard-table:end -->"
 TRACE_BEGIN = "<!-- osm-leaderboard-traces:begin -->"
 TRACE_END = "<!-- osm-leaderboard-traces:end -->"
 JOULES_BEGIN = "<!-- osm-leaderboard-joules:begin -->"
 JOULES_END = "<!-- osm-leaderboard-joules:end -->"
+COMPARE_BEGIN = "<!-- osm-leaderboard-compare:begin -->"
+COMPARE_END = "<!-- osm-leaderboard-compare:end -->"
 HIDDEN_TABLE_COLS = ("server", "test")
 
 
@@ -97,7 +109,17 @@ def config_label(row: pd.Series) -> str:
 
 def prepare_leaderboard_df(rows: list[dict[str, str]]) -> pd.DataFrame:
     df = pd.DataFrame(rows)
-    for col in ("mem_gb", "overall_kips", "score_kips", "index_kips", "ver", "hours", "max_wal_gb", "kj"):
+    for col in (
+        "mem_gb",
+        "overall_kips",
+        "score_kips",
+        "index_kips",
+        "rel_ps",
+        "ver",
+        "hours",
+        "max_wal_gb",
+        "kj",
+    ):
         if col in df.columns:
             df[col] = numeric(df[col])
     df["disk"] = df["disk"].str.strip()
@@ -243,6 +265,130 @@ def joules_markdown(df: pd.DataFrame) -> str:
         "({{ '/images/osm-leaderboard-joules.png' | relative_url }})\n\n"
         f"{JOULES_END}"
     )
+
+
+def compare_markdown() -> str:
+    return (
+        f"{COMPARE_BEGIN}\n\n"
+        "One chart for the same best-score run on each machine, sorted by OSM score. "
+        "Bar length is relative to the leader, on that metric "
+        "(**100%** = the score winner's value). "
+        "Labels are the raw values. A longer **kJ** bar means more energy used, not more efficiency.\n\n"
+        "![OSM system comparison]"
+        "({{ '/images/osm-leaderboard-compare.png' | relative_url }})\n\n"
+        f"{COMPARE_END}"
+    )
+
+
+def _contrast_text_color(hex_color: str) -> str:
+    color = hex_color.lstrip("#")
+    if len(color) != 6:
+        return BAR_LABEL_INSIDE_COLOR
+    r, g, b = (int(color[i : i + 2], 16) / 255 for i in (0, 2, 4))
+    luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    return BAR_LABEL_INSIDE_COLOR if luminance < 0.55 else BAR_LABEL_OUTSIDE_COLOR
+
+
+def _text_width_data(ax, text: str, fontsize: float, renderer) -> float:
+    probe = ax.text(0, 0, text, fontsize=fontsize, alpha=0.0)
+    ax.figure.canvas.draw()
+    bbox = probe.get_window_extent(renderer)
+    probe.remove()
+    x0, _ = ax.transData.inverted().transform((bbox.x0, bbox.y0))
+    x1, _ = ax.transData.inverted().transform((bbox.x1, bbox.y1))
+    return abs(x1 - x0)
+
+
+def _pct_of_leader(series: pd.Series, leader_value: float) -> pd.Series:
+    if leader_value is None or leader_value <= 0:
+        return series * 0
+    return series / leader_value * 100.0
+
+
+def plot_system_compare(df: pd.DataFrame, output: Path, show: bool = False) -> None:
+    plot_df = df.dropna(subset=["score_kips", "rel_ps", "kj"]).copy()
+    plot_df = plot_df.sort_values("score_kips", ascending=True).reset_index(drop=True)
+    if plot_df.empty:
+        raise SystemExit("No rows with score, relations/s, and kJ for the comparison chart")
+
+    leader = plot_df.loc[plot_df["score_kips"].idxmax()]
+    score_pct = _pct_of_leader(plot_df["score_kips"], float(leader["score_kips"]))
+    rel_pct = _pct_of_leader(plot_df["rel_ps"], float(leader["rel_ps"]))
+    kj_pct = _pct_of_leader(plot_df["kj"], float(leader["kj"]))
+    n = len(plot_df)
+    y = list(range(n))
+    bar_h = 0.24
+    series = (
+        (score_pct, [i + bar_h for i in y], NODES_COLOR, "OSM score", plot_df["score_kips"], "{:,.0f}"),
+        (rel_pct, y, INDEX_COLOR, "Relations/s", plot_df["rel_ps"], "{:,.0f}/s"),
+        (kj_pct, [i - bar_h for i in y], ENERGY_COLOR, "kJ used", plot_df["kj"], "{:,.0f} kJ"),
+    )
+
+    fig, ax = plt.subplots(figsize=(11, max(5.5, 1.35 * n + 1.6)))
+    items: list[tuple[float, float, str, str]] = []
+    for widths, ys, color, label, raw, fmt in series:
+        ax.barh(ys, widths, height=bar_h, color=color, label=label)
+        for yi, width, value in zip(ys, widths, raw):
+            items.append((yi, float(width), color, fmt.format(float(value))))
+
+    ax.set_yticks(y)
+    ax.set_yticklabels(plot_df["cpu"], fontsize=Y_LABEL_FONTSIZE)
+    ax.set_xlabel("Relative to the leader, on that metric (100%)")
+    ax.set_title("OSM system comparison")
+    ax.xaxis.set_minor_locator(AutoMinorLocator(2))
+    ax.grid(True, axis="x", which="major", linestyle="--", alpha=0.4)
+    ax.grid(True, axis="x", which="minor", linestyle=":", alpha=0.25)
+    ax.legend(
+        loc="upper center",
+        bbox_to_anchor=(0.5, 1.14),
+        ncol=3,
+        fontsize=LEADERBOARD_LEGEND_FONTSIZE,
+        frameon=False,
+    )
+    plain_axis(ax)
+
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    xmax = max(w for _, w, _, _ in items)
+    pad = max(xmax * 0.02, 2)
+    inner_pad = max(xmax * 0.015, 1.5)
+    max_x = xmax
+    for yi, width, color, label in items:
+        text_width = _text_width_data(ax, label, BAR_LABEL_FONTSIZE, renderer)
+        if text_width + inner_pad * 2 <= width:
+            ax.text(
+                width - inner_pad,
+                yi,
+                label,
+                va="center",
+                ha="right",
+                fontsize=BAR_LABEL_FONTSIZE,
+                color=_contrast_text_color(color),
+                clip_on=True,
+            )
+            max_x = max(max_x, width)
+        else:
+            x = width + pad
+            ax.text(
+                x,
+                yi,
+                label,
+                va="center",
+                ha="left",
+                fontsize=BAR_LABEL_FONTSIZE,
+                color=BAR_LABEL_OUTSIDE_COLOR,
+                clip_on=True,
+            )
+            max_x = max(max_x, x + text_width)
+    ax.set_xlim(0, max_x + pad)
+
+    fig.tight_layout()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output, dpi=160, bbox_inches="tight")
+    print(f"Wrote {output} ({n} systems)")
+    if show:
+        plt.show()
+    plt.close(fig)
 
 
 def plot_leaderboard(df: pd.DataFrame, output: Path, show: bool = False) -> None:
@@ -425,6 +571,7 @@ def write_leaderboard_page(
     n_rows: int,
     traces_md: str | None = None,
     joules_md: str | None = None,
+    compare_md: str | None = None,
 ) -> None:
     text = page.read_text(encoding="utf-8")
     table_inner = f"{TABLE_BEGIN}\n\n_Query returned {n_rows} rows._\n\n{table_md}\n\n{TABLE_END}"
@@ -433,6 +580,8 @@ def write_leaderboard_page(
         text = replace_marked_block(text, TRACE_BEGIN, TRACE_END, traces_md)
     if joules_md is not None:
         text = replace_marked_block(text, JOULES_BEGIN, JOULES_END, joules_md)
+    if compare_md is not None:
+        text = replace_marked_block(text, COMPARE_BEGIN, COMPARE_END, compare_md)
     page.write_text(text, encoding="utf-8")
     print(f"Wrote {n_rows} rows into {page}")
 
@@ -537,9 +686,19 @@ def main() -> int:
     df = prepare_leaderboard_df(rows)
     plot_leaderboard(df, args.output, show=args.show)
     joules_md = None
+    compare_md = None
     if args.from_db and "kj" in df.columns and df["kj"].notna().any():
         plot_score_vs_joules(df, JOULES_IMAGE, show=args.show)
         joules_md = joules_markdown(df)
+    if (
+        args.from_db
+        and "kj" in df.columns
+        and "rel_ps" in df.columns
+        and df["kj"].notna().any()
+        and df["rel_ps"].notna().any()
+    ):
+        plot_system_compare(df, COMPARE_IMAGE, show=args.show)
+        compare_md = compare_markdown()
     if args.from_db and table is not None and not args.no_page:
         write_leaderboard_page(
             args.page,
@@ -547,6 +706,7 @@ def main() -> int:
             len(table),
             traces_md,
             joules_md,
+            compare_md,
         )
     return 0
 

@@ -249,8 +249,8 @@ temporary corporate inventory. Finish the OSM/PG19 cells on these boxes.
 
 | Host | CPU | Notes |
 |------|-----|--------|
-| **siren** | **9950X** (was **9700X**) | **2026-10-16 evening — parked.** Died in **Ways** again. Do **not** retry PG18 low-durability / thin-WAL on this chassis; that corner is what trips the board, and those cells get re-run after the WAL vs fsync split anyway. Downloaded set **70** (PG18.3 durable) vs set **71** (PG19 fast 2974/2975/3009/3010 and durable 3011–3013) is enough for the 18↔19 regression; twilight 117 vs 118 and abbey 11 fill the rest of the fleet. Next hardware try is still the **rear case fan** (this build has none) — not more OSM until then. This build **has no rear case fan**; that may be enough of the crash story (hot air staying in the chassis) that a fan is the first fix, not a cooler retrofit or 9700X swap mid-park. Cooler is a **240mm AIO** (undersized for 9950X; 9700X was stable). **9700X→9950X barely moved OSM**, as expected (second CCD idle); the buy was for **short pgbench / ~1M TPS** (perceptually important). OSM *might* improve on a 9950X **after a larger heatsink**, not in this chassis. Workaround is the **room AC**, same as keeping the lab alive at **100°F** outside — not a CPU swap mid-grid. `wl/osm-import` `RECOVERY=3600` is an **informed** hour between planet loads (AIO/room heat dump); Greg expected another crash and wanted **`k10temp` live**. 2026-10-15 hard off; 2026-10-16 way ingest (`Node(10791148k …) Way(1133809k …) Relation(0)`); same-day restart still heat-soaked, `sensors` **Tctl 79°C / Tccd1 78.5 / Tccd2 42.6**, died in **Node** phase. Later the same day, cooled+AC **cleared Nodes at peak Tctl 87°C**; Ways sat ~**77°C** for a while with intake ~**68°F** (room normally **71°F**), then **still died in Ways** — 3°F of AC was not enough for the rest of that pass. Delete incomplete tests; thermal **starts as the host vanishing**. After the beta cells: **rear case fan first** (might stop the trips by itself); **9700X back into siren** / 9950X into a larger-cooler chassis only if it still dies. Confirmed chip **`k10temp-pci-00c3`**: collect `sensors -u k10temp-*` (no sudo) → `Tctl_temp1_input` (package, vis 9) plus `Tccd1`/`Tccd2` (split, vis 5) — **do not average the CCDs**. The split is the teaching sample: **Tccd2 stayed ~43°C while Tccd1/Tctl sat in the 80s** — the second CCD is not on the OSM critical path, so extra cores on that die do not help a struggling load (and dump all the watts onto one hot chiplet). Live samples work; shutdown looks like the **motherboard cutting power near 90°C Tctl**, before the 9950X hits Tjmax throttle. Greg-only on the box — do not SSH. |
-| **twilight** | **13600K** (was **14900K**) | Roles used to be reversed: the **14900K** made twilight the unstable box. Back on a cool-running **13600K** it is trouble-free again — preferred host for long PG19 matrices. |
+| **siren** | **9950X** (was **9700X**) | **2026-10-18 — down next for a major overhaul.** OSM/`perf` work moves to twilight; do not SSH. After the rear fan, try one OSM load — maybe the leftover PG18 grid cells finish; if Ways dies again, skip OSM and continue. PG19 sets 70/71 are enough. The **9700X** is the comparison SKU this box should publish: OSM barely used the 9950X’s second CCD (`Tccd2` ~43°C while Tctl/Tccd1 sat in the 80s), so the 16-core swap did not buy planet-load speed, only package watts (9950X **70 W** avg / **180 W** peak / **1046 kJ** vs Apple **8 W** / **37 W** / **224 kJ**). An 8-core 9700X at nearly the same OSM score and a 9600X-class envelope (~**47 W** avg / **89 W** peak on this board) is the bang-for-buck point on the system-comparison chart and a fairer fight against the Mac. **9950X** is still the short-pgbench / ~1M TPS chip, but this 240mm AIO with **no rear case fan** cannot hold OSM. Overhaul order: **1. rear airflow** (fan; that may be the whole crash story). **1b. one OSM probe** once the fan is in — lucky path is the last few PG18 grid cells; a Ways death is still hardware, not a new software bug. **2. Phoronix-comparable pgbench SELECT** on the 9950X while it is still in this board (`wl/select-grid`, `-M prepared`, 90s, scale 100, 1-client + full clients, sockets face with package power — the reason this chip was bought; short runs only, not OSM). **3. downgrade to 9700X** for the OSM / system-comparison SKU. Do not keep the 9950X here hoping AC will hold Ways. **2026-10-16 evening — parked.** Died in **Ways** again. Do **not** retry PG18 low-durability / thin-WAL on this chassis; that corner is what trips the board, and those cells get re-run after the WAL vs fsync split anyway. Downloaded set **70** (PG18.3 durable) vs set **71** (PG19 fast 2974/2975/3009/3010 and durable 3011–3013) is enough for the 18↔19 regression; twilight 117 vs 118 and abbey 11 fill the rest of the fleet. Next hardware try is still the **rear case fan** (this build has none) — not more OSM until then. This build **has no rear case fan**; that may be enough of the crash story (hot air staying in the chassis) that a fan is the first fix, not a cooler retrofit or 9700X swap mid-park. Cooler is a **240mm AIO** (undersized for 9950X; 9700X was stable). **9700X→9950X barely moved OSM**, as expected (second CCD idle); the buy was for **short pgbench / ~1M TPS** (perceptually important). OSM *might* improve on a 9950X **after a larger heatsink**, not in this chassis. Workaround is the **room AC**, same as keeping the lab alive at **100°F** outside — not a CPU swap mid-grid. `wl/osm-import` `RECOVERY=3600` is an **informed** hour between planet loads (AIO/room heat dump); Greg expected another crash and wanted **`k10temp` live**. 2026-10-15 hard off; 2026-10-16 way ingest (`Node(10791148k …) Way(1133809k …) Relation(0)`); same-day restart still heat-soaked, `sensors` **Tctl 79°C / Tccd1 78.5 / Tccd2 42.6**, died in **Node** phase. Later the same day, cooled+AC **cleared Nodes at peak Tctl 87°C**; Ways sat ~**77°C** for a while with intake ~**68°F** (room normally **71°F**), then **still died in Ways** — 3°F of AC was not enough for the rest of that pass. Delete incomplete tests; thermal **starts as the host vanishing**. After the beta cells: rear fan, one OSM try (PG18 leftovers if it holds), then 9950X SELECT cells, then 9700X. Confirmed chip **`k10temp-pci-00c3`**: collect `sensors -u k10temp-*` (no sudo) → `Tctl_temp1_input` (package, vis 9) plus `Tccd1`/`Tccd2` (split, vis 5) — **do not average the CCDs**. The split is the teaching sample: **Tccd2 stayed ~43°C while Tccd1/Tctl sat in the 80s** — the second CCD is not on the OSM critical path, so extra cores on that die do not help a struggling load (and dump all the watts onto one hot chiplet). Live samples work; shutdown looks like the **motherboard cutting power near 90°C Tctl**, before the 9950X hits Tjmax throttle. Greg-only on the box — do not SSH. |
+| **twilight** | **13600K** (was **14900K**) | **188GB** RAM, **Fury G5 4TB**. Roles used to be reversed: the **14900K** made twilight the unstable box. Back on a cool-running **13600K** it is trouble-free again — preferred host for long PG19 matrices. **2026-10-18 — powered down**; do not SSH until Greg brings it up. |
 
 Other machines:
 
@@ -267,10 +267,10 @@ Other machines:
   Ubuntu 24.04.5**, kernel **`7.0.0-1019-nvidia`**. Spbm power works (test 13+);
   `DISKLIST="nvme0n1"` or `iostat.csv` is empty. **PG18 set 4:** fast 16/17
   (7.81h/384, 7.74h/387) then durable 18 (8.68h/346) — about **+12% / −10%**
-  vs abbey’s bundled **+49% / −33%**. Second durable **test 19** is running
-  (`osm2pgsql` since 21:45 UTC 2026-10-16); `complete` is armed so the loop
-  stops after that cell. Overnight wrap, then **one PG19 OSM** (Monday bar).
-  Unreliable about booting; force-restart procedure not written down yet.
+  vs abbey’s bundled **+49% / −33%**. **PG19 set 5** durable pair **20/21**
+  landed (8.73h / 343, 8.78h / 342); `OSMRELPROF=1` is on in `params`; loop
+  idle as of 2026-10-18. Unreliable about booting; force-restart procedure
+  not written down yet. Do **not** start another court load unless asked.
 
 ## Near-term deadline (lab downtime)
 
@@ -300,11 +300,22 @@ Do **not** start the big twilight GUC exploration (durability 2×2 corners,
 checksums, buffers, …) until Fury TRIM is understood and this Monday bar is
 met. After the outage, resume the PG19 study sequence below.
 
-**2026-10-16 — twilight parked.** Set 118 (`PG19 beta4`) is wrapped and in
+**2026-10-16 — twilight parked (set 118 done).** Set 118 (`PG19 beta4`) is in
 the assembly DB (`twilight-20261016-163051.tar.gz`): fast 2593–2595
 (~4.8h / 623–628) and durable 2596, 2597, 2600, 2601 (~5.05h / 586–597),
-about **+6%**. **Do not start more twilight loads.** Court is the only live
-OSM loop; siren/abbey/twilight stay down.
+about **+6%**. Box is **powered down** (2026-10-18).
+
+**Next on twilight (when it is up): 128GB + `OSMRELPROF` vs court.** Do not
+profile this against **siren** (9950X thermal). The comparison chart’s x86
+peer for court’s relation `perf` is twilight: **i5-13600K** is reliable, almost
+matches 9950X score (1407 vs 1480), and **leads relations/s** (4590 vs 4529)
+at less package energy. Court’s Spark reports **~121Gi**; twilight’s extra
+**188GB** would gift the node-cache / OS-cache packing. Equalize with a
+Linux **`mem=128G`** kernel cap (GRUB) so `MemTotal`, dirty ratios, and
+`pgsysinfo` / `server.mem_gb` all look like the 128GB class — keep
+`osm-mem-128` as the Postgres tier. Then a **few durable PG19** planet loads
+with `OSMRELPROF=1` (same path as court: `pgbent_perf`, artifacts in the
+test dir). Not the big GUC matrix; TRIM still taxes each `newgis`.
 
 Fleet notes (update as needed):
 
@@ -493,14 +504,10 @@ Expect `osm-rel-perf.data` / report / `osm-rel-prof.log` under each new test
 dir. If `perf record` fails on Spark (permissions / PMU), fix from that log;
 do not block durability collection.
 
-**Monday bar — one PG19 run on court.** PG18 durable **18** landed (8.68h /
-346 vs fast ~7.8h / 385). Second durable **19** is in flight, `complete`
-armed. After that pair: cut over to 19 (PGDG) and **one** clean OSM load
-before the solar outage. Two matching durables can skip a third. Goal is “basic
-functional integration tested on DGX Spark / ARM64” — few outsiders have
-that box. Profile under 19 is probably identical to the x86 loopers; nice
-if the one run has `OSMRELPROF=1`, not required for the claim. Do not burn
-the weekend on court repeats or block twilight’s matrix / PG18 power publish.
+**Monday bar — court PG19 landed.** Durable pair **20/21** (8.73–8.78h /
+342–343) with `OSMRELPROF=1`. Loop idle. Do not start another court OSM
+unless asked. The matching x86 `perf` series is **twilight at `mem=128G`**,
+not siren — wait until that box is up.
 
 ### Two majors in parallel (test + results)
 
