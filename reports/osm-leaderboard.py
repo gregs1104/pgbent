@@ -271,10 +271,10 @@ def compare_markdown() -> str:
     return (
         f"{COMPARE_BEGIN}\n\n"
         "One chart for the same best-score run on each machine, sorted by OSM score. "
-        "Bar length is relative to the leader, on that metric "
-        "(**100%** = the score winner's value). "
+        "Bar length is relative to the lead system, on that metric "
+        "(**100%** = that system's value). "
         "Labels are the raw values. A longer **kJ** bar means more energy used, not more efficiency.\n\n"
-        "![OSM system comparison]"
+        "![osm2pgsql Load Time - System Comparison]"
         "({{ '/images/osm-leaderboard-compare.png' | relative_url }})\n\n"
         f"{COMPARE_END}"
     )
@@ -337,8 +337,8 @@ def plot_system_compare(df: pd.DataFrame, output: Path, show: bool = False) -> N
         fontsize=LEADERBOARD_Y_LABEL_FONTSIZE,
         linespacing=LABEL_LINESPACING,
     )
-    ax.set_xlabel("% Relative to the leader, on that metric")
-    ax.set_title("OSM system comparison")
+    ax.set_xlabel("% Relative to the lead system, on that metric")
+    ax.set_title("osm2pgsql Load Time - System Comparison")
     ax.xaxis.set_minor_locator(AutoMinorLocator(2))
     ax.grid(True, axis="x", which="major", linestyle="--", alpha=0.4)
     ax.grid(True, axis="x", which="minor", linestyle=":", alpha=0.25)

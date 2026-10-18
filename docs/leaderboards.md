@@ -47,9 +47,9 @@ You can potentially triple the score running on the fastest x86 instead of ARM, 
 
 <!-- osm-leaderboard-compare:begin -->
 
-One chart for the same best-score run on each machine, sorted by OSM score. Bar length is relative to the leader, on that metric (**100%** = the score winner's value). Labels are the raw values. A longer **kJ** bar means more energy used, not more efficiency.
+One chart for the same best-score run on each machine, sorted by OSM score. Bar length is relative to the lead system, on that metric (**100%** = that system's value). Labels are the raw values. A longer **kJ** bar means more energy used, not more efficiency.
 
-![OSM system comparison]({{ '/images/osm-leaderboard-compare.png' | relative_url }})
+![osm2pgsql Load Time - System Comparison]({{ '/images/osm-leaderboard-compare.png' | relative_url }})
 
 <!-- osm-leaderboard-compare:end -->
 
