@@ -50,6 +50,7 @@ ENERGY_COLOR = "#2a9d8f"
 BAR_LABEL_INSIDE_COLOR = "#ffffff"
 BAR_LABEL_OUTSIDE_COLOR = "#333333"
 SCATTER_MARKER_SIZE = 90
+LABEL_LINESPACING = 1.4
 DEFAULT_CONN = "host=localhost dbname=results user=gsmith password=secret"
 SQL_PATH = REPO_ROOT / "reports" / "osm-leaderboard.sql"
 LEADERBOARD_PAGE = REPO_ROOT / "docs" / "leaderboards.md"
@@ -334,7 +335,7 @@ def plot_system_compare(df: pd.DataFrame, output: Path, show: bool = False) -> N
     ax.set_yticklabels(
         plot_df["label"],
         fontsize=LEADERBOARD_Y_LABEL_FONTSIZE,
-        linespacing=0.95,
+        linespacing=LABEL_LINESPACING,
     )
     ax.set_xlabel("Relative to the leader, on that metric (100%)")
     ax.set_title("OSM system comparison")
@@ -418,7 +419,7 @@ def plot_leaderboard(df: pd.DataFrame, output: Path, show: bool = False) -> None
     ax.set_yticklabels(
         df["label"],
         fontsize=LEADERBOARD_Y_LABEL_FONTSIZE,
-        linespacing=0.95,
+        linespacing=LABEL_LINESPACING,
     )
     ax.set_xlabel("OSM load throughput (kNodes/s)")
     ax.set_title("PostgreSQL OSM load leaderboard")
