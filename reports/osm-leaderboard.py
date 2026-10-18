@@ -50,7 +50,7 @@ ENERGY_COLOR = "#2a9d8f"
 BAR_LABEL_INSIDE_COLOR = "#ffffff"
 BAR_LABEL_OUTSIDE_COLOR = "#333333"
 SCATTER_MARKER_SIZE = 90
-LABEL_LINESPACING = 1.4
+LABEL_LINESPACING = 1.7
 DEFAULT_CONN = "host=localhost dbname=results user=gsmith password=secret"
 SQL_PATH = REPO_ROOT / "reports" / "osm-leaderboard.sql"
 LEADERBOARD_PAGE = REPO_ROOT / "docs" / "leaderboards.md"
