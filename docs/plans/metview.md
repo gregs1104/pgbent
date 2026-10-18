@@ -23,12 +23,13 @@ Replace gnuplot per-run metric graphs (`plots/dirty.plot`, etc.) and eventually 
 - [x] Graph every decoded metric for one `(server, test)` pair
 - [x] Plain decimal Y-axis labels (no scientific notation)
 - [x] Inherit pgbent metrics conversion (`metrics_info` multipliers, units, labels)
+- [x] **Avg/max overlay (first consumer)** — public OSM leaderboard traces (`reports/metric_series.py`): two lines on one axes from `test_metrics_data`, minute buckets so the max is a real 1-second sample. `metview.py` itself still plots avg-only.
 
 ## Next
 
 - [ ] **Priority filter (not a blunt verbose flag)** — see below; default = top priorities only
 - [ ] **Stacked metric groups** — see below; first-class alongside single-series plots
-- [ ] **Legend** — show min/avg/max, not avg three times
+- [ ] **Multi-line groups in metview** — fold `plot_avg_max` into `graph_single` / `graph_group`; legend shows min/avg/max values, not avg three times
 - [ ] **Layout** — bottom of graph clipped on rotated x-axis labels
 - [ ] **CLI** — database connection via options, not hard-coded DSN
 - [ ] **SQL** — parameterized queries instead of string formatting

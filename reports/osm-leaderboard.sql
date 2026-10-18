@@ -8,11 +8,12 @@
 WITH
 best AS
   (SELECT
+    server,test,
     cpu,mem_gb,disk,server_ver,client,script,clients,conn,hours,nodes,
     score_kips,overall_kips,index_kips,rel_ps,
     fsync,wal_level,max_wal_gb,db_gb,
     wal_mbps, avg_write_mbps, max_write_mbps, avg_read_mbps, max_read_mbps,
-    avg_package_watts, max_package_watts,
+    avg_package_watts, max_package_watts, package_joules,
     ROW_NUMBER()
     OVER(
         PARTITION BY
@@ -32,6 +33,8 @@ best AS
       nodes >= 10000000000
   )
 SELECT
+    server,
+    test,
     cpu,
     mem_gb,
     substr(disk,1,12) AS disk,
@@ -50,6 +53,7 @@ SELECT
     END AS pwr_est,
     round(avg_package_watts) AS avg_pkg,
     round(max_package_watts) AS max_pkg,
+    round((package_joules / 1000000.0)::numeric, 2) AS mj,
     round((score_kips / NULLIF(max_package_watts, 0))::numeric, 1) AS score_per_watt,
     round((overall_kips / NULLIF(max_package_watts, 0))::numeric, 1) AS overall_per_watt,
     round((index_kips / NULLIF(max_package_watts, 0))::numeric, 1) AS index_per_watt,

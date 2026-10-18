@@ -184,7 +184,27 @@ CREATE OR REPLACE VIEW write_internals AS
     tests.test=d.test AND
     (d.metric='PkgWatt' OR d.metric='Combined_Power_mW' OR d.metric='soc_pkg_power2_input')
   GROUP BY mi.multi,d.metric
-  ) AS max_package_watts
+  ) AS max_package_watts,
+  -- 1-second package-power integral over the test window. Watts × Δt ≈ joules.
+  (
+  SELECT round(sum(x.watts * x.dt)::numeric)
+  FROM (
+    SELECT
+      CASE WHEN d.metric = 'Combined_Power_mW' THEN d.value * 0.001 ELSE d.value END AS watts,
+      LEAST(5.0, GREATEST(0.0, extract(epoch FROM (
+        coalesce(
+          lead(d.collected) OVER (ORDER BY d.collected),
+          d.collected + interval '1 second'
+        ) - d.collected)))) AS dt
+    FROM test_metrics_data d
+    WHERE
+      tests.server = d.server AND
+      tests.test = d.test AND
+      d.metric IN ('PkgWatt', 'Combined_Power_mW', 'soc_pkg_power2_input') AND
+      d.collected >= tests.start_time AND
+      d.collected <= tests.end_time
+  ) x
+  ) AS package_joules
 FROM tests,server,test_bgwriter,test_stat_database,testset
 WHERE
   tests.server=server.server AND

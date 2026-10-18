@@ -17,6 +17,7 @@ One plotting stack reading from the results database, without time-averaging awa
 ## Milestones
 
 - [x] `metview.py` — graph every metric for one test run ([metview.md](metview.md))
+- [x] Multi-line avg/max overlay — first use is the OSM leaderboard disk + power pair (`reports/metric_series.py`, `osm-leaderboard.py --from-db`); same helper is the start of grouped-settings overlays
 - [ ] `metview.py` — **priority range** (`metrics_info.visibility` / decode `vis`); default top band; drill-down requests the next band only (e.g. 5-6 after 7-9); see [metview.md](metview.md)
 - [ ] `metview.py` — **stacked groups** for CPU (user/system/idle/wait → 100%×cores) and Linux memory (free/cached/dirty/… → MemTotal); see [metview.md](metview.md) § Stacked metric groups
 - [ ] Latency plots with per-outlier markers (gnuplot cross-symbol equivalent in `plots/latency.plot`)
@@ -33,4 +34,4 @@ One plotting stack reading from the results database, without time-averaging awa
 ## References
 
 - Legacy: `plots/`, `./webreport`, `./rates_webreport`, `./limited_webreport`
-- New: `metview.py`, `reports/compare.py`, `reports/bars.py`, `collectPandas`
+- New: `metview.py`, `reports/metric_series.py`, `reports/compare.py`, `reports/bars.py`, `collectPandas`

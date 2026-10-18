@@ -39,7 +39,7 @@ INSERT INTO submission (
     timed_pct, chkp_mins, chkp_mbph, clean_mbph, backend_mbph, cleaned_pct, max_dirty,
     hit_pct, hit_mbps, read_mbps, wal_mbps,
     avg_write_mbps, max_write_mbps, avg_read_mbps, max_read_mbps,
-    avg_package_watts, max_package_watts)
+    avg_package_watts, max_package_watts, package_joules)
 SELECT
   submitter,affiliation,
   write_internals.*

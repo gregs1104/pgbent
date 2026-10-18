@@ -5,9 +5,11 @@ Graph OSM leaderboard results.
 Default: read a release's static snapshot (PG18) and write the matching PNG.
 
 `--from-db` runs `reports/osm-leaderboard.sql` against the results database,
-writes the ranked table into `docs/leaderboards.md`, and plots
-`docs/images/osm-leaderboard.png`. That is the public-page path; it does not
-go through Streamlit.
+writes the ranked table into `docs/leaderboards.md`, plots the per-machine
+bar chart, score-vs-joules scatter, and Average vs Maximum disk and
+package-power traces for the score leader and the power-efficiency leader
+from `test_metrics_data`. That is the public-page path; it does not go
+through Streamlit.
 
 Usage:
   python3 reports/osm-leaderboard.py
@@ -19,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import io
+import math
 import os
 import re
 import subprocess
@@ -27,21 +30,34 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
-from matplotlib.ticker import ScalarFormatter
+from matplotlib.ticker import AutoMinorLocator, ScalarFormatter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from snapshot_table import load_snapshot_table
 from pg18_style import LEADERBOARD_LEGEND_FONTSIZE, LEADERBOARD_Y_LABEL_FONTSIZE, use_pg18_style
 from release_paths import REPO_ROOT, add_pg_argument, image_path, snapshot_path
+from metric_series import fetch_disk_avg_max, fetch_power_avg_max, legend_avg_max, plot_avg_max
+from label_layout import LabelOffset, place_point_labels
 
 NODES_COLOR = "#e4572e"
 INDEX_COLOR = "#4c78a8"
+SCATTER_MARKER_SIZE = 90
 DEFAULT_CONN = "host=localhost dbname=results user=gsmith password=secret"
 SQL_PATH = REPO_ROOT / "reports" / "osm-leaderboard.sql"
 LEADERBOARD_PAGE = REPO_ROOT / "docs" / "leaderboards.md"
 PUBLIC_IMAGE = REPO_ROOT / "docs" / "images" / "osm-leaderboard.png"
+DISK_IMAGE = REPO_ROOT / "docs" / "images" / "osm-leaderboard-disk.png"
+POWER_IMAGE = REPO_ROOT / "docs" / "images" / "osm-leaderboard-power.png"
+EFF_DISK_IMAGE = REPO_ROOT / "docs" / "images" / "osm-leaderboard-efficiency-disk.png"
+EFF_POWER_IMAGE = REPO_ROOT / "docs" / "images" / "osm-leaderboard-efficiency-power.png"
+JOULES_IMAGE = REPO_ROOT / "docs" / "images" / "osm-leaderboard-joules.png"
 TABLE_BEGIN = "<!-- osm-leaderboard-table:begin -->"
 TABLE_END = "<!-- osm-leaderboard-table:end -->"
+TRACE_BEGIN = "<!-- osm-leaderboard-traces:begin -->"
+TRACE_END = "<!-- osm-leaderboard-traces:end -->"
+JOULES_BEGIN = "<!-- osm-leaderboard-joules:begin -->"
+JOULES_END = "<!-- osm-leaderboard-joules:end -->"
+HIDDEN_TABLE_COLS = ("server", "test")
 
 
 def parse_args() -> argparse.Namespace:
@@ -81,7 +97,7 @@ def config_label(row: pd.Series) -> str:
 
 def prepare_leaderboard_df(rows: list[dict[str, str]]) -> pd.DataFrame:
     df = pd.DataFrame(rows)
-    for col in ("mem_gb", "overall_kips", "score_kips", "index_kips", "ver", "hours", "max_wal_gb"):
+    for col in ("mem_gb", "overall_kips", "score_kips", "index_kips", "ver", "hours", "max_wal_gb", "mj"):
         if col in df.columns:
             df[col] = numeric(df[col])
     df["disk"] = df["disk"].str.strip()
@@ -109,6 +125,124 @@ def plain_axis(ax, y: bool = False, x: bool = True) -> None:
         ax.yaxis.set_major_formatter(formatter)
     if x:
         ax.xaxis.set_major_formatter(formatter)
+
+
+def _marker_x_gap(gap: float = 12) -> float:
+    return math.sqrt(SCATTER_MARKER_SIZE / math.pi) + gap
+
+
+JOULES_LABEL_OVERRIDES = {
+    "i5-13600K": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
+    "R9 9950X": LabelOffset(-_marker_x_gap(), -22, ha="right", va="top"),
+    "Apple M4 Max Studio": LabelOffset(_marker_x_gap(), 12, ha="left", va="bottom"),
+    "NVIDIA P4242": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
+}
+
+
+def cpu_color(cpu: str) -> str:
+    name = str(cpu)
+    if name.startswith("NVIDIA"):
+        return "#76B900"
+    if name[:1] == "A":
+        return "#000000"
+    if name[:1] == "i":
+        return "#0071C5"
+    if name[:1] == "R":
+        return "#ED1C24"
+    return "#333333"
+
+
+def plot_score_vs_joules(df: pd.DataFrame, output: Path, show: bool = False) -> None:
+    """Tiny speed-vs-energy scatter: one point per machine, score against MJ."""
+    pts = df.dropna(subset=["mj", "score_kips"]).copy()
+    if pts.empty:
+        raise SystemExit("No package_joules on leaderboard rows")
+    fig, ax = plt.subplots(figsize=(7.2, 4.6))
+    colors = [cpu_color(c) for c in pts["cpu"]]
+    ax.scatter(pts["mj"], pts["score_kips"], s=SCATTER_MARKER_SIZE, c=colors, zorder=3)
+    xmax = float(pts["mj"].max())
+    ymax = float(pts["score_kips"].max())
+    ax.set_xlim(0, xmax * 1.14)
+    ax.set_ylim(0, ymax * 1.18)
+    ax.set_xlabel("Package energy (MJ)")
+    ax.set_ylabel("OSM score")
+    ax.set_title("Score vs joules")
+    ax.xaxis.set_minor_locator(AutoMinorLocator())
+    ax.yaxis.set_minor_locator(AutoMinorLocator())
+    ax.tick_params(which="major", length=6)
+    ax.tick_params(which="minor", length=3)
+    ax.grid(True, which="major", linestyle="--", alpha=0.4)
+    ax.grid(True, which="minor", linestyle=":", alpha=0.25)
+    plain_axis(ax, y=True)
+    fig.tight_layout()
+    place_point_labels(
+        ax,
+        pts["cpu"].astype(str),
+        pts["mj"],
+        pts["score_kips"],
+        colors,
+        16,
+        overrides=JOULES_LABEL_OVERRIDES,
+    )
+    output.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output, dpi=160, bbox_inches="tight")
+    print(f"Wrote {output} ({len(pts)} systems)")
+    if show:
+        plt.show()
+    plt.close(fig)
+
+
+def joules_takeaway(df: pd.DataFrame) -> str:
+    """Fastest x86 vs cheapest ARM on the one-point-per-machine board."""
+    pts = df.dropna(subset=["mj", "score_kips"]).copy()
+    if pts.empty:
+        return ""
+    cpu = pts["cpu"].astype(str)
+    x86 = pts[cpu.str.match(r"^[Ri]")]
+    apple = pts[cpu.str.contains("Apple", case=False, regex=False)]
+    nvidia = pts[cpu.str.contains("NVIDIA", case=False, regex=False)]
+    if x86.empty or apple.empty:
+        return ""
+    fast = x86.sort_values("score_kips", ascending=False).iloc[0]
+    arm = apple.sort_values("mj", ascending=True).iloc[0]
+    score_x = float(fast["score_kips"]) / float(arm["score_kips"])
+    joule_x = float(fast["mj"]) / float(arm["mj"])
+    bits = [
+        "You can potentially triple the score running on the fastest x86 instead of ARM, "
+        "but it costs 4–5× as much energy to juice up the processors to do it. "
+        f"**{fast['cpu']}** scores **{format_markdown_cell(fast['score_kips'])}** at "
+        f"**{format_markdown_cell(fast['mj'])} MJ**; **{arm['cpu']}** scores "
+        f"**{format_markdown_cell(arm['score_kips'])}** at "
+        f"**{format_markdown_cell(arm['mj'])} MJ** "
+        f"(**{score_x:.1f}×** score, **{joule_x:.1f}×** joules)."
+    ]
+    if not nvidia.empty:
+        nv = nvidia.sort_values("score_kips", ascending=False).iloc[0]
+        nv_x = float(fast["score_kips"]) / float(nv["score_kips"])
+        bits.append(
+            f"Versus NVIDIA Grace the score ratio is **{nv_x:.1f}×** "
+            f"({format_markdown_cell(fast['score_kips'])} vs "
+            f"{format_markdown_cell(nv['score_kips'])})."
+        )
+    return " ".join(bits)
+
+
+def joules_markdown(df: pd.DataFrame) -> str:
+    takeaway = joules_takeaway(df)
+    body = (
+        "Speed vs energy for the best run on each machine. **Score** is OSM kNodes/s; "
+        "**MJ** is total package energy (joules, shown as megajoules) from the 1-second "
+        "power integral over the test window."
+    )
+    if takeaway:
+        body = f"{body}\n\n{takeaway}"
+    return (
+        f"{JOULES_BEGIN}\n\n"
+        f"{body}\n\n"
+        "![OSM score vs package energy]"
+        "({{ '/images/osm-leaderboard-joules.png' | relative_url }})\n\n"
+        f"{JOULES_END}"
+    )
 
 
 def plot_leaderboard(df: pd.DataFrame, output: Path, show: bool = False) -> None:
@@ -208,30 +342,193 @@ def records_from_frame(df: pd.DataFrame) -> list[dict[str, str]]:
     return [{str(k): str(v) for k, v in row.items()} for row in filled.to_dict(orient="records")]
 
 
-def write_leaderboard_page(page: Path, table_md: str, n_rows: int) -> None:
-    text = page.read_text(encoding="utf-8")
-    inner = f"{TABLE_BEGIN}\n\n_Query returned {n_rows} rows._\n\n{table_md}\n\n{TABLE_END}"
-    if TABLE_BEGIN in text and TABLE_END in text:
-        text = re.sub(
-            re.escape(TABLE_BEGIN) + r".*?" + re.escape(TABLE_END),
+def public_table(df: pd.DataFrame) -> pd.DataFrame:
+    drop = [c for c in HIDDEN_TABLE_COLS if c in df.columns]
+    return df.drop(columns=drop)
+
+
+def disk_caption(disk: str, mode: str) -> str:
+    if not disk:
+        return ""
+    if mode == "combined":
+        return (
+            f" Disk is Darwin combined throughput (`{disk}_MB/s`); "
+            "there is no read/write split."
+        )
+    return f" Disk is combined read+write on data volume `{disk}`."
+
+
+def traces_markdown(
+    score_row: pd.Series,
+    score_disk: str,
+    score_mode: str,
+    eff_row: pd.Series | None = None,
+    eff_disk: str = "",
+    eff_mode: str = "",
+) -> str:
+    def intro(row: pd.Series, role: str) -> str:
+        cpu = str(row["cpu"]).strip()
+        ver = format_markdown_cell(row["ver"])
+        fsync = str(row["fsync"]).strip()
+        score = format_markdown_cell(row["score_kips"])
+        if role == "score":
+            return (
+                f"The board leader is **{cpu}** (PostgreSQL {ver}, `fsync={fsync}`, "
+                f"OSM score **{score}**)."
+            )
+        watts = format_markdown_cell(row["score_per_watt"])
+        return (
+            f"The power-efficiency leader is **{cpu}** (PostgreSQL {ver}, "
+            f"`fsync={fsync}`, **{watts}** score/W, OSM score **{score}**)."
+        )
+
+    blocks = [
+        intro(score_row, "score")
+        + " Both traces are minute buckets of the owned **1-second** collectors "
+        "on that run: Average is what a minute-grained sample would report; "
+        "Maximum is the peak 1-second reading in that minute — the cliffs a "
+        "delegated 60-second poll never stored."
+        + disk_caption(score_disk, score_mode),
+        "![OSM leader disk average vs 1-second maximum]"
+        "({{ '/images/osm-leaderboard-disk.png' | relative_url }})",
+        "![OSM leader package power average vs 1-second maximum]"
+        "({{ '/images/osm-leaderboard-power.png' | relative_url }})",
+    ]
+    if eff_row is not None:
+        blocks.extend(
+            [
+                intro(eff_row, "efficiency") + disk_caption(eff_disk, eff_mode),
+                "![OSM efficiency-leader disk average vs 1-second maximum]"
+                "({{ '/images/osm-leaderboard-efficiency-disk.png' | relative_url }})",
+                "![OSM efficiency-leader package power average vs 1-second maximum]"
+                "({{ '/images/osm-leaderboard-efficiency-power.png' | relative_url }})",
+            ]
+        )
+    return f"{TRACE_BEGIN}\n\n" + "\n\n".join(blocks) + f"\n\n{TRACE_END}"
+
+
+def replace_marked_block(text: str, begin: str, end: str, inner: str) -> str:
+    if begin in text and end in text:
+        return re.sub(
+            re.escape(begin) + r".*?" + re.escape(end),
             inner,
             text,
             count=1,
             flags=re.S,
         )
-    else:
-        raise SystemExit(f"Missing {TABLE_BEGIN} / {TABLE_END} markers in {page}")
+    raise SystemExit(f"Missing {begin} / {end} markers in leaderboard page")
+
+
+def write_leaderboard_page(
+    page: Path,
+    table_md: str,
+    n_rows: int,
+    traces_md: str | None = None,
+    joules_md: str | None = None,
+) -> None:
+    text = page.read_text(encoding="utf-8")
+    table_inner = f"{TABLE_BEGIN}\n\n_Query returned {n_rows} rows._\n\n{table_md}\n\n{TABLE_END}"
+    text = replace_marked_block(text, TABLE_BEGIN, TABLE_END, table_inner)
+    if traces_md is not None:
+        text = replace_marked_block(text, TRACE_BEGIN, TRACE_END, traces_md)
+    if joules_md is not None:
+        text = replace_marked_block(text, JOULES_BEGIN, JOULES_END, joules_md)
     page.write_text(text, encoding="utf-8")
     print(f"Wrote {n_rows} rows into {page}")
+
+
+def same_run(a: pd.Series, b: pd.Series) -> bool:
+    return str(a["server"]).strip() == str(b["server"]).strip() and int(a["test"]) == int(
+        b["test"]
+    )
+
+
+def efficiency_row(table: pd.DataFrame, score_row: pd.Series) -> pd.Series | None:
+    if "score_per_watt" not in table.columns:
+        return None
+    ranked = table.copy()
+    ranked["score_per_watt"] = pd.to_numeric(ranked["score_per_watt"], errors="coerce")
+    ranked = ranked.dropna(subset=["score_per_watt"]).sort_values(
+        "score_per_watt", ascending=False
+    )
+    if ranked.empty:
+        return None
+    best = ranked.iloc[0]
+    if same_run(best, score_row):
+        return None
+    return best
+
+
+def disk_title(cpu: str, disk: str, mode: str) -> str:
+    if not disk:
+        return f"{cpu} disk"
+    if mode == "combined":
+        return f"{cpu} disk · {disk}"
+    return f"{cpu} disk · {disk} read+write"
+
+
+def plot_leader_traces(
+    row: pd.Series,
+    conn: str,
+    disk_path: Path,
+    power_path: Path,
+    show: bool = False,
+) -> tuple[str, str]:
+    server = str(row["server"]).strip()
+    test = int(row["test"])
+    cpu = str(row["cpu"]).strip()
+    disk_df, disk, mode = fetch_disk_avg_max(conn, server, test)
+    power_df = fetch_power_avg_max(conn, server, test)
+    if disk_df.empty:
+        raise SystemExit(f"No disk series for {server} test {test}")
+    if power_df.empty:
+        raise SystemExit(f"No power series for {server} test {test}")
+    avg_l, max_l = legend_avg_max(disk_df, "MB/s")
+    plot_avg_max(
+        disk_df,
+        disk_path,
+        title=disk_title(cpu, disk, mode),
+        ylabel="MB/s",
+        avg_legend=avg_l,
+        max_legend=max_l,
+        show=show,
+    )
+    avg_l, max_l = legend_avg_max(power_df, "W")
+    plot_avg_max(
+        power_df,
+        power_path,
+        title=f"{cpu} package power",
+        ylabel="Watts",
+        avg_legend=avg_l,
+        max_legend=max_l,
+        show=show,
+    )
+    return disk, mode
 
 
 def main() -> int:
     use_pg18_style()
     args = parse_args()
+    table = None
+    traces_md = None
     if args.from_db:
         table = fetch_sql_table(args.sql, args.conn)
-        if not args.no_page:
-            write_leaderboard_page(args.page, dataframe_to_markdown(table), len(table))
+        if "server" in table.columns and "test" in table.columns:
+            top = table.iloc[0]
+            disk, mode = plot_leader_traces(
+                top, args.conn, DISK_IMAGE, POWER_IMAGE, show=args.show
+            )
+            eff = efficiency_row(table, top)
+            eff_disk, eff_mode = "", ""
+            if eff is not None:
+                eff_disk, eff_mode = plot_leader_traces(
+                    eff,
+                    args.conn,
+                    EFF_DISK_IMAGE,
+                    EFF_POWER_IMAGE,
+                    show=args.show,
+                )
+            traces_md = traces_markdown(top, disk, mode, eff, eff_disk, eff_mode)
         rows = records_from_frame(table)
     else:
         rows = load_snapshot_table(args.snapshot)
@@ -239,6 +536,18 @@ def main() -> int:
             raise SystemExit(f"No table found in {args.snapshot}")
     df = prepare_leaderboard_df(rows)
     plot_leaderboard(df, args.output, show=args.show)
+    joules_md = None
+    if args.from_db and "mj" in df.columns and df["mj"].notna().any():
+        plot_score_vs_joules(df, JOULES_IMAGE, show=args.show)
+        joules_md = joules_markdown(df)
+    if args.from_db and table is not None and not args.no_page:
+        write_leaderboard_page(
+            args.page,
+            dataframe_to_markdown(public_table(table)),
+            len(table),
+            traces_md,
+            joules_md,
+        )
     return 0
 
 
