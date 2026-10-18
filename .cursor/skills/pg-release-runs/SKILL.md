@@ -317,6 +317,16 @@ Linux **`mem=128G`** kernel cap (GRUB) so `MemTotal`, dirty ratios, and
 with `OSMRELPROF=1` (same path as court: `pgbent_perf`, artifacts in the
 test dir). Not the big GUC matrix; TRIM still taxes each `newgis`.
 
+**Before `OSMRELPROF=1` on twilight:** install the 2026-10-18 `pgbent_perf`
+stop path. Court’s relation `perf` never died — `SIGINT` hit `sudo`, not
+root’s `perf record`, and postgres cannot signal that child — so tests 20/21
+left **121 GB + 56 GB** `osm-rel-perf.data` after COPY ended (deleted, not
+worth processing). Copy `util/pgbent_perf` to `/usr/local/bin/pgbent_perf`
+(NOPASSWD already), `git pull` so `osm-rel-prof` / `osm-importer` / `stop-set`
+call `sudo pgbent_perf stop`, then enable profiling. Confirm no leftover
+`perf record` after the first relation phase. Do not reuse court’s hung
+captures.
+
 Fleet notes (update as needed):
 
 - **Do not** use `pgrep -f` patterns that appear in the waiter’s own

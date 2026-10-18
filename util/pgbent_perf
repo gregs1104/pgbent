@@ -14,30 +14,143 @@
 #
 # Used by util/osm-rel-prof:
 #    sudo /usr/local/bin/pgbent_perf record -a -g -o osm-rel-perf.data
+#    sudo /usr/local/bin/pgbent_perf stop -o osm-rel-perf.data
 #    sudo /usr/local/bin/pgbent_perf report -i osm-rel-perf.data --stdio
 #
+# `record` must not exec perf: SIGINT to sudo does not always reach the perf
+# child, and postgres cannot signal a root perf.  This wrapper traps signals,
+# and `stop` is the sudoers-allowed way to reap leftover recorders.
 
 PERF=/usr/bin/perf
-
 if [ ! -x "$PERF" ]; then
-  echo "pgbent_perf: $PERF not found" >&2
+  PERF=$(command -v perf 2>/dev/null || true)
+fi
+if [ -z "$PERF" ] || [ ! -x "$PERF" ]; then
+  echo "pgbent_perf: perf not found" >&2
   exit 1
 fi
 
-# After a privileged record, hand -o/--output artifacts back to the invoking user
-# so later analysis in the results directory does not need root.
+output_from_args() {
+  local prev="" a
+  for a in "$@"; do
+    if [ "$prev" = "-o" ] || [ "$prev" = "--output" ]; then
+      printf '%s\n' "$a"
+      return 0
+    fi
+    prev="$a"
+  done
+  return 1
+}
+
+# PIDs whose cmdline is a pgbent relation-phase recorder for $out (or any
+# osm-rel-perf.data if $out is empty).  Does not match `pgbent_perf stop`.
+recorder_pids() {
+  local out="$1" pid cmd
+  for pid in /proc/[0-9]*; do
+    pid=${pid#/proc/}
+    cmd=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null) || continue
+    case "$cmd" in
+      *pgbent_perf\ stop*) continue ;;
+    esac
+    case "$cmd" in
+      *pgbent_perf\ record*|*perf\ record*)
+        if [ -n "$out" ]; then
+          case "$cmd" in
+            *"$out"*) printf '%s\n' "$pid" ;;
+          esac
+        else
+          case "$cmd" in
+            *osm-rel-perf.data*) printf '%s\n' "$pid" ;;
+          esac
+        fi
+        ;;
+    esac
+  done
+}
+
+signal_pids() {
+  local sig="$1" pid
+  shift
+  for pid in "$@"; do
+    [ -z "$pid" ] && continue
+    kill -s "$sig" "$pid" 2>/dev/null || true
+  done
+}
+
+wait_gone() {
+  local seconds="$1" pid
+  shift
+  local i=0
+  while [ "$i" -lt "$seconds" ]; do
+    local any=0
+    for pid in "$@"; do
+      [ -z "$pid" ] && continue
+      if [ -d "/proc/$pid" ]; then
+        any=1
+        break
+      fi
+    done
+    [ "$any" -eq 0 ] && return 0
+    sleep 1
+    i=$((i + 1))
+  done
+  return 1
+}
+
+stop_recorders() {
+  local out="$1"
+  local pids
+  pids=$(recorder_pids "$out" | sort -u)
+  if [ -z "$pids" ]; then
+    return 0
+  fi
+  # INT first so `record`'s trap can ask perf to flush.
+  # shellcheck disable=SC2086
+  signal_pids INT $pids
+  # shellcheck disable=SC2086
+  wait_gone 20 $pids || true
+  pids=$(recorder_pids "$out" | sort -u)
+  if [ -n "$pids" ]; then
+    # shellcheck disable=SC2086
+    signal_pids KILL $pids
+    # shellcheck disable=SC2086
+    wait_gone 5 $pids || true
+  fi
+}
+
+if [ "$1" = "stop" ]; then
+  shift
+  out=""
+  if [ "$1" = "-o" ] || [ "$1" = "--output" ]; then
+    out="$2"
+  elif [ -n "$1" ]; then
+    out="$1"
+  fi
+  stop_recorders "$out"
+  exit 0
+fi
+
 if [ "$1" = "record" ]; then
   shift
-  "$PERF" record "$@"
+  out=$(output_from_args "$@") || out=""
+  child=""
+  shutdown() {
+    if [ -n "$child" ]; then
+      kill -INT "$child" 2>/dev/null || true
+      wait_gone 15 "$child" || kill -KILL "$child" 2>/dev/null || true
+      wait "$child" 2>/dev/null || true
+      child=""
+    fi
+  }
+  trap shutdown INT TERM HUP
+  "$PERF" record "$@" &
+  child=$!
+  wait "$child"
   rc=$?
-  if [ -n "$SUDO_USER" ]; then
-    prev=""
-    for a in "$@"; do
-      if [ "$prev" = "-o" ] || [ "$prev" = "--output" ]; then
-        chown "$SUDO_USER:" "$a" 2>/dev/null || true
-      fi
-      prev="$a"
-    done
+  trap - INT TERM HUP
+  child=""
+  if [ -n "$SUDO_USER" ] && [ -n "$out" ] && [ -e "$out" ]; then
+    chown "$SUDO_USER:" "$out" 2>/dev/null || true
   fi
   exit $rc
 fi

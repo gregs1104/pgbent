@@ -42,9 +42,10 @@ fi
 rm -f $NODES_FILE
 
 # Optional relation-phase profiler (see util/osm-rel-prof). Off by default.
+# setsid so a later kill of this PID cannot leave sudo/perf in the importer group.
 RELPROF_PID=""
 if [ "${OSMRELPROF:-0}" = "1" ]; then
-  ../../../util/osm-rel-prof > osm-rel-prof.log 2>&1 &
+  setsid ../../../util/osm-rel-prof > osm-rel-prof.log 2>&1 &
   RELPROF_PID=$!
   echo "Started osm-rel-prof pid ${RELPROF_PID}"
 fi
@@ -59,8 +60,19 @@ time osm2pgsql --create --slim -v \
     $PLANET_FILE
 
 # If the load ends before the profiler self-exits, tear it down.
+# TERM so osm-rel-prof can `pgbent_perf stop` (postgres cannot signal root perf).
 if [ -n "$RELPROF_PID" ]; then
-  kill "$RELPROF_PID" 2>/dev/null || true
+  kill -TERM "$RELPROF_PID" 2>/dev/null || true
+  i=0
+  while [ "$i" -lt 20 ] && kill -0 "$RELPROF_PID" 2>/dev/null; do
+    sleep 1
+    i=$((i + 1))
+  done
+  if kill -0 "$RELPROF_PID" 2>/dev/null; then
+    echo "osm-rel-prof still running after TERM, KILL + pgbent_perf stop"
+    kill -KILL "$RELPROF_PID" 2>/dev/null || true
+  fi
+  sudo /usr/local/bin/pgbent_perf stop -o "$(pwd)/osm-rel-perf.data" 2>/dev/null || true
 fi
 
 rm -f $NODES_FILE

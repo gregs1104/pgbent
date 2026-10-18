@@ -13,6 +13,10 @@
 # osm-importer):
 #   osm-rel-perf.data
 #   osm-rel-perf-report.txt
+#
+# Stopping goes through `pgbent_perf stop`.  SIGINT to the sudo wrapper
+# does not reliably kill root's `perf record`; leftover system-wide
+# recorders have filled disks after the COPY ended.
 
 . ../../../config
 . ../../../params
@@ -24,17 +28,38 @@ if [ -z "$OSMRELPROF_POLL" ] || [ "$OSMRELPROF_POLL" = "0" ]; then
 else
   POLL_SEC="$OSMRELPROF_POLL"
 fi
+if [ -z "$OSMRELPROF_MAX_MB" ] || [ "$OSMRELPROF_MAX_MB" = "0" ]; then
+  MAX_MB=8192
+else
+  MAX_MB="$OSMRELPROF_MAX_MB"
+fi
 PGBENT_PERF="sudo /usr/local/bin/pgbent_perf"
-PERF_DATA="osm-rel-perf.data"
-PERF_REPORT="osm-rel-perf-report.txt"
+PERF_DATA="$(pwd)/osm-rel-perf.data"
+PERF_REPORT="$(pwd)/osm-rel-perf-report.txt"
 PERF_PID=""
+STOPPING=0
 
-cleanup() {
-  if [ -n "$PERF_PID" ] && kill -0 "$PERF_PID" 2>/dev/null; then
-    kill -INT "$PERF_PID" 2>/dev/null || kill "$PERF_PID" 2>/dev/null || true
+stop_perf() {
+  local reason="$1"
+  if [ "$STOPPING" -eq 1 ]; then
+    return 0
+  fi
+  STOPPING=1
+  echo "osm-rel-prof: stopping perf ($reason)"
+  $PGBENT_PERF stop -o "$PERF_DATA" || true
+  if [ -n "$PERF_PID" ]; then
+    local i=0
+    while [ "$i" -lt 20 ] && kill -0 "$PERF_PID" 2>/dev/null; do
+      sleep 1
+      i=$((i + 1))
+    done
     wait "$PERF_PID" 2>/dev/null || true
     PERF_PID=""
   fi
+}
+
+cleanup() {
+  stop_perf "signal or exit"
 }
 trap cleanup EXIT TERM INT
 
@@ -45,6 +70,10 @@ FROM pg_stat_activity
 WHERE application_name LIKE 'osm2pgsql%'
   AND query ILIKE '%COPY%planet_osm_rels%'
 LIMIT 1"
+}
+
+data_bytes() {
+  stat -c%s "$PERF_DATA" 2>/dev/null || echo 0
 }
 
 echo "osm-rel-prof: waiting for planet_osm_rels COPY"
@@ -64,19 +93,21 @@ while true; do
   if [ "$(rels_copy_active)" != "1" ]; then
     break
   fi
-  # Bail if perf died unexpectedly
   if ! kill -0 "$PERF_PID" 2>/dev/null; then
     echo "osm-rel-prof: perf exited early" >&2
     PERF_PID=""
     exit 1
   fi
+  bytes=$(data_bytes)
+  if [ "$bytes" -gt $((MAX_MB * 1024 * 1024)) ]; then
+    echo "osm-rel-prof: $PERF_DATA exceeded ${MAX_MB}MB, stopping" >&2
+    break
+  fi
   sleep "$POLL_SEC"
 done
 
-echo "osm-rel-prof: planet_osm_rels COPY gone, stopping perf"
-kill -INT "$PERF_PID" 2>/dev/null || kill "$PERF_PID" 2>/dev/null || true
-wait "$PERF_PID" 2>/dev/null || true
-PERF_PID=""
+stop_perf "planet_osm_rels COPY gone"
+trap - EXIT TERM INT
 
 if [ -s "$PERF_DATA" ]; then
   echo "osm-rel-prof: writing $PERF_REPORT"

@@ -99,8 +99,13 @@ kill_pids 9 \
   `pids_for 'pgbench '`
 
 # 3) Collectors: timed-os-stats called setsid so kill_pg gets iostat/vmstat/psql children.
+# Root `perf record` from OSMRELPROF survives SIGKILL of osm-rel-prof; reap via sudo helper.
 echo "== collectors =="
 kill_groups `pids_for 'timed-os-stats'`
+if [ -x /usr/local/bin/pgbent_perf ]; then
+  echo "== pgbent_perf stop =="
+  sudo /usr/local/bin/pgbent_perf stop 2>/dev/null || true
+fi
 
 # Leftover metric-query backends on the test database.
 if [ -n "$TESTDB" ]; then
@@ -113,7 +118,7 @@ fi
 rm -f "${STATEDIR}/complete" "${STATEDIR}/pgbent.pid"
 
 echo "== remaining =="
-LEFTOVER=`pgrep -af 'repeat-gis|./runset|./benchwarmer|osm-importer|osm-rel-prof|osm2pgsql|timed-os-stats|pgbench ' 2>/dev/null | grep -v stop-set | grep -v pgrep || true`
+LEFTOVER=`pgrep -af 'repeat-gis|./runset|./benchwarmer|osm-importer|osm-rel-prof|osm2pgsql|timed-os-stats|pgbench |perf record|pgbent_perf record' 2>/dev/null | grep -v stop-set | grep -v pgrep || true`
 if [ -n "$LEFTOVER" ]; then
   echo "$LEFTOVER"
 else
