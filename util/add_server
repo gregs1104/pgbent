@@ -1,6 +1,9 @@
 #!/bin/bash -ex
 # Temporary migration script for breaking down server level results
 
+echo This script doesn't work anymore and is only kept as a sample
+exit 1
+
 source ./config
 RESULTPSQL="psql -h $RESULTHOST -U $RESULTUSER -p $RESULTPORT -d $RESULTDB"
 
