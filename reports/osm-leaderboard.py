@@ -38,7 +38,6 @@ from pg18_style import (
     BAR_LABEL_FONTSIZE,
     LEADERBOARD_LEGEND_FONTSIZE,
     LEADERBOARD_Y_LABEL_FONTSIZE,
-    Y_LABEL_FONTSIZE,
     use_pg18_style,
 )
 from release_paths import REPO_ROOT, add_pg_argument, image_path, snapshot_path
@@ -101,10 +100,10 @@ def numeric(series: pd.Series) -> pd.Series:
 
 
 def config_label(row: pd.Series) -> str:
-    """Two-line label: cpu and memory, then disk on its own line."""
+    """Two-line label: cpu, then memory - disk."""
     mem = int(row["mem_gb"])
     disk = str(row["disk"]).strip()
-    return f"{row['cpu']} · {mem}GB\n{disk}"
+    return f"{row['cpu']}\n{mem}GB - {disk}"
 
 
 def prepare_leaderboard_df(rows: list[dict[str, str]]) -> pd.DataFrame:
@@ -332,7 +331,11 @@ def plot_system_compare(df: pd.DataFrame, output: Path, show: bool = False) -> N
             items.append((yi, float(width), color, fmt.format(float(value))))
 
     ax.set_yticks(y)
-    ax.set_yticklabels(plot_df["cpu"], fontsize=Y_LABEL_FONTSIZE)
+    ax.set_yticklabels(
+        plot_df["label"],
+        fontsize=LEADERBOARD_Y_LABEL_FONTSIZE,
+        linespacing=0.95,
+    )
     ax.set_xlabel("Relative to the leader, on that metric (100%)")
     ax.set_title("OSM system comparison")
     ax.xaxis.set_minor_locator(AutoMinorLocator(2))
