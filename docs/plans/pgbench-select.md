@@ -69,7 +69,7 @@ Cable the pair once. Control rates with **`tc`** (TBF/HTB/CAKE) on the path pack
 | Box | Role |
 |-----|------|
 | twilight (13600K) | Fast looper; SELECT grid; 13600K end of the network pair |
-| siren (9950X) | Greg-only. After **rear airflow**, capture the sockets SELECT grid on this 9950X (`wl/select-grid`, prepared, 90s, scale 100, 1-client + full clients, package power) **before** the 9700X downgrade. Also 9950X client for the `tc` sweep; data via `download`. |
+| siren (9950X) | Greg-only / no agent SSH (fragile chassis, hands-on recovery). Rear ST120 is in; OSM probe **cleared Ways** (2026-10-18) and sat **Relation at medium fan / ~60°C**. After this OSM finishes, capture the sockets SELECT grid on this 9950X (`wl/select-grid`, prepared, 90s, scale 100, 1-client + full clients, package power) **before** the 9700X downgrade. Also 9950X client for the `tc` sweep; data via `download`. |
 | abbey | M-series watts; Greg workstation, not public Mac QA |
 | court (Spark) | ARM/Spark watts; build-animal later; OSM PG19 stretch still first |
 
