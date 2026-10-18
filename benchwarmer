@@ -565,6 +565,9 @@ $RESULTPSQL -q -c "UPDATE tests SET tps=round(dbsize / (1024*1024) / extract(epo
 cp $BASEDIR/config config
 cp $BASEDIR/params params
 cp $BASEDIR/templates/test-index.html index.html
+# TODO Summarize pgbench.log by second outside the DB (pandas/numpy).
+# Full COPY into timing is 2007 code, a side of replacing gnuplot latency.plot.
+# See docs/plans/plotting.md. Do not add a Perl importer.
 echo Importing and processing latency information
 
 # Confirm we have an patched version of pgbench that has timestamps

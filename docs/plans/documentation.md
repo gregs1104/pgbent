@@ -82,6 +82,7 @@ this design choice alongside the formats.
 
 - [ ] **Queries** — pgbench log lines, latency samples, custom SQL capture format
   - Existing: `timing` table (CSV staging), `tests` summary columns; `export-latency-metric.sql` as OHLC export sketch
+  - Implementation: out-of-DB per-second summary is a side of the gnuplot latency migration — [plotting.md](plotting.md) (pandas/numpy, not Perl)
 - [ ] **Capture automation and process pruning** — how collectors start/stop, zombie cleanup on crash
   - Existing: `benchwarmer`, `metrics2csv`, `util/pgbent_powermon`; known issue in [plotting.md](plotting.md) backlog; zombie `timed-os-stats` note in `pg-release-runs`
 

@@ -28,11 +28,11 @@ Public ranking: [Leaderboards]({{ '/leaderboards/' | relative_url }}) — two fa
 | Clients | **1** and full `SETCLIENTS` | Old single-core / multi-core pair |
 | Power | `SUDODATA=1`, working `pgbent_powermon` | **Sockets cells only** for the watts ranking — one package, clients+server on the same box, complete accounting. Do not try to sum client and server RAPL across machines (enterprise metering; out of scope). |
 
-Do not mix unix and TCP in one set. `conn` must stay `sockets prepared` or `host prepared`.
+Siren 2026-10-18: one batch **`pgbench SELECT`**, both sockets and IP in that set. `tests.conn_method` is saved on every row (`sockets prepared` / `host prepared` with `PREPARED=1`); reports split on `conn`, not on a second `newset`. Flip `SOCKETS` between `runset` passes. Localhost TCP is the on-box mapping study, not a remote DC client.
 
 ## Two board faces
 
-**Sockets** — `SOCKETS=1` (no `-h`). Unix domain, clients on the server. Modest desktops still clear ~1M TPS here; that is the internals/on-box cell, not how Phoronix’s multi-million DC numbers are made. **TPS vs watts lives here** because one `powermon` sees the whole load.
+**Sockets** — `SOCKETS=1` (no `-h`). Unix domain, clients on the server. Siren **9950X** hit **2,011,141 TPS** at 32 clients (PG18, 90s) once the rear ST120 was in — the missing vent had been leaving that performance on the table. That is still the internals/on-box cell, not how Phoronix’s multi-million DC numbers are made. **TPS vs watts lives here** because one `powermon` sees the whole load.
 
 **Networked** — remote (or LAN) TCP client, server not running pgbench. **The millions on OpenBenchmarking come from this face** once the link is in the DC class (**above ~10Gb/s**): a dedicated client can push the server harder than co-located sockets, because the server is not also burning cores on pgbench workers.
 
@@ -54,9 +54,13 @@ At **960 clients / 128 jobs**, sockets looked **capped below what the hardware s
 
 Unthrottled networked cells on the leaderboard for **TPS**, not for a combined power score. Localhost TCP is **not** a substitute for a remote client or for the Mbps sweep.
 
-## One-shot mapping study
+## Today: on-box UNIX vs TCP (overhead only)
 
-Publish unix prepared vs host/remote prepared on the same boxes (1-client and full clients, 90s, power on) so on-box TPS is not confused with a network client. After that page exists, the board stays two unthrottled faces. Repeating the **960-client sockets cap vs networked** comparison waits on `super` (or equivalent 2S) — not on twilight/siren desktops.
+Siren `pgbench SELECT`: **unix sockets vs localhost TCP**, same box, same grid, no other change. That is the protocol overhead, not a network client. Flip `SOCKETS` between `runset` passes; `conn_method` splits the rows.
+
+## Later: true remote TCP on the new 2S
+
+This is what the **new 2-socket system** is for. A dedicated client should drive a **128-client** load as high as the network will allow (server not running pgbench workers). Separate test — do not fold it into today's on-box pair. The old `super` 960-client sockets ceiling vs >10Gb networked story stays parked until that iron (or this new 2S) is actually the client/server pair.
 
 ## Rate sweep (not a ranking)
 
@@ -69,7 +73,7 @@ Cable the pair once. Control rates with **`tc`** (TBF/HTB/CAKE) on the path pack
 | Box | Role |
 |-----|------|
 | twilight (13600K) | Fast looper; SELECT grid; 13600K end of the network pair |
-| siren (9950X) | Greg-only / no agent SSH (fragile chassis, hands-on recovery). Rear ST120 is in; OSM probe **cleared Ways** (2026-10-18) and sat **Relation at medium fan / ~60°C**. After this OSM finishes, capture the sockets SELECT grid on this 9950X (`wl/select-grid`, prepared, 90s, scale 100, 1-client + full clients, package power) **before** the 9700X downgrade. Also 9950X client for the `tc` sweep; data via `download`. |
+| siren (9950X) | Greg-only / no agent SSH (fragile chassis, hands-on recovery). Rear ST120 is in; OSM probe **finished 4.07h** (2026-10-18; replacement for the wiped cell). **2,011,141 TPS** at 32 clients (PG18 sockets). `newset` **`pgbench SELECT`** is running on **PG18** (active cluster): on-box **UNIX vs localhost TCP** (`conn_method` distinguishes) — overhead only. Collect this baseline, then the same cell on **PG19** while the 9950X is still in the board. That plus OSM is the usual 18↔19 regression pair (small-scale SELECT reads, planet-load writes). Rear ST120 works hard by the end of each 90s and harder still importing `pgbench -l` latency at this TPS. Prepared, 90s, scale 100, 1-client + full clients, package power; `PREPARED=1` in params, `SUDODATA=1` already in `config`. Do this **before** the 9600X downgrade. True remote TCP at 128 clients waits on the **new 2S**. OSM comparison charts are waiting on **9600X** to fill the gap between high-power x86 and ARM; OSM barely moved 9600X→9950X. Greg is looking for the chip. Also 9950X client for the `tc` sweep; data via `download`. |
 | abbey | M-series watts; Greg workstation, not public Mac QA |
 | court (Spark) | ARM/Spark watts; build-animal later; OSM PG19 stretch still first |
 
@@ -81,7 +85,7 @@ The switch of gears is already public on [Greg Smith’s Crunchy blog index](htt
 
 ## Publication
 
-- Newset name along the lines of `SELECT sockets prepared` / `SELECT host prepared` (PG19 when that major is the test cluster).
+- Study batch can be one `newset` (siren: `pgbench SELECT`); faces are `conn_method`, not separate batches.
 - Scatter like OSM power: TPS vs max package W on **sockets** cells, two markers per CPU (1 client / full).
 - `/leaderboards/` SELECT section + versioned snapshot tables. Streamlit stays a local grid, not the hosted site.
 
