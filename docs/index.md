@@ -26,7 +26,7 @@ Shell scripts (`benchwarmer`, `runset`) orchestrate each run. Scale and client c
 - **Deep metrics collection** — One-second resolution sampling into a PostgreSQL results database, without monitor averaging that hides peak GB/s behavior.
 - **Human-readable internals** — Metrics grade how effectively each test stresses CPU and storage, useful for tuning training and regression diagnosis.
 - **Configuration capture** — Server hardware, OS details, and PostgreSQL settings recorded with every run.
-- **SQL and visual analysis** — Reports in the `reports/` directory; the [leaderboards]({{ '/leaderboards/' | relative_url }}) page is the public ranking; [PostgreSQL 18 results]({{ '/results-summary/pg18/' | relative_url }}) keep the full study tables.
+- **SQL and visual analysis** — Reports in the `reports/` directory; the [leaderboards]({{ '/leaderboards/' | relative_url }}) page is the public ranking; [PostgreSQL 19]({{ '/results-summary/pg19/' | relative_url }}) and [PostgreSQL 18]({{ '/results-summary/pg18/' | relative_url }}) keep the study tables.
 - **Easy to extend and audit** — Workloads are plain scripts; the metrics system is transparent shell and SQL.
 
 ## Workloads
@@ -70,6 +70,7 @@ pgbent workloads aim to reflect that reality. Databases have a broad set of use 
 ## Links
 
 - [Leaderboards]({{ '/leaderboards/' | relative_url }}) — OSM and pgbench SELECT rankings
+- [PostgreSQL 19 results]({{ '/results-summary/pg19/' | relative_url }}) — current-cycle studies (OSM power)
 - [PostgreSQL 18 results]({{ '/results-summary/pg18/' | relative_url }}) — full published study tables
 
 - TOC

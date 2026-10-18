@@ -60,6 +60,21 @@ SINGLE_CHART_LABEL_OVERRIDES: dict[str, dict[str, LabelOffset]] = {
     },
 }
 
+# Current-planet four-CPU board: 9950X sits on the right edge; Apple and NVIDIA
+# share the low-left. Do not reuse these for --pg 18 (byte-identical PNGs).
+PG19_CHART_LABEL_OVERRIDES: dict[str, dict[str, LabelOffset]] = {
+    "index_kips": {
+        "Apple M4 Max Studio": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
+        "i5-13600K": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
+        "R9 9950X": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
+    },
+    "overall_kips": {
+        "Apple M4 Max Studio": LabelOffset(_marker_x_gap(), 10, ha="left", va="bottom"),
+        "i5-13600K": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
+        "R9 9950X": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
+    },
+}
+
 
 def row_color(row: pd.Series) -> str:
     return str(row.get("cpu_c", "")).strip() or DEFAULT_POINT_COLOR
@@ -180,6 +195,7 @@ def plot_single_throughput_vs_power(
     output: Path,
     metric_col: str,
     title: str,
+    pg: str,
     show: bool = False,
 ) -> None:
     fig, ax = plt.subplots(figsize=(10, 6))
@@ -201,7 +217,16 @@ def plot_single_throughput_vs_power(
     plain_axis(ax)
 
     fig.tight_layout()
-    label_df = df[df["cpu"] != "NVIDIA P4242"] if metric_col == "overall_kips" else df
+    if pg != "18":
+        ymin, ymax = ax.get_ylim()
+        ax.set_ylim(ymin, ymax + (ymax - ymin) * 0.06)
+    overrides = (
+        PG19_CHART_LABEL_OVERRIDES.get(metric_col)
+        if pg != "18"
+        else SINGLE_CHART_LABEL_OVERRIDES.get(metric_col)
+    )
+    pin_nvidia_bottom = metric_col == "overall_kips" or pg != "18"
+    label_df = df[df["cpu"] != "NVIDIA P4242"] if pin_nvidia_bottom else df
     place_point_labels(
         ax,
         label_df["cpu"],
@@ -209,15 +234,15 @@ def plot_single_throughput_vs_power(
         label_df[metric_col],
         [row_color(row) for _, row in label_df.iterrows()],
         POINT_LABEL_FONTSIZE,
-        overrides=SINGLE_CHART_LABEL_OVERRIDES.get(metric_col),
+        overrides=overrides,
     )
     nvidia_rows = df[df["cpu"] == "NVIDIA P4242"]
-    if metric_col == "overall_kips" and not nvidia_rows.empty:
+    if pin_nvidia_bottom and not nvidia_rows.empty:
         nvidia = nvidia_rows.iloc[0]
         place_label_at_grid_bottom(
             ax,
             nvidia["max_pkg"],
-            nvidia["overall_kips"],
+            nvidia[metric_col],
             nvidia["cpu"],
             row_color(nvidia),
             POINT_LABEL_FONTSIZE,
@@ -287,6 +312,7 @@ def main() -> int:
         args.total_output,
         "overall_kips",
         f"PostgreSQL {args.pg} OSM load: total throughput vs package power",
+        args.pg,
         show=args.show,
     )
     plot_single_throughput_vs_power(
@@ -294,6 +320,7 @@ def main() -> int:
         args.index_output,
         "index_kips",
         f"PostgreSQL {args.pg} OSM load: index throughput vs package power",
+        args.pg,
         show=args.show,
     )
     plot_efficiency(df, args.efficiency_output, args.pg, show=args.show)

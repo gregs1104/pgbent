@@ -48,6 +48,12 @@ RELATION_SCATTER_LABEL_OVERRIDES: dict[str, LabelOffset] = {
     "Intel i5-13600K": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
 }
 
+PG19_RELATION_SCATTER_LABEL_OVERRIDES: dict[str, LabelOffset] = {
+    "Apple M4 Max Studio": LabelOffset(_marker_x_gap(), 8, ha="left", va="bottom"),
+    "i5-13600K": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
+    "R9 9950X": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
+}
+
 
 def row_color(row: pd.Series) -> str:
     return str(row.get("cpu_c", "")).strip() or DEFAULT_POINT_COLOR
@@ -111,7 +117,19 @@ def _bar_value_label(row: pd.Series) -> str:
     return f"{int(row['rel']):,} rel · {int(row['avg_watts'])} W avg"
 
 
-def plot_relation_efficiency(df: pd.DataFrame, output: Path, show: bool = False) -> None:
+def relation_titles(pg: str) -> tuple[str, str]:
+    if pg == "18":
+        return (
+            "PostgreSQL 16-17 OSM load: relation phase efficiency",
+            "PostgreSQL 16-18 OSM load: relation throughput vs average power",
+        )
+    return (
+        f"PostgreSQL {pg} OSM load: relation phase efficiency",
+        f"PostgreSQL {pg} OSM load: relation throughput vs average power",
+    )
+
+
+def plot_relation_efficiency(df: pd.DataFrame, output: Path, title: str, show: bool = False) -> None:
     plot_df = df.sort_values("rel_per_watt", ascending=True).reset_index(drop=True)
     y = range(len(plot_df))
 
@@ -124,7 +142,7 @@ def plot_relation_efficiency(df: pd.DataFrame, output: Path, show: bool = False)
     for tick, color in zip(ax.get_yticklabels(), colors):
         tick.set_color(color)
     ax.set_xlabel("Relations per average watt (rel / W)")
-    ax.set_title("PostgreSQL 16-17 OSM load: relation phase efficiency")
+    ax.set_title(title)
     ax.grid(True, axis="x", linestyle="--", alpha=0.4)
 
     fig.canvas.draw()
@@ -178,7 +196,9 @@ def plot_relation_efficiency(df: pd.DataFrame, output: Path, show: bool = False)
     plt.close(fig)
 
 
-def plot_relation_scatter(df: pd.DataFrame, output: Path, show: bool = False) -> None:
+def plot_relation_scatter(
+    df: pd.DataFrame, output: Path, title: str, pg: str, show: bool = False
+) -> None:
     fig, ax = plt.subplots(figsize=(10, 6))
 
     for _, row in df.iterrows():
@@ -192,8 +212,8 @@ def plot_relation_scatter(df: pd.DataFrame, output: Path, show: bool = False) ->
         )
 
     ax.set_xlabel("Average package power (W)")
-    ax.set_ylabel("Relations")
-    ax.set_title("PostgreSQL 16-18 OSM load: relation throughput vs average power")
+    ax.set_ylabel("Relations/second")
+    ax.set_title(title)
     ax.grid(True, linestyle="--", alpha=0.4)
     plain_axis(ax)
 
@@ -208,7 +228,11 @@ def plot_relation_scatter(df: pd.DataFrame, output: Path, show: bool = False) ->
         label_df["rel"],
         [row_color(row) for _, row in label_df.iterrows()],
         POINT_LABEL_FONTSIZE,
-        overrides=RELATION_SCATTER_LABEL_OVERRIDES,
+        overrides=(
+            PG19_RELATION_SCATTER_LABEL_OVERRIDES
+            if pg != "18"
+            else RELATION_SCATTER_LABEL_OVERRIDES
+        ),
     )
     nvidia = df[df["cpu"] == "NVIDIA P4242"]
     if not nvidia.empty:
@@ -241,8 +265,9 @@ def main() -> int:
     df = prepare_relation_df(rows)
     if df.empty:
         raise SystemExit("Relation table has no plottable rows")
-    plot_relation_efficiency(df, args.output, show=args.show)
-    plot_relation_scatter(df, args.scatter_output, show=args.show)
+    bar_title, scatter_title = relation_titles(args.pg)
+    plot_relation_efficiency(df, args.output, bar_title, show=args.show)
+    plot_relation_scatter(df, args.scatter_output, scatter_title, args.pg, show=args.show)
     return 0
 
 
