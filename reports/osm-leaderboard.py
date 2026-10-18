@@ -187,7 +187,7 @@ def plot_score_vs_joules(df: pd.DataFrame, output: Path, show: bool = False) -> 
     ax.set_ylim(0, ymax * 1.18)
     ax.set_xlabel("Package energy (kJ)")
     ax.set_ylabel("OSM score")
-    ax.set_title("Score vs joules")
+    ax.set_title("OSM Score vs Total Power Use")
     ax.xaxis.set_minor_locator(AutoMinorLocator())
     ax.yaxis.set_minor_locator(AutoMinorLocator())
     ax.tick_params(which="major", length=6)
@@ -341,13 +341,6 @@ def plot_system_compare(df: pd.DataFrame, output: Path, show: bool = False) -> N
     ax.xaxis.set_minor_locator(AutoMinorLocator(2))
     ax.grid(True, axis="x", which="major", linestyle="--", alpha=0.4)
     ax.grid(True, axis="x", which="minor", linestyle=":", alpha=0.25)
-    ax.legend(
-        loc="upper center",
-        bbox_to_anchor=(0.5, 1.14),
-        ncol=3,
-        fontsize=LEADERBOARD_LEGEND_FONTSIZE,
-        frameon=False,
-    )
     plain_axis(ax)
 
     fig.canvas.draw()
@@ -384,6 +377,12 @@ def plot_system_compare(df: pd.DataFrame, output: Path, show: bool = False) -> N
             )
             max_x = max(max_x, x + text_width)
     ax.set_xlim(0, max_x + pad)
+    ax.legend(
+        loc="lower right",
+        ncol=1,
+        fontsize=LEADERBOARD_LEGEND_FONTSIZE,
+        framealpha=0.92,
+    )
 
     fig.tight_layout()
     output.parent.mkdir(parents=True, exist_ok=True)
