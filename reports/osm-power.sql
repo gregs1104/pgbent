@@ -9,7 +9,7 @@ best AS
     score_kips,overall_kips,index_kips,polygon_kips,line_kips,point_kips,node_kps,rel_ps,
     fsync,wal_level,max_wal_gb,db_gb,
     wal_mbps, avg_write_mbps, max_write_mbps, avg_read_mbps, max_read_mbps,
-    avg_package_watts, max_package_watts,
+    avg_package_watts, max_package_watts, package_joules,
     ROW_NUMBER()
     OVER(
         PARTITION BY cpu,conn,client
@@ -35,6 +35,7 @@ SELECT
     END AS pwr_est,
     round(max_package_watts) AS max_pkg,
     round(avg_package_watts) AS avg_pkg,
+    round((package_joules / 1000.0)::numeric, 0) AS kj,
     fsync, wal_level,
     wal_mbps AS wal,
     avg_write_mbps AS avg_write, max_write_mbps AS max_write,

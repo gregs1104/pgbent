@@ -53,7 +53,7 @@ SELECT
     END AS pwr_est,
     round(avg_package_watts) AS avg_pkg,
     round(max_package_watts) AS max_pkg,
-    round((package_joules / 1000000.0)::numeric, 2) AS mj,
+    round((package_joules / 1000.0)::numeric, 0) AS kj,
     round((score_kips / NULLIF(max_package_watts, 0))::numeric, 1) AS score_per_watt,
     round((overall_kips / NULLIF(max_package_watts, 0))::numeric, 1) AS overall_per_watt,
     round((index_kips / NULLIF(max_package_watts, 0))::numeric, 1) AS index_per_watt,

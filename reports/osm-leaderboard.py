@@ -97,7 +97,7 @@ def config_label(row: pd.Series) -> str:
 
 def prepare_leaderboard_df(rows: list[dict[str, str]]) -> pd.DataFrame:
     df = pd.DataFrame(rows)
-    for col in ("mem_gb", "overall_kips", "score_kips", "index_kips", "ver", "hours", "max_wal_gb", "mj"):
+    for col in ("mem_gb", "overall_kips", "score_kips", "index_kips", "ver", "hours", "max_wal_gb", "kj"):
         if col in df.columns:
             df[col] = numeric(df[col])
     df["disk"] = df["disk"].str.strip()
@@ -153,18 +153,18 @@ def cpu_color(cpu: str) -> str:
 
 
 def plot_score_vs_joules(df: pd.DataFrame, output: Path, show: bool = False) -> None:
-    """Tiny speed-vs-energy scatter: one point per machine, score against MJ."""
-    pts = df.dropna(subset=["mj", "score_kips"]).copy()
+    """Tiny speed-vs-energy scatter: one point per machine, score against kJ."""
+    pts = df.dropna(subset=["kj", "score_kips"]).copy()
     if pts.empty:
         raise SystemExit("No package_joules on leaderboard rows")
     fig, ax = plt.subplots(figsize=(7.2, 4.6))
     colors = [cpu_color(c) for c in pts["cpu"]]
-    ax.scatter(pts["mj"], pts["score_kips"], s=SCATTER_MARKER_SIZE, c=colors, zorder=3)
-    xmax = float(pts["mj"].max())
+    ax.scatter(pts["kj"], pts["score_kips"], s=SCATTER_MARKER_SIZE, c=colors, zorder=3)
+    xmax = float(pts["kj"].max())
     ymax = float(pts["score_kips"].max())
     ax.set_xlim(0, xmax * 1.14)
     ax.set_ylim(0, ymax * 1.18)
-    ax.set_xlabel("Package energy (MJ)")
+    ax.set_xlabel("Package energy (kJ)")
     ax.set_ylabel("OSM score")
     ax.set_title("Score vs joules")
     ax.xaxis.set_minor_locator(AutoMinorLocator())
@@ -178,7 +178,7 @@ def plot_score_vs_joules(df: pd.DataFrame, output: Path, show: bool = False) -> 
     place_point_labels(
         ax,
         pts["cpu"].astype(str),
-        pts["mj"],
+        pts["kj"],
         pts["score_kips"],
         colors,
         16,
@@ -194,7 +194,7 @@ def plot_score_vs_joules(df: pd.DataFrame, output: Path, show: bool = False) -> 
 
 def joules_takeaway(df: pd.DataFrame) -> str:
     """Fastest x86 vs cheapest ARM on the one-point-per-machine board."""
-    pts = df.dropna(subset=["mj", "score_kips"]).copy()
+    pts = df.dropna(subset=["kj", "score_kips"]).copy()
     if pts.empty:
         return ""
     cpu = pts["cpu"].astype(str)
@@ -204,16 +204,16 @@ def joules_takeaway(df: pd.DataFrame) -> str:
     if x86.empty or apple.empty:
         return ""
     fast = x86.sort_values("score_kips", ascending=False).iloc[0]
-    arm = apple.sort_values("mj", ascending=True).iloc[0]
+    arm = apple.sort_values("kj", ascending=True).iloc[0]
     score_x = float(fast["score_kips"]) / float(arm["score_kips"])
-    joule_x = float(fast["mj"]) / float(arm["mj"])
+    joule_x = float(fast["kj"]) / float(arm["kj"])
     bits = [
         "You can potentially triple the score running on the fastest x86 instead of ARM, "
         "but it costs 4–5× as much energy to juice up the processors to do it. "
         f"**{fast['cpu']}** scores **{format_markdown_cell(fast['score_kips'])}** at "
-        f"**{format_markdown_cell(fast['mj'])} MJ**; **{arm['cpu']}** scores "
+        f"**{format_markdown_cell(fast['kj'])} kJ**; **{arm['cpu']}** scores "
         f"**{format_markdown_cell(arm['score_kips'])}** at "
-        f"**{format_markdown_cell(arm['mj'])} MJ** "
+        f"**{format_markdown_cell(arm['kj'])} kJ** "
         f"(**{score_x:.1f}×** score, **{joule_x:.1f}×** joules)."
     ]
     if not nvidia.empty:
@@ -231,7 +231,7 @@ def joules_markdown(df: pd.DataFrame) -> str:
     takeaway = joules_takeaway(df)
     body = (
         "Speed vs energy for the best run on each machine. **Score** is OSM kNodes/s; "
-        "**MJ** is total package energy (joules, shown as megajoules) from the 1-second "
+        "**kJ** is total package energy (joules, shown as kilojoules) from the 1-second "
         "power integral over the test window."
     )
     if takeaway:
@@ -537,7 +537,7 @@ def main() -> int:
     df = prepare_leaderboard_df(rows)
     plot_leaderboard(df, args.output, show=args.show)
     joules_md = None
-    if args.from_db and "mj" in df.columns and df["mj"].notna().any():
+    if args.from_db and "kj" in df.columns and df["kj"].notna().any():
         plot_score_vs_joules(df, JOULES_IMAGE, show=args.show)
         joules_md = joules_markdown(df)
     if args.from_db and table is not None and not args.no_page:
