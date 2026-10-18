@@ -337,7 +337,7 @@ def plot_system_compare(df: pd.DataFrame, output: Path, show: bool = False) -> N
         fontsize=LEADERBOARD_Y_LABEL_FONTSIZE,
         linespacing=LABEL_LINESPACING,
     )
-    ax.set_xlabel("Relative to the leader, on that metric (100%)")
+    ax.set_xlabel("% Relative to the leader, on that metric")
     ax.set_title("OSM system comparison")
     ax.xaxis.set_minor_locator(AutoMinorLocator(2))
     ax.grid(True, axis="x", which="major", linestyle="--", alpha=0.4)
