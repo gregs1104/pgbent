@@ -7,6 +7,12 @@
 # report and exits.  A few seconds of edge jitter is acceptable; the
 # relation phase runs long enough that it does not matter.
 #
+# Stop after the first hour by default (`OSMRELPROF_MAX_SEC=3600`). That is
+# enough sample. Recording the whole COPY hits the size cap and `kill`s
+# perf, which leaves osm-rel-perf.data unreadable (court 22/23). Size cap
+# (`OSMRELPROF_MAX_MB`, default 8192) stays a backstop. Set MAX_SEC=0 to
+# record until COPY ends.
+#
 # Requires util/pgbent_perf installed under /usr/local/bin with a NOPASSWD
 # sudoers rule (same idiom as pgbent_powermon / pgbent_tune).  Artifacts
 # land in the current directory (the test results dir when launched from
@@ -32,6 +38,12 @@ if [ -z "$OSMRELPROF_MAX_MB" ] || [ "$OSMRELPROF_MAX_MB" = "0" ]; then
   MAX_MB=8192
 else
   MAX_MB="$OSMRELPROF_MAX_MB"
+fi
+# Empty defaults to one hour. 0 means no time cap.
+if [ -z "$OSMRELPROF_MAX_SEC" ]; then
+  MAX_SEC=3600
+else
+  MAX_SEC="$OSMRELPROF_MAX_SEC"
 fi
 PGBENT_PERF="sudo /usr/local/bin/pgbent_perf"
 PERF_DATA="$(pwd)/osm-rel-perf.data"
@@ -88,6 +100,8 @@ echo "osm-rel-prof: relation phase detected, starting perf"
 rm -f "$PERF_DATA" "$PERF_REPORT"
 $PGBENT_PERF record -a -g -o "$PERF_DATA" &
 PERF_PID=$!
+STARTED_AT=$(date +%s)
+STOP_REASON="planet_osm_rels COPY gone"
 
 while true; do
   if [ "$(rels_copy_active)" != "1" ]; then
@@ -98,15 +112,24 @@ while true; do
     PERF_PID=""
     exit 1
   fi
+  if [ "$MAX_SEC" -gt 0 ]; then
+    now=$(date +%s)
+    if [ $((now - STARTED_AT)) -ge "$MAX_SEC" ]; then
+      echo "osm-rel-prof: ${MAX_SEC}s sample complete, stopping" >&2
+      STOP_REASON="${MAX_SEC}s time cap"
+      break
+    fi
+  fi
   bytes=$(data_bytes)
   if [ "$bytes" -gt $((MAX_MB * 1024 * 1024)) ]; then
     echo "osm-rel-prof: $PERF_DATA exceeded ${MAX_MB}MB, stopping" >&2
+    STOP_REASON="${MAX_MB}MB size cap"
     break
   fi
   sleep "$POLL_SEC"
 done
 
-stop_perf "planet_osm_rels COPY gone"
+stop_perf "$STOP_REASON"
 trap - EXIT TERM INT
 
 if [ -s "$PERF_DATA" ]; then

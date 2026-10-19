@@ -24,7 +24,7 @@ Public ranking: [Leaderboards]({{ '/leaderboards/' | relative_url }}) — two fa
 | Protocol | `PREPARED=1` (`-M prepared`) | PTS since pgbench 1.13 |
 | Runtime | `RUNTIME=90` | PTS `-T` 90 |
 | Scale | 100 | Their advertised default; ~1.6GB |
-| Repeats | `SETTIMES=3` | |
+| Repeats | `SETTIMES=2` | These CPU runs are tight; a third only if the two diverge. |
 | Clients | **1** and full `SETCLIENTS` | Old single-core / multi-core pair |
 | Power | `SUDODATA=1`, working `pgbent_powermon` | **Sockets cells only** for the watts ranking — one package, clients+server on the same box, complete accounting. Do not try to sum client and server RAPL across machines (enterprise metering; out of scope). |
 
@@ -32,7 +32,7 @@ Siren 2026-10-18: one batch **`pgbench SELECT`**, both sockets and IP in that se
 
 ## Two board faces
 
-**Sockets** — `SOCKETS=1` (no `-h`). Unix domain, clients on the server. Siren **9950X** hit **2,011,141 TPS** at 32 clients (PG18, 90s) once the rear ST120 was in — the missing vent had been leaving that performance on the table. That is still the internals/on-box cell, not how Phoronix’s multi-million DC numbers are made. **TPS vs watts lives here** because one `powermon` sees the whole load.
+**Sockets** — `SOCKETS=1` (no `-h`). Unix domain, clients on the server. Siren **9950X** max is **32 clients**: **2,011,141** then **2,016,484 TPS** (PG18, 90s) once the rear ST120 was in — the missing vent had been leaving that performance on the table. That is still the internals/on-box cell, not how Phoronix’s multi-million DC numbers are made. **TPS vs watts lives here** because one `powermon` sees the whole load.
 
 **Networked** — remote (or LAN) TCP client, server not running pgbench. **The millions on OpenBenchmarking come from this face** once the link is in the DC class (**above ~10Gb/s**): a dedicated client can push the server harder than co-located sockets, because the server is not also burning cores on pgbench workers.
 
@@ -56,7 +56,9 @@ Unthrottled networked cells on the leaderboard for **TPS**, not for a combined p
 
 ## Today: on-box UNIX vs TCP (overhead only)
 
-Siren `pgbench SELECT`: **unix sockets vs localhost TCP**, same box, same grid, no other change. That is the protocol overhead, not a network client. Flip `SOCKETS` between `runset` passes; `conn_method` splits the rows.
+Siren `pgbench SELECT`: **unix sockets vs localhost TCP**, same box, same grid, no other change. That is the protocol overhead, not a network client. Flip `SOCKETS` between `runset` passes; `conn_method` splits the rows. Halt each face after **two** `SETTIMES` passes — do not grind a third unless they split.
+
+**Siren set 106 sockets (scale 100, 90s), 2026-10-19.** Peak still **32 clients** on both majors. PG18: **2,011,141** / **2,016,484**. 19beta4: **1,501,101** / **1,500,302** (~25% down; the pair agrees). Init `:-i` 503 vs 375. Drop is across the whole client sweep (~23–27%). **Do not publish** as an 18↔19 regression: beta packages often have assertions on (`debug_assertions`), and that trash this CPU-bound SELECT. **When siren is back, in order:** (1) **19rc1** and rerun this sockets SELECT grid until the data is clean (assert-off; not more 19beta4). (2) **OSM on 19rc1** on the 9950X. (3) **switch to 9600X** for the OSM comparison SKU.
 
 ## Later: true remote TCP on the new 2S
 
@@ -73,7 +75,7 @@ Cable the pair once. Control rates with **`tc`** (TBF/HTB/CAKE) on the path pack
 | Box | Role |
 |-----|------|
 | twilight (13600K) | Fast looper; SELECT grid; 13600K end of the network pair |
-| siren (9950X) | Greg-only / no agent SSH (fragile chassis, hands-on recovery). Rear ST120 is in; OSM probe **finished 4.07h** (2026-10-18; replacement for the wiped cell). **2,011,141 TPS** at 32 clients (PG18 sockets). `newset` **`pgbench SELECT`** is running on **PG18** (active cluster): on-box **UNIX vs localhost TCP** (`conn_method` distinguishes) — overhead only. Collect this baseline, then the same cell on **PG19** while the 9950X is still in the board. That plus OSM is the usual 18↔19 regression pair (small-scale SELECT reads, planet-load writes). Rear ST120 works hard by the end of each 90s and harder still importing `pgbench -l` latency at this TPS. Prepared, 90s, scale 100, 1-client + full clients, package power; `PREPARED=1` in params, `SUDODATA=1` already in `config`. Do this **before** the 9600X downgrade. True remote TCP at 128 clients waits on the **new 2S**. OSM comparison charts are waiting on **9600X** to fill the gap between high-power x86 and ARM; OSM barely moved 9600X→9950X. Greg is looking for the chip. Also 9950X client for the `tc` sweep; data via `download`. |
+| siren (9950X) | Greg-only / no agent SSH (fragile chassis, hands-on recovery). Rear ST120 is in; OSM probe **finished 4.07h** (2026-10-18; replacement for the wiped cell). Set **106** sockets: PG18 max at **32 clients** **2,011,141** / **2,016,484**; 19beta4 **1,501,101** / **1,500,302** (~25% down, pair agrees). Halt after two; **`SETTIMES=2`**. Do not publish the 19b4 drop (beta assertions trash this test). **When siren is back, in order:** **19rc1 SELECT** until clean, then **OSM on 19rc1**, then **9600X**. `newset` **`pgbench SELECT`**: on-box **UNIX vs localhost TCP** (`conn_method` distinguishes) — overhead only; TCP still to collect. SELECT + OSM is the usual 18↔19 regression pair (small-scale reads, planet-load writes). Rear ST120 works hard by the end of each 90s and harder still importing `pgbench -l` latency at this TPS. Prepared, 90s, scale 100, 1-client + full clients, package power; `PREPARED=1` in params, `SUDODATA=1` already in `config`. Do this **before** the 9600X downgrade. True remote TCP at 128 clients waits on the **new 2S**. OSM comparison charts are waiting on **9600X** to fill the gap between high-power x86 and ARM; OSM barely moved 9600X→9950X. Greg is looking for the chip. Also 9950X client for the `tc` sweep; data via `download`. |
 | abbey | M-series watts; Greg workstation, not public Mac QA |
 | court (Spark) | ARM/Spark watts; build-animal later; OSM PG19 stretch still first |
 
