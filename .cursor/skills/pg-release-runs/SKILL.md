@@ -54,6 +54,12 @@ Siren 9950X, 90s, 32 clients, mean of two `SETTIMES`, same `conn_method`:
 19rc1 is a hair faster than 18 and than 19beta4. Beta packages can still ship
 `--enable-cassert` (wiki); that was not this drop.
 
+SELECT also publishes **transactions per joule** per client count (same
+1-second `PkgWatt` integral as OSM kJ). At the 200 W PPT rail every face
+burns the same ~17.8 kJ in 90s; sockets prepared does about twice the
+work of localhost TCP simple. Energy efficiency is the virtuous side of
+the protocol fan.
+
 ## How a study is identified
 
 `./newset 'description'` inserts a `testset` row (`server`, `set` serial, `info`).

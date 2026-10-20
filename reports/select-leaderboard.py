@@ -2,12 +2,12 @@
 """
 Starter pgbench SELECT leaderboard from siren PG19 rc1.
 
-Graphs TPS vs clients for the four conn_method faces (sockets vs localhost
-TCP, prepared vs simple) and writes a compact 1-client / 32-client table
-into docs/leaderboards.md.
+Graphs TPS and transactions/joule vs clients for the four conn_method
+faces (sockets vs localhost TCP, prepared vs simple) and writes a compact
+1-client / 32-client table into docs/leaderboards.md.
 
 Usage:
-  python3 reports/select-leaderboard.py --from-db
+    python3 reports/select-leaderboard.py --from-db
 """
 
 from __future__ import annotations
@@ -31,6 +31,7 @@ DEFAULT_CONN = "host=localhost dbname=results user=gsmith password=secret"
 SQL_PATH = REPO_ROOT / "reports" / "select-leaderboard.sql"
 LEADERBOARD_PAGE = REPO_ROOT / "docs" / "leaderboards.md"
 PUBLIC_IMAGE = REPO_ROOT / "docs" / "images" / "select-leaderboard.png"
+JOULES_IMAGE = REPO_ROOT / "docs" / "images" / "select-leaderboard-joules.png"
 BLOCK_BEGIN = "<!-- select-leaderboard:begin -->"
 BLOCK_END = "<!-- select-leaderboard:end -->"
 
@@ -101,9 +102,11 @@ def ranking_table(df: pd.DataFrame) -> pd.DataFrame:
             {
                 "conn": CONN_LABEL.get(conn, conn),
                 "tps_1": int(one.iloc[0]["tps"]),
+                "pkg_1": one.iloc[0]["avg_pkg"],
+                "txn_j_1": one.iloc[0]["txn_per_j"],
                 "tps_32": int(peak.iloc[0]["tps"]),
-                "avg_pkg": peak.iloc[0]["avg_pkg"],
-                "max_pkg": peak.iloc[0]["max_pkg"],
+                "pkg_32": peak.iloc[0]["avg_pkg"],
+                "txn_j_32": peak.iloc[0]["txn_per_j"],
             }
         )
     out = pd.DataFrame(rows).sort_values("tps_32", ascending=False)
@@ -112,10 +115,12 @@ def ranking_table(df: pd.DataFrame) -> pd.DataFrame:
 
 def dataframe_to_markdown(df: pd.DataFrame) -> str:
     display = df.copy()
-    for col in ("tps_1", "tps_32"):
+    for col in ("tps_1", "tps_32", "txn_j_1", "txn_j_32"):
         display[col] = display[col].map(format_tps)
-    for col in ("avg_pkg", "max_pkg"):
-        display[col] = display[col].map(lambda v: "" if pd.isna(v) else str(int(round(float(v)))))
+    for col in ("pkg_1", "pkg_32"):
+        display[col] = display[col].map(
+            lambda v: "" if pd.isna(v) else f"{float(v):.1f}".rstrip("0").rstrip(".")
+        )
     cols = [str(c) for c in display.columns]
     lines = [
         "| " + " | ".join(cols) + " |",
@@ -165,6 +170,45 @@ def plot_select(df: pd.DataFrame, output: Path, show: bool = False) -> None:
     plt.close(fig)
 
 
+def plot_txn_per_joule(df: pd.DataFrame, output: Path, show: bool = False) -> None:
+    use_pg18_style()
+    fig, ax = plt.subplots(figsize=(11, 6.5))
+    plotted = 0
+    for conn, color, style in SERIES:
+        face = df[df["conn"] == conn].sort_values("clients")
+        if face.empty or face["txn_per_j"].isna().all():
+            continue
+        ax.plot(
+            face["clients"],
+            face["txn_per_j"],
+            color=color,
+            linestyle=style,
+            marker="o",
+            linewidth=2.4,
+            markersize=8,
+            label=CONN_LABEL.get(conn, conn),
+        )
+        plotted += 1
+    if plotted == 0:
+        raise SystemExit("No txn/joule series to plot")
+    ax.set_xscale("log", base=2)
+    ax.set_xticks(sorted(df["clients"].unique()))
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{int(v)}"))
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{int(v):,}"))
+    ax.set_xlabel("Clients")
+    ax.set_ylabel("Transactions / joule")
+    ax.set_title("pgbench SELECT - Siren 9950X energy")
+    ax.grid(True, which="major", linestyle=":", alpha=0.5)
+    ax.legend(loc="upper left", fontsize=LEADERBOARD_LEGEND_FONTSIZE, framealpha=0.92)
+    fig.tight_layout()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output, dpi=160, bbox_inches="tight")
+    print(f"Wrote {output}")
+    if show:
+        plt.show()
+    plt.close(fig)
+
+
 def replace_marked_block(text: str, begin: str, end: str, inner: str) -> str:
     if begin in text and end in text:
         return re.sub(
@@ -185,11 +229,20 @@ def block_markdown(table_md: str, n_faces: int) -> str:
         "90s. Same box, four faces of the connection sweep (PG18 study, kept as a "
         "code exercise): unix sockets vs localhost TCP, simple vs `-M prepared`. "
         "Peak is **32 clients**, sockets prepared (**2.06M TPS**). Localhost TCP "
-        "prepared sits at **1.52M** (~26% below sockets). Package watts are on the "
-        "sockets face; 32-client runs sat at the **200 W** RAPL sample.\n\n"
+        "prepared sits at **1.52M** (~26% below sockets). Package watts: 1-client "
+        "is ~**62 W**; from 16 clients up the 9950X sits on the **~200 W PPT** "
+        "rail (RAPL avg **199.6**, not a copied 200).\n\n"
         "![pgbench SELECT - Siren 9950X]({{ '/images/select-leaderboard.png' | relative_url }})\n\n"
-        f"Mean TPS across repeats ({n_faces} faces). **tps_1** is the old single-core cell; "
-        "**tps_32** is the max on this chip.\n\n"
+        "**Transactions per joule** uses the same 1-second `PkgWatt` integral as OSM "
+        "kJ. At 32 clients every face burns ~**17.8 kJ** in 90s — the PPT rail. "
+        "Sockets prepared does **10,406** txn/J; localhost TCP simple does **5,040**. "
+        "Same joules, twice the work. Energy efficiency is the other side of the "
+        "protocol fan: better performance spends the same watt-seconds on more "
+        "useful work.\n\n"
+        "![pgbench SELECT - transactions per joule]({{ '/images/select-leaderboard-joules.png' | relative_url }})\n\n"
+        f"Mean across repeats ({n_faces} faces). **tps_1** is the old single-core cell; "
+        "**tps_32** is the max on this chip. **pkg_*** is average package watts; "
+        "**txn_j_*** is transactions per joule on those same runs.\n\n"
         f"{table_md}\n\n"
         f"{BLOCK_END}"
     )
@@ -202,7 +255,9 @@ def main() -> None:
     df = fetch_sql_table(args.sql, args.conn)
     df["clients"] = pd.to_numeric(df["clients"])
     df["tps"] = pd.to_numeric(df["tps"])
+    df["txn_per_j"] = pd.to_numeric(df["txn_per_j"])
     plot_select(df, args.output, show=args.show)
+    plot_txn_per_joule(df, JOULES_IMAGE, show=args.show)
     ranking = ranking_table(df)
     table_md = dataframe_to_markdown(ranking)
     text = args.page.read_text(encoding="utf-8")

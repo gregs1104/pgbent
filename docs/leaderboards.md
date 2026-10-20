@@ -77,7 +77,7 @@ Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bi
 
 ## pgbench SELECT
 
-Phoronix-comparable **SELECT** cells: **90s**, scale 100. Package power sits on the same row as TPS on the **sockets** face (one machine, complete accounting). Combining client and server watts across boxes is out of scope. Postgres developers care whether a code change moves power and memory up or down. For hardware outside this lab, use [OpenBenchmarking.org pts/pgbench](https://openbenchmarking.org/test/pts/pgbench) as the comparable TPS set.
+Phoronix-comparable **SELECT** cells: **90s**, scale 100. Package power sits on the same row as TPS on the **sockets** face (one machine, complete accounting). Combining client and server watts across boxes is out of scope. **Transactions per joule** is the energy-efficiency number for each client count — the same 1-second `PkgWatt` integral as OSM kJ. Better performance is also more work per watt-second; the PG community cares about that as a virtuous side effect, and this lab publishes it. For hardware outside this lab, use [OpenBenchmarking.org pts/pgbench](https://openbenchmarking.org/test/pts/pgbench) as the comparable TPS set.
 
 Phoronix switched to `-M prepared` a few years ago (PTS pgbench 1.13) and kind of reset that public history. Numbers went up; not many people noticed. This lab still runs **all four faces** — sockets vs localhost TCP, simple vs prepared — the [PG18 connection study]({{ '/results-summary/pg18/pgbench-select/' | relative_url }}), kept as a code exercise so a method change cannot hide. Prepared is the Phoronix-shaped ranking cell. OpenBenchmarking’s multi-million TPS numbers are a **remote** TCP client on DC hardware, not localhost and not unix sockets sharing the server with pgbench. A true remote mapping waits on the new 2S.
 
@@ -85,18 +85,22 @@ This starter board is **siren** (R9 9950X) on PostgreSQL **19rc1**, published **
 
 <!-- select-leaderboard:begin -->
 
-Starter board from **siren** (R9 9950X), PostgreSQL **19rc1** (published **2026-10-20**, the day after the rc1 catalog bump), scale 100, 90s. Same box, four faces of the connection sweep (PG18 study, kept as a code exercise): unix sockets vs localhost TCP, simple vs `-M prepared`. Peak is **32 clients**, sockets prepared (**2.06M TPS**). Localhost TCP prepared sits at **1.52M** (~26% below sockets). Package watts are on the sockets face; 32-client runs sat at the **200 W** RAPL sample.
+Starter board from **siren** (R9 9950X), PostgreSQL **19rc1** (published **2026-10-20**, the day after the rc1 catalog bump), scale 100, 90s. Same box, four faces of the connection sweep (PG18 study, kept as a code exercise): unix sockets vs localhost TCP, simple vs `-M prepared`. Peak is **32 clients**, sockets prepared (**2.06M TPS**). Localhost TCP prepared sits at **1.52M** (~26% below sockets). Package watts: 1-client is ~**62 W**; from 16 clients up the 9950X sits on the **~200 W PPT** rail (RAPL avg **199.6**, not a copied 200).
 
 ![pgbench SELECT - Siren 9950X]({{ '/images/select-leaderboard.png' | relative_url }})
 
-Mean TPS across repeats (4 faces). **tps_1** is the old single-core cell; **tps_32** is the max on this chip.
+**Transactions per joule** uses the same 1-second `PkgWatt` integral as OSM kJ. At 32 clients every face burns ~**17.8 kJ** in 90s — the PPT rail. Sockets prepared does **10,406** txn/J; localhost TCP simple does **5,040**. Same joules, twice the work. Energy efficiency is the other side of the protocol fan: better performance spends the same watt-seconds on more useful work.
 
-| conn | tps_1 | tps_32 | avg_pkg | max_pkg |
-| --- | --- | --- | --- | --- |
-| sockets prepared | 132,433 | 2,058,653 | 200 | 200 |
-| localhost TCP prepared | 96,566 | 1,517,063 | 200 | 200 |
-| sockets | 89,241 | 1,354,200 | 200 | 200 |
-| localhost TCP | 68,924 | 997,097 | 200 | 200 |
+![pgbench SELECT - transactions per joule]({{ '/images/select-leaderboard-joules.png' | relative_url }})
+
+Mean across repeats (4 faces). **tps_1** is the old single-core cell; **tps_32** is the max on this chip. **pkg_*** is average package watts; **txn_j_*** is transactions per joule on those same runs.
+
+| conn | tps_1 | pkg_1 | txn_j_1 | tps_32 | pkg_32 | txn_j_32 |
+| --- | --- | --- | --- | --- | --- | --- |
+| sockets prepared | 132,433 | 60.9 | 2,196 | 2,058,653 | 199.6 | 10,406 |
+| localhost TCP prepared | 96,566 | 61.7 | 1,579 | 1,517,063 | 199.6 | 7,669 |
+| sockets | 89,241 | 62.7 | 1,438 | 1,354,200 | 199.6 | 6,841 |
+| localhost TCP | 68,924 | 65.2 | 1,066 | 997,097 | 199.6 | 5,040 |
 
 <!-- select-leaderboard:end -->
 

@@ -12,7 +12,7 @@ Near-term study so `/leaderboards/` can show Phoronix-comparable SELECT **plus p
 
 ## Goal
 
-Match [OpenBenchmarking.org pts/pgbench](https://openbenchmarking.org/test/pts/pgbench) closely enough to **claim comparability** and **link them** for TPS outside this lab. What this farm adds is **package power** (and memory) on the same row. Postgres developers care whether a code change moves those up or down.
+Match [OpenBenchmarking.org pts/pgbench](https://openbenchmarking.org/test/pts/pgbench) closely enough to **claim comparability** and **link them** for TPS outside this lab. What this farm adds is **package power** and **transactions per joule** on the same row — energy efficiency as the virtuous side of better performance. Postgres developers care whether a code change moves those up or down. This lab is the public instrumentation; hyperscalers who host PG surely have their own.
 
 Public ranking: [Leaderboards]({{ '/leaderboards/' | relative_url }}). The Phoronix-shaped cell is **prepared**. Keep running **all four faces** (sockets vs localhost TCP, simple vs prepared): that is the PG18 connection study, swept for code exercise so a method change cannot hide. Sockets-versus-TCP is not a third ranking forever, but it stays on the graph. Phoronix switched to `-M prepared` a few years ago (PTS pgbench 1.13) and kind of reset that public history; numbers went up, few noticed.
 
@@ -87,7 +87,7 @@ The switch of gears is already public on [Greg Smith’s Crunchy blog index](htt
 
 ## Publication
 
-- **Starter board:** siren PG19 rc1 `pgbench SELECT` set — graph and table of `conn_method` faces on `/leaderboards/` (`reports/select-leaderboard.py --from-db`). Later: sockets TPS vs watts scatter and more machines.
+- **Starter board:** siren PG19 rc1 `pgbench SELECT` set — TPS and txn/J graphs plus the 1/32 table of `conn_method` faces on `/leaderboards/` (`reports/select-leaderboard.py --from-db`). Later: more machines.
 - Study batch can be one `newset` (siren: `pgbench SELECT`); faces are `conn_method`, not separate batches.
 - Scatter like OSM power: TPS vs max package W on **sockets** cells, two markers per CPU (1 client / full).
 - `/leaderboards/` SELECT section + versioned snapshot tables. Streamlit stays a local grid, not the hosted site.
