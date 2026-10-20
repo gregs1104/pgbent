@@ -7,7 +7,9 @@ nav_order: 0
 
 # Leaderboards
 
-Public OSM planet-load and pgbench SELECT rankings from the pgbent farm personally run by Greg Smith. This page is updated when there are new cells; it is not a live dashboard. PostgreSQL **19rc1** SELECT connection sweep and OSM import on siren landed **2026-10-20**, the day after the rc1 catalog bump.
+Public OSM planet-load and pgbench SELECT rankings from the pgbent farm personally run by Greg Smith. This page is updated when there are new cells; it is not a live dashboard.
+
+PostgreSQL 19rc1 SELECT connection sweep and OSM import on siren completed 2026-10-20, based on rc1 2026-10-15 catalog 20261006.
 
 The OSM table is the current Planet extract (**10.79 billion** nodes), mixed PostgreSQL 16–19, ranked by OSM score. The [PostgreSQL 18]({{ '/results-summary/pg18/' | relative_url }}) snapshot remains the last frozen release cycle. Watts, durability (`fsync` / `wal_level`), and checkpoint columns travel with the OSM rows.
 
@@ -83,11 +85,11 @@ Phoronix-comparable **SELECT** cells: **90s**, scale 100. Package power sits on 
 
 Phoronix switched to `-M prepared` a few years ago (PTS pgbench 1.13) and kind of reset that public history. Numbers went up; not many people noticed. This lab still runs **all four faces** — sockets vs localhost TCP, simple vs prepared — the [PG18 connection study]({{ '/results-summary/pg18/pgbench-select/' | relative_url }}), kept as a code exercise so a method change cannot hide. Prepared is the Phoronix-shaped ranking cell. OpenBenchmarking’s multi-million TPS numbers are a **remote** TCP client on DC hardware, not localhost and not unix sockets sharing the server with pgbench. A true remote mapping waits on the new 2S.
 
-This starter board is **siren** (R9 9950X) on PostgreSQL **19rc1**, published **2026-10-20** — the day after the rc1 catalog bump. Hold `conn_method` constant when comparing versions — mixing sockets with localhost TCP can look like a 25% hole. See [Comparing versions]({{ '/workloads/#comparing-versions' | relative_url }}).
+This starter board is **siren** (R9 9950X) on PostgreSQL **19rc1**. Hold `conn_method` constant when comparing versions — mixing sockets with localhost TCP can look like a 25% hole. See [Comparing versions]({{ '/workloads/#comparing-versions' | relative_url }}).
 
 <!-- select-leaderboard:begin -->
 
-Starter board from **siren** (R9 9950X), PostgreSQL **19rc1** (published **2026-10-20**, the day after the rc1 catalog bump), scale 100, 90s. Same box, four faces of the connection sweep (PG18 study, kept as a code exercise): unix sockets vs localhost TCP, simple vs `-M prepared`. Peak is **32 clients**, sockets prepared (**2.06M TPS**). Localhost TCP prepared sits at **1.52M** (~26% below sockets). Package watts: 1-client is ~**62 W**; from 16 clients up the 9950X sits on the **~200 W PPT** rail (RAPL avg **199.6**, not a copied 200).
+Starter board from **siren** (R9 9950X), PostgreSQL **19rc1** (rc1 2026-10-15, catalog 20261006), scale 100, 90s. Same box, four faces of the connection sweep (PG18 study, kept as a code exercise): unix sockets vs localhost TCP, simple vs `-M prepared`. Peak is **32 clients**, sockets prepared (**2.06M TPS**). Localhost TCP prepared sits at **1.52M** (~26% below sockets). Package watts: 1-client is ~**62 W**; from 16 clients up the 9950X sits on the **~200 W PPT** rail (RAPL avg **199.6**, not a copied 200).
 
 ![pgbench SELECT - Siren 9950X]({{ '/images/select-leaderboard.png' | relative_url }})
 

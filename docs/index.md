@@ -8,7 +8,7 @@ layout: home
 
 As a performance regression tool, pgbent has helped catch packaging and integration issues across PostgreSQL releases 16–18. Years of trace history document how Postgres—and the hardware it runs on—has progressed in both software and storage performance.
 
-**[Leaderboards]({{ '/leaderboards/' | relative_url }})** — OSM planet load and pgbench SELECT rankings. PostgreSQL **19rc1** SELECT connection sweep and OSM import on siren landed **2026-10-20**, the day after the rc1 catalog bump.
+**[Leaderboards]({{ '/leaderboards/' | relative_url }})** — OSM planet load and pgbench SELECT rankings. PostgreSQL 19rc1 SELECT connection sweep and OSM import on siren completed 2026-10-20, based on rc1 2026-10-15 catalog 20261006.
 
 ![PostgreSQL 18 OSM load: throughput per watt by CPU]({{ '/images/pg18-osm-power-efficiency.png' | relative_url }})
 

@@ -225,7 +225,7 @@ def block_markdown(table_md: str, n_faces: int) -> str:
     return (
         f"{BLOCK_BEGIN}\n\n"
         "Starter board from **siren** (R9 9950X), PostgreSQL **19rc1** "
-        "(published **2026-10-20**, the day after the rc1 catalog bump), scale 100, "
+        "(rc1 2026-10-15, catalog 20261006), scale 100, "
         "90s. Same box, four faces of the connection sweep (PG18 study, kept as a "
         "code exercise): unix sockets vs localhost TCP, simple vs `-M prepared`. "
         "Peak is **32 clients**, sockets prepared (**2.06M TPS**). Localhost TCP "

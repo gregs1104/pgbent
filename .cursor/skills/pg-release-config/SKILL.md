@@ -70,6 +70,13 @@ other study-critical GUCs) rather than `sourcefile LIKE '%conf.d%'`.
 When the Homebrew cluster major changes, migrate the results database with the
 upload-then-reload workflow in `pg-release-runs` before opening a new study set.
 
+**Catalog version is a manual pin, RC week only.** Do not scrape
+`pg_control_system()` into the results schema. That function is 9.6+, and
+catalog identity only matters in this brief window each year. Public freshness
+is a sentence, not a column: package date plus catalog number, e.g. PostgreSQL
+19rc1 SELECT connection sweep and OSM import on siren completed 2026-10-20,
+based on rc1 2026-10-15 catalog 20261006.
+
 **PG19 rc1 catalog bump (2026-10-19).** A beta4 (or earlier 19) data directory
 will not start on rc1. **Twilight’s** PG19 **test** instance must be recreated
 from scratch — Greg leads because that datadir is **partitioned** on the Fury
