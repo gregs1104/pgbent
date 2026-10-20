@@ -13,6 +13,8 @@ The OSM table is the current Planet extract (**10.79 billion** nodes), mixed Pos
 
 ## OSM
 
+The OSM Score is a composite ranking based on loading the OpenStreetMap Planet GIS workload. The score includes just the hardest CPU phase, Relation building, and the two longest index builds. It ignores aspects of the loading that stress cache effects more so than CPU or disk.
+
 <!-- osm-leaderboard-traces:begin -->
 
 The board leader is **R9 9950X** (PostgreSQL 19, `fsync=off`, OSM score **1480**). Both traces are minute buckets of the owned **1-second** collectors on that run: Average is what a minute-grained sample would report; Maximum is the peak 1-second reading in that minute — the cliffs a delegated 60-second poll never stored. Disk is combined read+write on data volume `nvme2n1`.
