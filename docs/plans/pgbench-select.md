@@ -14,14 +14,14 @@ Near-term study so `/leaderboards/` can show Phoronix-comparable SELECT **plus p
 
 Match [OpenBenchmarking.org pts/pgbench](https://openbenchmarking.org/test/pts/pgbench) closely enough to **claim comparability** and **link them** for TPS outside this lab. What this farm adds is **package power** (and memory) on the same row. Postgres developers care whether a code change moves those up or down.
 
-Public ranking: [Leaderboards]({{ '/leaderboards/' | relative_url }}) — two faces only (**sockets** and **networked**). The sockets-versus-TCP mapping is a **one-time published study**, not a third ranking forever.
+Public ranking: [Leaderboards]({{ '/leaderboards/' | relative_url }}). The Phoronix-shaped cell is **prepared**. Keep running **all four faces** (sockets vs localhost TCP, simple vs prepared): that is the PG18 connection study, swept for code exercise so a method change cannot hide. Sockets-versus-TCP is not a third ranking forever, but it stays on the graph. Phoronix switched to `-M prepared` a few years ago (PTS pgbench 1.13) and kind of reset that public history; numbers went up, few noticed.
 
 ## Phoronix-shaped cell
 
 | Knob | Value | Notes |
 |------|--------|--------|
 | Workload | `wl/select-grid` / `SCRIPT=select` | |
-| Protocol | `PREPARED=1` (`-M prepared`) | PTS since pgbench 1.13 |
+| Protocol | `PREPARED=1` (`-M prepared`) | PTS since pgbench 1.13; that switch reset public history. Still sweep simple too. |
 | Runtime | `RUNTIME=90` | PTS `-T` 90 |
 | Scale | 100 | Their advertised default; ~1.6GB |
 | Repeats | `SETTIMES=2` | These CPU runs are tight; a third only if the two diverge. |
@@ -58,7 +58,7 @@ Unthrottled networked cells on the leaderboard for **TPS**, not for a combined p
 
 Siren `pgbench SELECT`: **unix sockets vs localhost TCP**, same box, same grid, no other change. That is the protocol overhead, not a network client. Flip `SOCKETS` between `runset` passes; `conn_method` splits the rows. Halt each face after **two** `SETTIMES` passes — do not grind a third unless they split.
 
-**Siren set 106 sockets (scale 100, 90s), 2026-10-19.** Peak still **32 clients** on both majors. PG18: **2,011,141** / **2,016,484**. 19beta4: **1,501,101** / **1,500,302** (~25% down; the pair agrees). Init `:-i` 503 vs 375. Drop is across the whole client sweep (~23–27%). **Do not publish** as an 18↔19 regression: beta packages often have assertions on (`debug_assertions`), and that trash this CPU-bound SELECT. **When siren is back, in order:** (1) **19rc1** and rerun this sockets SELECT grid until the data is clean (assert-off; not more 19beta4). (2) **OSM on 19rc1** on the 9950X. (3) **switch to 9600X** for the OSM comparison SKU.
+**Siren set 106 sockets prepared (scale 100, 90s), 2026-10-19.** Peak still **32 clients**. PG18: **2,011,141** / **2,016,484**. An early mixed `latest_set` also had 19beta4 **host prepared** **1,501,101** / **1,500,302** (~25% down) — test-method error, not debug assertions. Not worth chasing; cover the whole connection grid once the RC is ready. Fair version-only: 19rc1 sockets prepared **2.06M** vs 18 **2.01M**; 19rc1 host prepared **1.52M** vs 19beta4 **1.50M**. Scale 100 is ~1.6GB in RAM; a disk swap between pins does not matter. See [Comparing versions]({{ '/workloads/#comparing-versions' | relative_url }}). **2026-10-20 — 19rc1 validated** (as fast as 18, maybe a tiny faster) across three Linux platforms and a Mac. Siren OSM import on 19rc1 is done. The siren `pgbench SELECT` set is the **starter leaderboard** (`conn_method` faces). Next hardware step is still **9600X**.
 
 ## Later: true remote TCP on the new 2S
 
@@ -75,7 +75,7 @@ Cable the pair once. Control rates with **`tc`** (TBF/HTB/CAKE) on the path pack
 | Box | Role |
 |-----|------|
 | twilight (13600K) | Fast looper; SELECT grid; 13600K end of the network pair |
-| siren (9950X) | Greg-only / no agent SSH (fragile chassis, hands-on recovery). Rear ST120 is in; OSM probe **finished 4.07h** (2026-10-18; replacement for the wiped cell). Set **106** sockets: PG18 max at **32 clients** **2,011,141** / **2,016,484**; 19beta4 **1,501,101** / **1,500,302** (~25% down, pair agrees). Halt after two; **`SETTIMES=2`**. Do not publish the 19b4 drop (beta assertions trash this test). **When siren is back, in order:** **19rc1 SELECT** until clean, then **OSM on 19rc1**, then **9600X**. `newset` **`pgbench SELECT`**: on-box **UNIX vs localhost TCP** (`conn_method` distinguishes) — overhead only; TCP still to collect. SELECT + OSM is the usual 18↔19 regression pair (small-scale reads, planet-load writes). Rear ST120 works hard by the end of each 90s and harder still importing `pgbench -l` latency at this TPS. Prepared, 90s, scale 100, 1-client + full clients, package power; `PREPARED=1` in params, `SUDODATA=1` already in `config`. Do this **before** the 9600X downgrade. True remote TCP at 128 clients waits on the **new 2S**. OSM comparison charts are waiting on **9600X** to fill the gap between high-power x86 and ARM; OSM barely moved 9600X→9950X. Greg is looking for the chip. Also 9950X client for the `tc` sweep; data via `download`. |
+| siren (9950X) | Greg-only / no agent SSH (fragile chassis, hands-on recovery). Rear ST120 is in; OSM probe **finished 4.07h** (2026-10-18; replacement for the wiped cell). Set **106** sockets prepared: PG18 max at **32 clients** **2,011,141** / **2,016,484**. Early 19beta4 **1.50M** cells in that `latest_set` were **host prepared** (method error, not asserts). **19rc1** covered the whole connection grid; sockets prepared **2.06M**. Halt after two; **`SETTIMES=2`**. **19rc1 is the validated pin** (as fast as 18, maybe a tiny faster). Siren OSM import finished 2026-10-20. The SELECT set is the starter leaderboard (`conn_method` faces). Next: **9600X**. Rear ST120 works hard by the end of each 90s and harder still importing `pgbench -l` latency at this TPS. Prepared, 90s, scale 100, 1-client + full clients, package power; `PREPARED=1` in params, `SUDODATA=1` already in `config`. Do this **before** the 9600X downgrade. True remote TCP at 128 clients waits on the **new 2S**. OSM comparison charts are waiting on **9600X** to fill the gap between high-power x86 and ARM; OSM barely moved 9600X→9950X. Greg is looking for the chip. Also 9950X client for the `tc` sweep; data via `download`. |
 | abbey | M-series watts; Greg workstation, not public Mac QA |
 | court (Spark) | ARM/Spark watts; build-animal later; OSM PG19 stretch still first |
 
@@ -87,6 +87,7 @@ The switch of gears is already public on [Greg Smith’s Crunchy blog index](htt
 
 ## Publication
 
+- **Starter board:** siren PG19 rc1 `pgbench SELECT` set — graph and table of `conn_method` faces on `/leaderboards/` (`reports/select-leaderboard.py --from-db`). Later: sockets TPS vs watts scatter and more machines.
 - Study batch can be one `newset` (siren: `pgbench SELECT`); faces are `conn_method`, not separate batches.
 - Scatter like OSM power: TPS vs max package W on **sockets** cells, two markers per CPU (1 client / full).
 - `/leaderboards/` SELECT section + versioned snapshot tables. Streamlit stays a local grid, not the hosted site.

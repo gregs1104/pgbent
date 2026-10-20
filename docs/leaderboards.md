@@ -7,7 +7,7 @@ nav_order: 0
 
 # Leaderboards
 
-Public OSM planet-load and pgbench SELECT rankings from the pgbent farm personally run by Greg Smith. This page is updated when there are new cells; it is not a live dashboard.
+Public OSM planet-load and pgbench SELECT rankings from the pgbent farm personally run by Greg Smith. This page is updated when there are new cells; it is not a live dashboard. PostgreSQL **19rc1** SELECT connection sweep and OSM import on siren landed **2026-10-20**, the day after the rc1 catalog bump.
 
 The OSM table is the current Planet extract (**10.79 billion** nodes), mixed PostgreSQL 16–19, ranked by OSM score. The [PostgreSQL 18]({{ '/results-summary/pg18/' | relative_url }}) snapshot remains the last frozen release cycle. Watts, durability (`fsync` / `wal_level`), and checkpoint columns travel with the OSM rows.
 
@@ -77,19 +77,38 @@ Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bi
 
 ## pgbench SELECT
 
-Phoronix-comparable **SELECT** cells: `-M prepared`, **90s**, scale 100, single-client and full-client. Package power and memory sit on the same row as TPS on the **sockets** face (one machine, complete accounting). Combining client and server watts across boxes is out of scope. Postgres developers care whether a code change moves power and memory up or down. For hardware outside this lab, use [OpenBenchmarking.org pts/pgbench](https://openbenchmarking.org/test/pts/pgbench) as the comparable TPS set.
+Phoronix-comparable **SELECT** cells: **90s**, scale 100. Package power sits on the same row as TPS on the **sockets** face (one machine, complete accounting). Combining client and server watts across boxes is out of scope. Postgres developers care whether a code change moves power and memory up or down. For hardware outside this lab, use [OpenBenchmarking.org pts/pgbench](https://openbenchmarking.org/test/pts/pgbench) as the comparable TPS set.
 
-The board has two faces: on-box unix sockets, and a network client. OpenBenchmarking’s multi-million TPS numbers are the networked face on DC hardware, not unix sockets sharing the server with pgbench. A sockets-versus-network mapping study will be published once. The remote rate sweep (same Mbps labels as [OSM Network]({{ '/results-summary/pg18/osm-network/' | relative_url }})) sits with that study, not as a third ranking.
+Phoronix switched to `-M prepared` a few years ago (PTS pgbench 1.13) and kind of reset that public history. Numbers went up; not many people noticed. This lab still runs **all four faces** — sockets vs localhost TCP, simple vs prepared — the [PG18 connection study]({{ '/results-summary/pg18/pgbench-select/' | relative_url }}), kept as a code exercise so a method change cannot hide. Prepared is the Phoronix-shaped ranking cell. OpenBenchmarking’s multi-million TPS numbers are a **remote** TCP client on DC hardware, not localhost and not unix sockets sharing the server with pgbench. A true remote mapping waits on the new 2S.
 
-Current published SELECT grid (older mix of protocols): [pgbench SELECT (PG18 snapshot)]({{ '/results-summary/pg18/pgbench-select/' | relative_url }}). Workload notes: [pgbench grids]({{ '/workloads/' | relative_url }}).
+This starter board is **siren** (R9 9950X) on PostgreSQL **19rc1**, published **2026-10-20** — the day after the rc1 catalog bump. Hold `conn_method` constant when comparing versions — mixing sockets with localhost TCP can look like a 25% hole. See [Comparing versions]({{ '/workloads/#comparing-versions' | relative_url }}).
+
+<!-- select-leaderboard:begin -->
+
+Starter board from **siren** (R9 9950X), PostgreSQL **19rc1** (published **2026-10-20**, the day after the rc1 catalog bump), scale 100, 90s. Same box, four faces of the connection sweep (PG18 study, kept as a code exercise): unix sockets vs localhost TCP, simple vs `-M prepared`. Peak is **32 clients**, sockets prepared (**2.06M TPS**). Localhost TCP prepared sits at **1.52M** (~26% below sockets). Package watts are on the sockets face; 32-client runs sat at the **200 W** RAPL sample.
+
+![pgbench SELECT - Siren 9950X]({{ '/images/select-leaderboard.png' | relative_url }})
+
+Mean TPS across repeats (4 faces). **tps_1** is the old single-core cell; **tps_32** is the max on this chip.
+
+| conn | tps_1 | tps_32 | avg_pkg | max_pkg |
+| --- | --- | --- | --- | --- |
+| sockets prepared | 132,433 | 2,058,653 | 200 | 200 |
+| localhost TCP prepared | 96,566 | 1,517,063 | 200 | 200 |
+| sockets | 89,241 | 1,354,200 | 200 | 200 |
+| localhost TCP | 68,924 | 997,097 | 200 | 200 |
+
+<!-- select-leaderboard:end -->
+
+Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/select-leaderboard.py --from-db`. Older mixed-protocol grid: [pgbench SELECT (PG18 snapshot)]({{ '/results-summary/pg18/pgbench-select/' | relative_url }}). Workload notes: [pgbench grids]({{ '/workloads/' | relative_url }}).
 
 ### Sockets
 
-Unix-domain connections (`SOCKETS=1`), prepared statements. Clients run on the server. This is the power-ranking cell.
+Unix-domain connections (`SOCKETS=1`). Clients run on the server. This is the power-ranking cell. **Prepared** is the Phoronix-shaped face.
 
 ### Networked
 
-TCP to a dedicated client (`host`), prepared statements. Unthrottled only on this board. This is the face that can exceed on-box rates once the link is faster than ~10Gb/s.
+Localhost TCP (`host`) on this starter chart is protocol overhead on the same box, not a dedicated client. Unthrottled remote TCP is the face that can exceed on-box rates once the link is faster than ~10Gb/s.
 
 ## Contact
 

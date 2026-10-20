@@ -24,6 +24,7 @@ Topics worth writing for [getbent.io](https://getbent.io) when there is time and
 | Public OSM / pgbench SELECT rankings | `docs/leaderboards.md` (`/leaderboards/`) |
 | Setup, running, results, reports | `docs/setup.md`, `docs/running.md`, `docs/results.md`, `docs/reports.md` |
 | Workloads (pgbench, OSM, CBC) | `docs/workloads/` |
+| Comparing versions / conn_method | `docs/workloads/index.md` § Comparing versions |
 | Tuning studies | `docs/model/` |
 | Troubleshooting, versions | `docs/troubleshooting.md`, `docs/versions.md` |
 

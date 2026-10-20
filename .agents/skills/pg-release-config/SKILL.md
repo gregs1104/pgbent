@@ -70,6 +70,15 @@ other study-critical GUCs) rather than `sourcefile LIKE '%conf.d%'`.
 When the Homebrew cluster major changes, migrate the results database with the
 upload-then-reload workflow in `pg-release-runs` before opening a new study set.
 
+**PG19 rc1 catalog bump (2026-10-19).** A beta4 (or earlier 19) data directory
+will not start on rc1. **Twilight’s** PG19 **test** instance must be recreated
+from scratch — Greg leads because that datadir is **partitioned** on the Fury
+volumes, not a stock PGDG path. Do not `pg_upgrade`, do not `initdb` into the
+live path until he walks it. Keep the results instance; only the test cluster
+is thrown away. **This is why results stay on a 1GB previous-major cluster** —
+never in the beta. After a catalog bump the beta datadir can be unreadable.
+**Abbey has not gotten PG19 yet.**
+
 **Brew PG restarts are a struggle.** `brew services restart postgresql@<N>` often
 claims success while the **old postmaster keeps running** (idle `gis` backends,
 metrics collectors, etc. hold it open). After folding durability or memory
