@@ -3,6 +3,7 @@ layout: home
 title: Leaderboards
 permalink: /leaderboards/
 nav_order: 0
+has_children: true
 ---
 
 # Leaderboards
@@ -19,47 +20,13 @@ The OSM Score is a composite ranking based on loading the OpenStreetMap Planet G
 
 This workload does not benefit very much from larger core or socket counts. Relation building does not fill a second CCD or a second socket; extra cores mostly add package watts. The 9600X→9950X swap barely moved OSM score.
 
-At current sizes near 10 billion nodes, a **Total** of **750** kNodes/s is a 4-hour run. The bars are the numbers people already know: OSM score, full-load Total, and Index. Everything after this chart breaks down some component.
+At current sizes near 10 billion nodes, a **Total** of **750** kNodes/s is a 4-hour run. The bars are the numbers people already know: OSM score, full-load Total, and Index.
 
 ![OSM load leaderboard — best run per server configuration]({{ '/images/osm-leaderboard.png' | relative_url }})
 
-**R9 9950X** leads at **1480** OSM score (**719** Total, **4.17h**, PostgreSQL 19, `fsync=off`, **70 W** average / **180 W** peak). **i5-13600K** follows on the same Planet.
+**R9 9950X** leads at **1480** OSM score (**719** Total, **4.17h**). **i5-13600K** follows on the same Planet. Disk traces, package watts, and energy are on [OSM Leaders: Performance vs. Power]({{ '/leaderboards/osm-performance-power/' | relative_url }}).
 
-<!-- osm-leaderboard-traces:begin -->
-
-The board leader is **R9 9950X** (PostgreSQL 19, `fsync=off`, OSM score **1480**). Both traces are minute buckets of the owned **1-second** collectors on that run: Average is what a minute-grained sample would report; Maximum is the peak 1-second reading in that minute — the cliffs a delegated 60-second poll never stored. Disk is combined read+write on data volume `nvme2n1`.
-
-![OSM leader disk average vs 1-second maximum]({{ '/images/osm-leaderboard-disk.png' | relative_url }})
-
-![OSM leader package power average vs 1-second maximum]({{ '/images/osm-leaderboard-power.png' | relative_url }})
-
-The power-efficiency leader is **Apple M4 Max Studio** (PostgreSQL 18, `fsync=off`, **16.1** score/W, OSM score **561**). Disk is Darwin combined throughput (`disk0_MB/s`); there is no read/write split.
-
-![OSM efficiency-leader disk average vs 1-second maximum]({{ '/images/osm-leaderboard-efficiency-disk.png' | relative_url }})
-
-![OSM efficiency-leader package power average vs 1-second maximum]({{ '/images/osm-leaderboard-efficiency-power.png' | relative_url }})
-
-<!-- osm-leaderboard-traces:end -->
-
-<!-- osm-leaderboard-joules:begin -->
-
-Speed vs energy for the best run on each machine. **Score** is OSM kNodes/s; **kJ** is total package energy (joules, shown as kilojoules) from the 1-second power integral over the test window. NVIDIA DGX Spark package watts come from the open [spark_hwmon](https://github.com/antheas/spark_hwmon) module, not an NVIDIA-shipped sensor path.
-
-You can potentially triple the OSM score running on the fastest x86 instead of ARM, but it costs 4–5× as much energy to juice up the processors to do it. **R9 9950X** scores **1480** at **1046 kJ**; **Apple M4 Max Studio** scores **578** at **224 kJ** (**2.6×** score, **4.7×** joules). Versus NVIDIA Grace the score ratio is **2.9×** (1480 vs 504).
-
-![OSM score vs package energy]({{ '/images/osm-leaderboard-joules.png' | relative_url }})
-
-<!-- osm-leaderboard-joules:end -->
-
-<!-- osm-leaderboard-compare:begin -->
-
-One chart for the same best-score run on each machine, sorted by OSM score. Bar length is relative to the lead system, on that metric (**100%** = that system's value). Labels are the raw values. A longer **kJ** bar means more energy used, not more efficiency.
-
-![osm2pgsql Load Time - System Comparison]({{ '/images/osm-leaderboard-compare.png' | relative_url }})
-
-<!-- osm-leaderboard-compare:end -->
-
-Best OpenStreetMap planet load per **machine × version × durability** cell (host-local client). Only extracts with **at least 10 billion nodes** are eligible. Each row is the **score_kips** winner for that CPU/memory/disk, PostgreSQL major, `fsync`, `wal_level`, and `max_wal_gb`, with average and peak **disk MB/s** and **package watts** from the same run — the grid the power-efficiency study will use. Ranked by OSM score (`score_kips`): node count divided by relation + polygon + line time, in kNodes/s. **overall_kips** is the full load; **index_kips** is index build. Fast cells (`fsync=off` / `wal_level=minimal`) stay on the board and are labeled, not hidden. Per-watt columns use peak package power; `pwr_est` means only the peak was sampled.
+Best OpenStreetMap planet load per **machine × version × durability** cell (host-local client). Only extracts with **at least 10 billion nodes** are eligible. Each row is the **score_kips** winner for that CPU/memory/disk, PostgreSQL major, `fsync`, `wal_level`, and `max_wal_gb`. Ranked by OSM score (`score_kips`): node count divided by relation + polygon + line time, in kNodes/s. **overall_kips** is the full load; **index_kips** is index build. Fast cells (`fsync=off` / `wal_level=minimal`) stay on the board and are labeled, not hidden.
 
 <!-- osm-leaderboard-table:begin -->
 
@@ -81,7 +48,7 @@ _Query returned 11 rows._
 
 <!-- osm-leaderboard-table:end -->
 
-Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/osm-leaderboard.py --from-db` (runs `reports/osm-leaderboard.sql`). Previous cycle used a smaller Planet (~9.3B nodes): [OSM Leaderboard (PG18 snapshot)]({{ '/results-summary/pg18/osm-leaderboard/' | relative_url }}). Workload notes: [OSM]({{ '/workloads/osm' | relative_url }}).
+Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/osm-leaderboard.py --from-db` (runs `reports/osm-leaderboard.sql`). Disk and power studies: [OSM Leaders: Performance vs. Power]({{ '/leaderboards/osm-performance-power/' | relative_url }}). Previous cycle used a smaller Planet (~9.3B nodes): [OSM Leaderboard (PG18 snapshot)]({{ '/results-summary/pg18/osm-leaderboard/' | relative_url }}). Workload notes: [OSM]({{ '/workloads/osm' | relative_url }}).
 
 ## pgbench SELECT
 

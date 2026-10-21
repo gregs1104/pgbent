@@ -21,7 +21,7 @@ Topics worth writing for [getbent.io](https://getbent.io) when there is time and
 | Area | Location |
 |------|----------|
 | Overview, workloads, getting started | `docs/index.md`, `docs/intro.md` |
-| Public OSM / pgbench SELECT rankings | `docs/leaderboards.md` (`/leaderboards/`) |
+| Public OSM / pgbench SELECT rankings | `docs/leaderboards.md` (`/leaderboards/`); OSM disk and power on `/leaderboards/osm-performance-power/` |
 | Setup, running, results, reports | `docs/setup.md`, `docs/running.md`, `docs/results.md`, `docs/reports.md` |
 | Workloads (pgbench, OSM, CBC) | `docs/workloads/` |
 | Comparing versions / conn_method | `docs/workloads/index.md` § Comparing versions |

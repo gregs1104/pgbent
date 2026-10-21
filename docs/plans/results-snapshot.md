@@ -21,7 +21,7 @@ treat re-enabling Streamlit Cloud as part of this cycle.
 
 | Path | Role |
 |------|------|
-| **Leaderboards** (`docs/leaderboards.md` → `/leaderboards/`) | Public OSM + pgbench SELECT ranking URL; refresh when new cells land |
+| **Leaderboards** (`docs/leaderboards.md` → `/leaderboards/`) | Public OSM + pgbench SELECT ranking URL; refresh when new cells land. OSM disk/power: `/leaderboards/osm-performance-power/` |
 | **Results summary** (`docs/results-summary/pg<N>/`) | Full study tables on getbent.io; **primary archive for PG19** |
 | **Study SQL** (`reports/*.sql` and/or `explorer/submission_studies.py`) | Query that defines each study |
 | **Streamlit** (`explorer/submission-explore.py`) | PG18 path / optional local; not hosted for PG19 |

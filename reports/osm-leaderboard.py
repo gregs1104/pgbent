@@ -5,11 +5,10 @@ Graph OSM leaderboard results.
 Default: read a release's static snapshot (PG18) and write the matching PNG.
 
 `--from-db` runs `reports/osm-leaderboard.sql` against the results database,
-writes the ranked table into `docs/leaderboards.md`, plots the per-machine
-bar chart, score-vs-joules scatter, the three-metric system comparison,
-and Average vs Maximum disk and package-power traces for the score leader
-and the power-efficiency leader from `test_metrics_data`. That is the
-public-page path; it does not go through Streamlit.
+writes the ranked table into `docs/leaderboards.md`, and writes disk/power
+traces, score-vs-joules, and the system comparison into
+`docs/leaderboards/osm-performance-power.md`. That is the public-page path;
+it does not go through Streamlit.
 
 Usage:
   python3 reports/osm-leaderboard.py
@@ -55,6 +54,7 @@ LABEL_LINESPACING = 1.7
 DEFAULT_CONN = "host=localhost dbname=results user=gsmith password=secret"
 SQL_PATH = REPO_ROOT / "reports" / "osm-leaderboard.sql"
 LEADERBOARD_PAGE = REPO_ROOT / "docs" / "leaderboards.md"
+POWER_PAGE = REPO_ROOT / "docs" / "leaderboards" / "osm-performance-power.md"
 PUBLIC_IMAGE = REPO_ROOT / "docs" / "images" / "osm-leaderboard.png"
 DISK_IMAGE = REPO_ROOT / "docs" / "images" / "osm-leaderboard-disk.png"
 POWER_IMAGE = REPO_ROOT / "docs" / "images" / "osm-leaderboard-power.png"
@@ -82,11 +82,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--from-db",
         action="store_true",
-        help="Run osm-leaderboard.sql and populate docs/leaderboards.md",
+        help="Run osm-leaderboard.sql and populate the leaderboard and power pages",
     )
     parser.add_argument("--sql", type=Path, default=SQL_PATH)
     parser.add_argument("--page", type=Path, default=LEADERBOARD_PAGE)
-    parser.add_argument("--no-page", action="store_true", help="Skip writing the Markdown page")
+    parser.add_argument("--power-page", type=Path, default=POWER_PAGE)
+    parser.add_argument("--no-page", action="store_true", help="Skip writing the Markdown pages")
     parser.add_argument("--conn", default=os.environ.get("RESULTS_CONN", DEFAULT_CONN))
     args = parser.parse_args()
     if args.from_db:
@@ -580,17 +581,21 @@ def replace_marked_block(text: str, begin: str, end: str, inner: str) -> str:
     raise SystemExit(f"Missing {begin} / {end} markers in leaderboard page")
 
 
-def write_leaderboard_page(
+def write_leaderboard_page(page: Path, table_md: str, n_rows: int) -> None:
+    text = page.read_text(encoding="utf-8")
+    table_inner = f"{TABLE_BEGIN}\n\n_Query returned {n_rows} rows._\n\n{table_md}\n\n{TABLE_END}"
+    text = replace_marked_block(text, TABLE_BEGIN, TABLE_END, table_inner)
+    page.write_text(text, encoding="utf-8")
+    print(f"Wrote {n_rows} rows into {page}")
+
+
+def write_power_page(
     page: Path,
-    table_md: str,
-    n_rows: int,
     traces_md: str | None = None,
     joules_md: str | None = None,
     compare_md: str | None = None,
 ) -> None:
     text = page.read_text(encoding="utf-8")
-    table_inner = f"{TABLE_BEGIN}\n\n_Query returned {n_rows} rows._\n\n{table_md}\n\n{TABLE_END}"
-    text = replace_marked_block(text, TABLE_BEGIN, TABLE_END, table_inner)
     if traces_md is not None:
         text = replace_marked_block(text, TRACE_BEGIN, TRACE_END, traces_md)
     if joules_md is not None:
@@ -598,7 +603,7 @@ def write_leaderboard_page(
     if compare_md is not None:
         text = replace_marked_block(text, COMPARE_BEGIN, COMPARE_END, compare_md)
     page.write_text(text, encoding="utf-8")
-    print(f"Wrote {n_rows} rows into {page}")
+    print(f"Wrote disk/power detail into {page}")
 
 
 def same_run(a: pd.Series, b: pd.Series) -> bool:
@@ -719,10 +724,9 @@ def main() -> int:
             args.page,
             dataframe_to_markdown(public_table(table)),
             len(table),
-            traces_md,
-            joules_md,
-            compare_md,
         )
+        if traces_md or joules_md or compare_md:
+            write_power_page(args.power_page, traces_md, joules_md, compare_md)
     return 0
 
 
