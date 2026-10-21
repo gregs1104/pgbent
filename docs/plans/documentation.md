@@ -81,6 +81,14 @@ weeks always mean a lot of lab firefighting; that granularity is how failures
 like a mid-import table rewrite (DB size cliff in ~5s) get diagnosed. Document
 this design choice alongside the formats.
 
+The schema grew the same way: each year a study needed extra metadata, so
+another column landed — never a grand design. When a published number looks
+wrong, the check is the text files behind `test_metrics_data` (siren SELECT
+rounding every 32-client face to 200 W; the 1-second `PkgWatt` series was
+~62 W at 1 client and 199.6 on the PPT rail). A monitoring-system sample
+would not have that detail, and 60-second averages hide the same cliffs.
+That is why the collector work stays.
+
 - [ ] **Queries** — pgbench log lines, latency samples, custom SQL capture format
   - Existing: `timing` table (CSV staging), `tests` summary columns; `export-latency-metric.sql` as OHLC export sketch
   - Implementation: out-of-DB per-second summary is a side of the gnuplot latency migration — [plotting.md](plotting.md) (pandas/numpy, not Perl)

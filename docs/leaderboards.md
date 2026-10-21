@@ -41,7 +41,7 @@ The chart still keeps one bar pair per machine (best **score** on that box). **R
 
 <!-- osm-leaderboard-joules:begin -->
 
-Speed vs energy for the best run on each machine. **Score** is OSM kNodes/s; **kJ** is total package energy (joules, shown as kilojoules) from the 1-second power integral over the test window.  NVidia DGX Spark power consumption collected via [spark_hwmon https://github.com/antheas/spark_hwmon].
+Speed vs energy for the best run on each machine. **Score** is OSM kNodes/s; **kJ** is total package energy (joules, shown as kilojoules) from the 1-second power integral over the test window. NVIDIA DGX Spark package watts come from the open [spark_hwmon](https://github.com/antheas/spark_hwmon) module, not an NVIDIA-shipped sensor path.
 
 You can potentially triple the OSM score running on the fastest x86 instead of ARM, but it costs 4–5× as much energy to juice up the processors to do it. **R9 9950X** scores **1480** at **1046 kJ**; **Apple M4 Max Studio** scores **578** at **224 kJ** (**2.6×** score, **4.7×** joules). Versus NVIDIA Grace the score ratio is **2.9×** (1480 vs 504).
 

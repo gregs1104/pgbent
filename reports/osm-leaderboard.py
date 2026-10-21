@@ -254,7 +254,9 @@ def joules_markdown(df: pd.DataFrame) -> str:
     body = (
         "Speed vs energy for the best run on each machine. **Score** is OSM kNodes/s; "
         "**kJ** is total package energy (joules, shown as kilojoules) from the 1-second "
-        "power integral over the test window."
+        "power integral over the test window. NVIDIA DGX Spark package watts come from "
+        "the open [spark_hwmon](https://github.com/antheas/spark_hwmon) module, not an "
+        "NVIDIA-shipped sensor path."
     )
     if takeaway:
         body = f"{body}\n\n{takeaway}"

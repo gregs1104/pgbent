@@ -15,7 +15,7 @@ This page describes what pgbent collects during a run and how results are organi
 
 pgbent records all system activity and a package of PostgreSQL metrics while executing a database workload. It saves enough data to discover and investigate performance regressions in PostgreSQL itself or in a workload built on top of it.
 
-All metrics go into a PostgreSQL results database. Summary reporting SQL gives immediate feedback on each run. Graphics include workload summaries, and Python/Pandas scripts can plot any test run's metric time series.
+All metrics go into a PostgreSQL results database. Summary reporting SQL gives immediate feedback on each run. Graphics include workload summaries, and Python/Pandas scripts can plot any test run's metric time series. When a summary looks suspicious, the check is the one-second files behind those rows — a delegated monitor average would not have that detail.
 
 Collected by default:
 

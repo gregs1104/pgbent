@@ -257,6 +257,14 @@ was rewritten). Delegating that layer to other tools historically lost
 granularity and trust. Keep the simple collectors; fix their edges — do not
 replace them with an opaque stack mid-cycle. See `AGENTS.md` § Architecture.
 
+The schema was never meant to be this large. Each year some study needs extra
+metadata, so another column or metric lands. The 19rc1 SELECT power table is
+the method: every face rounded to **200 / 200 W** looked copied; the 1-second
+`PkgWatt` files showed 1-client ~62 W and 16+ clients pegged at **199.6**
+(PPT rail). A monitoring-system average would have erased that check. Combined
+with per-second averaging hiding cliffs, this lab is stuck with the collector
+work on purpose.
+
 ### OSM stack freeze (hold regression points)
 
 Do **not** casually upgrade osm2pgsql / PostGIS / related loader packages mid
@@ -312,8 +320,13 @@ Other machines:
   vs abbey’s bundled **+49% / −33%**. **PG19 rc1 set 5** has enough to start
   with: durable **20/21/22** (8.73h/343, 8.78h/342, 8.50h/353) and fast **23**
   (8.30h/361, `fsync` off). **2026-10-19 — halted:** `stop-set cleanup` wiped
-  unfinished **24**; `shutdown -h now`. SSH closed. Do not start another court
-  OSM. Unreliable about booting; force-restart procedure not written down yet.
+  unfinished **24**; `shutdown -h now`. SSH closed. Came back **2026-10-20**.
+  Do not start another court OSM. **2026-10-20 — PG19 rc1 SELECT** set **6**
+  (`PG19 rc1 SELECT`): four faces, scale 100, 90s, `SETTIMES=2`, clients
+  `1 2 4 8 16 32 64`, sockets prepared first (`/tmp/court-select-faces.sh`,
+  `select-faces.log`). Slowest ARM / Spark appliance cell for the public
+  txn/J board. Unreliable about booting; force-restart procedure not written
+  down yet.
 
 ## Near-term deadline (lab downtime)
 
@@ -372,8 +385,9 @@ call `sudo pgbent_perf stop`, then enable profiling. Confirm no leftover
 captures.
 
 **19rc1 OSM on court is in hand — enough to start with.** Set 5 durable
-20/21/22 plus fast 23. Box is **down** (2026-10-19); unfinished 24 was
-wiped. Do not queue more court planet loads. Tooling work for this major is
+20/21/22 plus fast 23. Unfinished 24 was wiped. Do not queue more court
+planet loads. Box is **up** (2026-10-20); set **6** is the SELECT connection
+sweep (same process as siren). Tooling work for this major is
 done; other hosts can use this pin as the published 19 cell. Community rc1
 testing deadline is **2026-11-12**; this lab should be weeks ahead.
 
