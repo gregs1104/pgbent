@@ -303,17 +303,50 @@ def _text_width_data(ax, text: str, fontsize: float, renderer) -> float:
     return abs(x1 - x0)
 
 
+def _format_hours(hours: float | None) -> str:
+    if hours is None or not math.isfinite(hours) or hours <= 0:
+        return ""
+    rounded = round(hours, 2)
+    if abs(rounded - round(rounded, 1)) < 1e-9:
+        return f"{rounded:.1f}h"
+    return f"{rounded:.2f}h"
+
+
+def _index_phase_hours(
+    hours: float, overall_kips: float, index_kips: float
+) -> float | None:
+    """Wall-clock of polygon+line+point+roads, inverted from index_kips.
+
+    index_kips is node_count/4 over the four index-table seconds, so
+    index_hours = hours * overall_kips / (4 * index_kips).
+    """
+    if any(
+        not math.isfinite(value) or value <= 0
+        for value in (hours, overall_kips, index_kips)
+    ):
+        return None
+    return hours * overall_kips / (4.0 * index_kips)
+
+
 def _label_barh_values(
-    ax, items: list[tuple[float, float, str, str]], fontsize: float = BAR_LABEL_FONTSIZE
+    ax,
+    items: list[tuple],
+    fontsize: float = BAR_LABEL_FONTSIZE,
 ) -> None:
-    """Inside-bar contrast labels when they fit; otherwise outside-right."""
+    """Inside-bar contrast labels when they fit; otherwise outside-right.
+
+    Optional 5th item is a hours suffix, always drawn to the right of the bar
+    (or combined with an outside rate label so the two do not stack).
+    """
     ax.figure.canvas.draw()
     renderer = ax.figure.canvas.get_renderer()
-    xmax = max(w for _, w, _, _ in items)
+    xmax = max(item[1] for item in items)
     pad = max(xmax * 0.02, 2)
     inner_pad = max(xmax * 0.015, 1.5)
     max_x = xmax
-    for yi, width, color, label in items:
+    for item in items:
+        yi, width, color, label = item[:4]
+        hours = item[4] if len(item) > 4 else ""
         text_width = _text_width_data(ax, label, fontsize, renderer)
         if text_width + inner_pad * 2 <= width:
             ax.text(
@@ -327,19 +360,35 @@ def _label_barh_values(
                 clip_on=True,
             )
             max_x = max(max_x, width)
+            if hours:
+                hx = width + pad
+                hour_width = _text_width_data(ax, hours, fontsize, renderer)
+                ax.text(
+                    hx,
+                    yi,
+                    hours,
+                    va="center",
+                    ha="left",
+                    fontsize=fontsize,
+                    color=BAR_LABEL_OUTSIDE_COLOR,
+                    clip_on=True,
+                )
+                max_x = max(max_x, hx + hour_width)
         else:
+            outside = f"{label} · {hours}" if hours else label
             x = width + pad
+            outside_width = _text_width_data(ax, outside, fontsize, renderer)
             ax.text(
                 x,
                 yi,
-                label,
+                outside,
                 va="center",
                 ha="left",
                 fontsize=fontsize,
                 color=BAR_LABEL_OUTSIDE_COLOR,
                 clip_on=True,
             )
-            max_x = max(max_x, x + text_width)
+            max_x = max(max_x, x + outside_width)
     ax.set_xlim(0, max_x + pad)
 
 
@@ -410,17 +459,31 @@ def plot_leaderboard(df: pd.DataFrame, output: Path, show: bool = False) -> None
     y = list(range(n))
     bar_h = 0.24
     series = (
-        (df["score_kips"], [i + bar_h for i in y], NODES_COLOR, "OSM score"),
-        (df["overall_kips"], y, TOTAL_COLOR, "Total"),
-        (df["index_kips"], [i - bar_h for i in y], INDEX_COLOR, "Index"),
+        (df["score_kips"], [i + bar_h for i in y], NODES_COLOR, "OSM score", None),
+        (df["overall_kips"], y, TOTAL_COLOR, "Total", "total"),
+        (df["index_kips"], [i - bar_h for i in y], INDEX_COLOR, "Index", "index"),
     )
 
     fig, ax = plt.subplots(figsize=(10, max(6, 1.15 * n + 1.8)))
-    items: list[tuple[float, float, str, str]] = []
-    for widths, ys, color, label in series:
+    items: list[tuple] = []
+    for widths, ys, color, label, phase in series:
         ax.barh(ys, widths, height=bar_h, color=color, label=label)
-        for yi, width in zip(ys, widths):
-            items.append((yi, float(width), color, f"{float(width):,.0f}"))
+        for i, (yi, width) in enumerate(zip(ys, widths)):
+            item: tuple = (yi, float(width), color, f"{float(width):,.0f}")
+            if phase == "total" and "hours" in df.columns:
+                hours_text = _format_hours(float(df.iloc[i]["hours"]))
+                if hours_text:
+                    item = (*item, hours_text)
+            elif phase == "index" and "hours" in df.columns:
+                index_hours = _index_phase_hours(
+                    float(df.iloc[i]["hours"]),
+                    float(df.iloc[i]["overall_kips"]),
+                    float(df.iloc[i]["index_kips"]),
+                )
+                hours_text = _format_hours(index_hours)
+                if hours_text:
+                    item = (*item, hours_text)
+            items.append(item)
 
     ax.set_yticks(y)
     ax.set_yticklabels(

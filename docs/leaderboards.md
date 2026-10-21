@@ -12,21 +12,21 @@ Public OSM planet-load and pgbench SELECT rankings from the pgbent server farm p
 
 PostgreSQL 19rc1 SELECT connection sweep and OSM import on siren completed 2026-10-20, based on rc1 2026-10-15 catalog 20261006.
 
-The OSM table is the current Planet extract (**10.79 billion** nodes), mixed PostgreSQL 16–19, ranked by OSM score. The [PostgreSQL 18]({{ '/results-summary/pg18/' | relative_url }}) snapshot remains the last frozen release cycle. Watts, durability (`fsync` / `wal_level`), and checkpoint columns travel with the OSM rows.
-
 ## OSM
 
 The OSM Score is a composite ranking based on loading the OpenStreetMap Planet GIS workload. The score includes just the hardest CPU phase, Relation building, and the two longest index builds. It ignores aspects of the loading that stress cache effects more so than CPU or disk.
 
-This workload does not benefit very much from larger core or socket counts. Relation building does not fill a second CCD or a second socket; extra cores mostly add package watts. The 9600X→9950X swap barely moved OSM score.
-
-At current sizes near 10 billion nodes, a **Total** of **750** kNodes/s is a 4-hour run. The bars are the numbers people already know: OSM score, full-load Total, and Index.
+At current sizes near 10 billion nodes, a **Total** of **750** kNodes/s is a 4-hour run. The bars are the score categories used here: OSM score, full-load Total score, and Index score. Total and Index also show hours to the right of the bar—the wall-clock figure people normally quote.
 
 ![OSM load leaderboard — best run per server configuration]({{ '/images/osm-leaderboard.png' | relative_url }})
 
 **R9 9950X** leads at **1480** OSM score (**719** Total, **4.17h**). **i5-13600K** follows on the same Planet. Disk traces, package watts, and energy are on [OSM Leaders: Performance vs. Power]({{ '/leaderboards/osm-performance-power/' | relative_url }}).
 
+The OSM table is the current Planet extract (**10.79 billion** nodes), mixed PostgreSQL 16–19, ranked by OSM score. The [PostgreSQL 18]({{ '/results-summary/pg18/' | relative_url }}) snapshot remains the last frozen release cycle. Watts, durability (`fsync` / `wal_level`), and checkpoint columns travel with the OSM rows.
+
 Best OpenStreetMap planet load per **machine × version × durability** cell (host-local client). Only extracts with **at least 10 billion nodes** are eligible. Each row is the **score_kips** winner for that CPU/memory/disk, PostgreSQL major, `fsync`, `wal_level`, and `max_wal_gb`. Ranked by OSM score (`score_kips`): node count divided by relation + polygon + line time, in kNodes/s. **overall_kips** is the full load; **index_kips** is index build. Fast cells (`fsync=off` / `wal_level=minimal`) stay on the board and are labeled, not hidden.
+
+This workload does not benefit very much from larger core or socket counts. Relation building does not fill a second CCD or a second socket; extra cores mostly add package watts. The past 9600X→9950X swap barely moved OSM score.
 
 <!-- osm-leaderboard-table:begin -->
 
