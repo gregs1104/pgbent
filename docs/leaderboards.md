@@ -39,7 +39,7 @@ Best OpenStreetMap planet load per **machine × version × durability** cell (ho
 
 ![OSM load leaderboard — best run per server configuration]({{ '/images/osm-leaderboard.png' | relative_url }})
 
-The chart still keeps one bar pair per machine (best **score** on that box). **R9 9950X** leads at **1480** OSM score (**719** overall kNodes/s, PostgreSQL 19, `fsync=off`, **70 W** average / **180 W** peak). **i5-13600K** follows on the same Planet.
+The chart keeps **OSM score** above **total** and **index** kNodes/s for the best-score run on each machine. **R9 9950X** leads at **1480** OSM score (**719** overall kNodes/s, PostgreSQL 19, `fsync=off`, **70 W** average / **180 W** peak). **i5-13600K** follows on the same Planet.
 
 <!-- osm-leaderboard-joules:begin -->
 

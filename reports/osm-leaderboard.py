@@ -46,6 +46,7 @@ from label_layout import LabelOffset, place_point_labels
 
 NODES_COLOR = "#e4572e"
 INDEX_COLOR = "#4c78a8"
+TOTAL_COLOR = "#f4a261"
 ENERGY_COLOR = "#2a9d8f"
 BAR_LABEL_INSIDE_COLOR = "#ffffff"
 BAR_LABEL_OUTSIDE_COLOR = "#333333"
@@ -301,6 +302,46 @@ def _text_width_data(ax, text: str, fontsize: float, renderer) -> float:
     return abs(x1 - x0)
 
 
+def _label_barh_values(
+    ax, items: list[tuple[float, float, str, str]], fontsize: float = BAR_LABEL_FONTSIZE
+) -> None:
+    """Inside-bar contrast labels when they fit; otherwise outside-right."""
+    ax.figure.canvas.draw()
+    renderer = ax.figure.canvas.get_renderer()
+    xmax = max(w for _, w, _, _ in items)
+    pad = max(xmax * 0.02, 2)
+    inner_pad = max(xmax * 0.015, 1.5)
+    max_x = xmax
+    for yi, width, color, label in items:
+        text_width = _text_width_data(ax, label, fontsize, renderer)
+        if text_width + inner_pad * 2 <= width:
+            ax.text(
+                width - inner_pad,
+                yi,
+                label,
+                va="center",
+                ha="right",
+                fontsize=fontsize,
+                color=_contrast_text_color(color),
+                clip_on=True,
+            )
+            max_x = max(max_x, width)
+        else:
+            x = width + pad
+            ax.text(
+                x,
+                yi,
+                label,
+                va="center",
+                ha="left",
+                fontsize=fontsize,
+                color=BAR_LABEL_OUTSIDE_COLOR,
+                clip_on=True,
+            )
+            max_x = max(max_x, x + text_width)
+    ax.set_xlim(0, max_x + pad)
+
+
 def _pct_of_leader(series: pd.Series, leader_value: float) -> pd.Series:
     if leader_value is None or leader_value <= 0:
         return series * 0
@@ -346,40 +387,7 @@ def plot_system_compare(df: pd.DataFrame, output: Path, show: bool = False) -> N
     ax.grid(True, axis="x", which="minor", linestyle=":", alpha=0.25)
     plain_axis(ax)
 
-    fig.canvas.draw()
-    renderer = fig.canvas.get_renderer()
-    xmax = max(w for _, w, _, _ in items)
-    pad = max(xmax * 0.02, 2)
-    inner_pad = max(xmax * 0.015, 1.5)
-    max_x = xmax
-    for yi, width, color, label in items:
-        text_width = _text_width_data(ax, label, BAR_LABEL_FONTSIZE, renderer)
-        if text_width + inner_pad * 2 <= width:
-            ax.text(
-                width - inner_pad,
-                yi,
-                label,
-                va="center",
-                ha="right",
-                fontsize=BAR_LABEL_FONTSIZE,
-                color=_contrast_text_color(color),
-                clip_on=True,
-            )
-            max_x = max(max_x, width)
-        else:
-            x = width + pad
-            ax.text(
-                x,
-                yi,
-                label,
-                va="center",
-                ha="left",
-                fontsize=BAR_LABEL_FONTSIZE,
-                color=BAR_LABEL_OUTSIDE_COLOR,
-                clip_on=True,
-            )
-            max_x = max(max_x, x + text_width)
-    ax.set_xlim(0, max_x + pad)
+    _label_barh_values(ax, items)
     ax.legend(
         loc="lower right",
         ncol=1,
@@ -397,42 +405,44 @@ def plot_system_compare(df: pd.DataFrame, output: Path, show: bool = False) -> N
 
 
 def plot_leaderboard(df: pd.DataFrame, output: Path, show: bool = False) -> None:
-    height = max(6, 0.52 * len(df) + 1.5)
-    fig, ax = plt.subplots(figsize=(10, height))
-    y = range(len(df))
-    bar_height = 0.35
-
-    ax.barh(
-        [i - bar_height / 2 for i in y],
-        df["overall_kips"],
-        height=bar_height,
-        color=NODES_COLOR,
-        label="Total (kNodes/s)",
-    )
-    ax.barh(
-        [i + bar_height / 2 for i in y],
-        df["index_kips"],
-        height=bar_height,
-        color=INDEX_COLOR,
-        label="Index (kNodes/s)",
+    n = len(df)
+    y = list(range(n))
+    bar_h = 0.24
+    series = (
+        (df["score_kips"], [i + bar_h for i in y], NODES_COLOR, "OSM score"),
+        (df["overall_kips"], y, TOTAL_COLOR, "Total"),
+        (df["index_kips"], [i - bar_h for i in y], INDEX_COLOR, "Index"),
     )
 
-    ax.set_yticks(list(y))
+    fig, ax = plt.subplots(figsize=(10, max(6, 1.15 * n + 1.8)))
+    items: list[tuple[float, float, str, str]] = []
+    for widths, ys, color, label in series:
+        ax.barh(ys, widths, height=bar_h, color=color, label=label)
+        for yi, width in zip(ys, widths):
+            items.append((yi, float(width), color, f"{float(width):,.0f}"))
+
+    ax.set_yticks(y)
     ax.set_yticklabels(
         df["label"],
         fontsize=LEADERBOARD_Y_LABEL_FONTSIZE,
         linespacing=LABEL_LINESPACING,
     )
-    ax.set_xlabel("OSM load throughput (kNodes/s)")
+    ax.set_xlabel("Throughput (kNodes/s)")
     ax.set_title("PostgreSQL OSM load leaderboard")
     ax.grid(True, axis="x", linestyle="--", alpha=0.4)
-    ax.legend(loc="lower right", fontsize=LEADERBOARD_LEGEND_FONTSIZE, markerscale=0.75)
     plain_axis(ax)
+    _label_barh_values(ax, items)
+    ax.legend(
+        loc="lower right",
+        fontsize=LEADERBOARD_LEGEND_FONTSIZE,
+        framealpha=0.92,
+        markerscale=0.75,
+    )
 
     fig.tight_layout()
     output.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output, dpi=160, bbox_inches="tight")
-    print(f"Wrote {output} ({len(df)} configurations)")
+    print(f"Wrote {output} ({n} configurations)")
     if show:
         plt.show()
     plt.close(fig)
