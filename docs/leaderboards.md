@@ -7,7 +7,7 @@ nav_order: 0
 
 # Leaderboards
 
-Public OSM planet-load and pgbench SELECT rankings from the pgbent farm personally run by Greg Smith. This page is updated when there are new cells; it is not a live dashboard.
+Public OSM planet-load and pgbench SELECT rankings from the pgbent server farm personally run by Greg Smith. This page is updated when there are interesting new cells; it is not a live dashboard.
 
 PostgreSQL 19rc1 SELECT connection sweep and OSM import on siren completed 2026-10-20, based on rc1 2026-10-15 catalog 20261006.
 
@@ -41,9 +41,9 @@ The chart still keeps one bar pair per machine (best **score** on that box). **R
 
 <!-- osm-leaderboard-joules:begin -->
 
-Speed vs energy for the best run on each machine. **Score** is OSM kNodes/s; **kJ** is total package energy (joules, shown as kilojoules) from the 1-second power integral over the test window.
+Speed vs energy for the best run on each machine. **Score** is OSM kNodes/s; **kJ** is total package energy (joules, shown as kilojoules) from the 1-second power integral over the test window.  NVidia DGX Spark power consumption collected via [spark_hwmon https://github.com/antheas/spark_hwmon].
 
-You can potentially triple the score running on the fastest x86 instead of ARM, but it costs 4–5× as much energy to juice up the processors to do it. **R9 9950X** scores **1480** at **1046 kJ**; **Apple M4 Max Studio** scores **578** at **224 kJ** (**2.6×** score, **4.7×** joules). Versus NVIDIA Grace the score ratio is **2.9×** (1480 vs 504).
+You can potentially triple the OSM score running on the fastest x86 instead of ARM, but it costs 4–5× as much energy to juice up the processors to do it. **R9 9950X** scores **1480** at **1046 kJ**; **Apple M4 Max Studio** scores **578** at **224 kJ** (**2.6×** score, **4.7×** joules). Versus NVIDIA Grace the score ratio is **2.9×** (1480 vs 504).
 
 ![OSM score vs package energy]({{ '/images/osm-leaderboard-joules.png' | relative_url }})
 
@@ -81,11 +81,13 @@ Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bi
 
 ## pgbench SELECT
 
-Phoronix-comparable **SELECT** cells: **90s**, scale 100. Package power sits on the same row as TPS on the **sockets** face (one machine, complete accounting). Combining client and server watts across boxes is out of scope. **Transactions per joule** is the energy-efficiency number for each client count — the same 1-second `PkgWatt` integral as OSM kJ. Better performance is also more work per watt-second; the PG community cares about that as a virtuous side effect, and this lab publishes it. For hardware outside this lab, use [OpenBenchmarking.org pts/pgbench](https://openbenchmarking.org/test/pts/pgbench) as the comparable TPS set.
+Phoronix-comparable **SELECT** cells: **90s**, scale 100.  The standard Postgres on Linux SELECT lab numbers published are at [OpenBenchmarking.org pts/pgbench](https://openbenchmarking.org/test/pts/pgbench); these are a comparable TPS collected by pgbent.
 
-Phoronix switched to `-M prepared` a few years ago (PTS pgbench 1.13) and kind of reset that public history. Numbers went up; not many people noticed. This lab still runs **all four faces** — sockets vs localhost TCP, simple vs prepared — the [PG18 connection study]({{ '/results-summary/pg18/pgbench-select/' | relative_url }}), kept as a code exercise so a method change cannot hide. Prepared is the Phoronix-shaped ranking cell. OpenBenchmarking’s multi-million TPS numbers are a **remote** TCP client on DC hardware, not localhost and not unix sockets sharing the server with pgbench. A true remote mapping waits on the new 2S.
+Phoronix switched to `-M prepared` a few years ago (PTS pgbench 1.13) and that reset the public face for a lot of viewers. Numbers went up, query planning in Postgres takes time. This lab still runs **all four faces** to SELECT performance — sockets vs localhost TCP, simple vs prepared. The [PG18 connection study]({{ '/results-summary/pg18/pgbench-select/' | relative_url }}) made the method public. Prepared is the Phoronix-shaped ranking cell. OpenBenchmarking’s multi-million TPS numbers involve multi-socket systems on DC network hardware, not localhost and not unix sockets sharing the server with pgbench.
 
-This starter board is **siren** (R9 9950X) on PostgreSQL **19rc1**. Hold `conn_method` constant when comparing versions — mixing sockets with localhost TCP can look like a 25% hole. See [Comparing versions]({{ '/workloads/#comparing-versions' | relative_url }}).
+The single socket leader board here is **siren** (R9 9950X) on PostgreSQL **19rc1**. Hold `conn_method` constant when comparing versions — mixing sockets with localhost TCP can look like a 25% hole. See [Comparing versions]({{ '/workloads/#comparing-versions' | relative_url }}).
+
+Package power sits on the same row as TPS on the **sockets** face (one machine, complete accounting). Combining client and server watts across boxes is out of scope--that's the harder to observe data center shaped problem. **Transactions per joule** is the energy-efficiency number for each client count — the same 1-second `PkgWatt` integral as OSM kJ. Better performance is also more work per watt-second; the PG community cares about that as a virtuous side effect of code improvements, so this lab publishes it.
 
 <!-- select-leaderboard:begin -->
 
@@ -120,4 +122,4 @@ Localhost TCP (`host`) on this starter chart is protocol overhead on the same bo
 
 ## Contact
 
-Greg is on Discord or e-mail. This page is the lab ranking, not an open submission program.
+Greg is on Discord or e-mail. This page is the lab ranking, not an open submission program--at least not yet anyway.
