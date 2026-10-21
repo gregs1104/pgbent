@@ -112,7 +112,7 @@ Mean across repeats (4 faces). **tps_1** is the old single-core cell; **tps_32**
 
 <!-- select-leaderboard:end -->
 
-`;` (`SCRIPT=empty`) can hit **280K TPS on a single client**. That's web scale. At one client the rates are just the inverse of the latency times: empty is the 3.6 μs protocol floor, then planning, execution, and TCP connection split the rest. Breakdown: [1-client latency pieces]({{ '/workloads/#1-client-latency-pieces' | relative_url }}). Not on this ranking.
+`;` (`SCRIPT=nothing`) **sockets prepared** can hit **280K TPS on a single client**. That's web scale. At one client the rates are just the inverse of the latency times: that face is the 3.6 μs protocol floor, then planning, execution, and TCP connection split the rest. The interesting next test is whether **preparation** moves `nothing` — no query to plan. Breakdown: [1-client latency pieces]({{ '/workloads/#1-client-latency-pieces' | relative_url }}). Not on this ranking.
 
 Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/select-leaderboard.py --from-db`. Older mixed-protocol grid: [pgbench SELECT (PG18 snapshot)]({{ '/results-summary/pg18/pgbench-select/' | relative_url }}). Workload notes: [pgbench grids]({{ '/workloads/' | relative_url }}).
 

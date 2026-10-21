@@ -12,7 +12,7 @@ pgbent includes fixed-size and scaling workloads. Each run records one-second me
 
 | Workload | What it exercises |
 |----------|-------------------|
-| **pgbench grids** (below) | SELECT, UPDATE, empty (`;`), and `:-i` init across client × database-size grids |
+| **pgbench grids** (below) | SELECT, UPDATE, nothing (`;`), constant (`SELECT 1`), and `:-i` init across client × database-size grids |
 | [OpenStreetMap import]({{ '/workloads/osm' \| relative_url }}) | Planet load via osm2pgsql—COPY, index builds, checkpoint and buffer-cache pressure |
 | [Complete Block Check (CBC)]({{ '/workloads/cbc' \| relative_url }}) | Short synthetic storage stress test (CTAS, VACUUM, CLUSTER, index scans); see also the [CBC Tutorial]({{ '/workloads/cbc/tutorial/' \| relative_url }}) |
 
@@ -26,7 +26,7 @@ pgbent includes fixed-size and scaling workloads. Each run records one-second me
 
   * The same SELECT is also run simple and over localhost TCP.  Phoronix switched to prepared statements a few years ago and kind of reset the public history; the numbers went up and not many people noticed.  Sweeping all four faces (sockets vs localhost TCP, simple vs prepared) is the connection study from PostgreSQL 18, kept as a code exercise so a method change cannot hide.  Each client count also gets **transactions per joule** from the 1-second package-power integral — energy efficiency as the other side of that TPS fan.  See the [SELECT leaderboard]({{ '/leaderboards/' | relative_url }}).
 
-  * One more fantasy workload sits under that SELECT: `SCRIPT=empty`, a script that is only `;`.  That is the lightest possible pgbench transaction — protocol and `BEGIN`/`COMMIT` with no query work.  Same connection faces as SELECT.  On siren that already hits **280K TPS on a single client**.  That's web scale.  `think` is the other end of that axis (it adds sleep).  `wl/empty-grid` writes the params; run against an existing scale-100 database with `SKIPINIT=1`.
+  * Fantasy scripts under that SELECT: `SCRIPT=nothing` (`tests/nothing.sql`) is only `;` — protocol and `BEGIN`/`COMMIT`, no query.  `SCRIPT=constant` (`tests/constant.sql`) is `SELECT 1;` — a query with no table lookup.  The accounts SELECT is the lookup on top of that.  Same connection faces.  On siren **sockets prepared** `nothing` already hits **280K TPS on a single client**.  That's web scale.  `think` is the other end of that axis (it adds sleep).  `wl/empty-grid` writes the nothing params; run against an existing scale-100 database with `SKIPINIT=1`.
 
 ### 1-client latency pieces
 
@@ -34,18 +34,22 @@ At one client these rates are just the inverse of the latency times. Planning ta
 
 | 1-client cell | TPS | 1/TPS |
 | --- | ---: | ---: |
-| `;` | 280K | 3.6 μs |
+| sockets prepared `;` | 280K | 3.6 μs |
 | sockets prepared SELECT | 132,433 | 7.6 μs |
 | localhost TCP prepared | 96,566 | 10.4 μs |
 | sockets | 89,241 | 11.2 μs |
 | localhost TCP | 68,924 | 14.5 μs |
 
-- **Protocol + `BEGIN`/`COMMIT`:** 3.6 μs from `;`. No query.
-- **Execution:** +4.0 μs, sockets prepared SELECT minus empty. The lookup itself.
+- **Protocol + `BEGIN`/`COMMIT`:** 3.6 μs from sockets prepared `;`. No query.
+- **Execution:** +4.0 μs, sockets prepared SELECT minus sockets prepared `;`. The lookup itself. `SCRIPT=constant` (`SELECT 1`) sits in between: a query with no accounts lookup. No 1-client number yet.
 - **Planning:** +3.6 μs, sockets simple minus sockets prepared. Parse/plan every transaction versus skip it.
 - **TCP Connection:** +2.8 μs, localhost TCP prepared minus sockets prepared. Already-open pgbench session — not `connect()`. Initial connect is a one-time pgbench line, not in these TPS numbers.
 
 Those four add to 14.0 μs against 14.5 μs on localhost TCP simple. Close enough to account for the cell. Multi-client TPS is the same latencies with more pipelines, not a different clock.
+
+Sockets prepared `nothing` at **8 clients** is already **1,459,014** TPS. The pause after each run is `pgbench -l` COPY into `timing` (~131 million rows in 90s) — 2007 ingest, not built for this rate. SELECT hit that heat spike near 2M / 32 clients; `;` hits it at 8. `tests.tps` is stored before that import.
+
+The interesting test coming next is whether **preparation** impacts `nothing` runs. SELECT simple vs prepared is the 3.6 μs planning piece; `;` has no query to plan. The 280K 1-client cell is **sockets prepared**; the measurement is sockets simple `nothing` against that.
 
 * Database population:  the init steps of building one of the pgbench test databases at some size.  That workload is particularly useful for cloud benchmarking work.  With the right command flags all the work to build a pgbench test database can run fully server side, which lets you test things while eliminating client latency from being a factor in the results.
 

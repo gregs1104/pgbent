@@ -41,13 +41,15 @@ Hands-on on siren (no agent SSH):
 
 1. Put **PG19 rc1** back on **SK51** if it is not already there (catalog
    **20261006**, `debug_assertions` off).
-2. **Empty `;`** (`wl/empty-grid`, `SCRIPT=empty`) on the existing
+2. **Empty `;`** (`wl/empty-grid`, `SCRIPT=nothing`) on the existing
    scale-100 database (`SKIPINIT=1`). Same cell as SELECT: 90s,
-   `SETTIMES=2`, clients `1 2 4 8 16 32 64`. Sockets first (the fantasy
-   floor); sweep the four faces if the box is staying up. **1 client
-   already 280K TPS** — that's web scale. Lightest possible pgbench
-   transaction — protocol and `BEGIN`/`COMMIT`, no query work. Finish
-   the client grid, then OSM.
+   `SETTIMES=2`, clients `1 2 4 8 16 32 64`. **Sockets prepared 1 client
+   is 280K TPS**; **8 clients already 1,459,014** — that's web scale.
+   The pause is `pgbench -l` COPY into `timing` (~131M rows in 90s),
+   not the run; `tests.tps` is stored first. The interesting test
+   coming next is whether **preparation** impacts `nothing` runs: `;`
+   has no query to plan, so sockets simple vs that prepared cell is the
+   measurement. Then TCP faces if the box is staying up. Then OSM.
 3. One full **OSM** (~4h) with `OSMRELPROF=1` and the 1h Relation stop.
    That re-tests rc1 and keeps a validated 9950X Relation `perf`.
 4. Then **9600X**.

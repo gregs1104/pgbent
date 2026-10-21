@@ -4,7 +4,7 @@
 # Protocol plus BEGIN/COMMIT, no query work. Same client grid as
 # select-grid. Use SKIPINIT=1 against an existing scale-100 database.
 
-SCRIPT="empty"
+SCRIPT="nothing"
 SETTIMES=2
 RUNTIME=90
 

@@ -67,11 +67,11 @@ Retire **9950X + SK51** with a complete pack before the chip comes out. Twilight
 Hands-on on siren (no agent SSH):
 
 1. Put **PG19 rc1** back on **SK51** if it is not already there (catalog **20261006**, `debug_assertions` off).
-2. **Empty `;`** (`wl/empty-grid`, `SCRIPT=empty`) on the existing scale-100 database (`SKIPINIT=1`). Same cell as SELECT: 90s, `SETTIMES=2`, clients `1 2 4 8 16 32 64`. Sockets first (the fantasy floor); sweep the four faces if the box is staying up. **1 client already 280K TPS.** That's web scale. Finish the client grid, then OSM.
+2. **Empty `;`** (`wl/empty-grid`, `SCRIPT=nothing`) on the existing scale-100 database (`SKIPINIT=1`). Same cell as SELECT: 90s, `SETTIMES=2`, clients `1 2 4 8 16 32 64`. **Sockets prepared 1 client is 280K TPS**; **8 clients already 1,459,014**. That's web scale. The pause is `pgbench -l` COPY into `timing`, not the run. The interesting test coming next is whether **preparation** impacts `nothing` runs — `;` has no query to plan, so sockets simple vs that prepared cell is the measurement. Then the TCP faces if the box is staying up. Then OSM.
 3. One full **OSM** (~4h) with `OSMRELPROF=1` and the 1h Relation stop. That re-tests rc1 and keeps a validated 9950X Relation `perf`.
 4. Then **9600X**.
 
-Keep `empty` off the SELECT ranking graph. The 280K 1-client note and the planning / execution / TCP connection split (rates as 1/latency) live on [1-client latency pieces]({{ '/workloads/#1-client-latency-pieces' | relative_url }}).
+Keep `nothing` off the SELECT ranking graph. The sockets prepared 280K 1-client note and the planning / execution / TCP connection split (rates as 1/latency) live on [1-client latency pieces]({{ '/workloads/#1-client-latency-pieces' | relative_url }}).
 
 ## Later: true remote TCP on the new 2S
 
