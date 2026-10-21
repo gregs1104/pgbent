@@ -17,6 +17,8 @@ The OSM table is the current Planet extract (**10.79 billion** nodes), mixed Pos
 
 The OSM Score is a composite ranking based on loading the OpenStreetMap Planet GIS workload. The score includes just the hardest CPU phase, Relation building, and the two longest index builds. It ignores aspects of the loading that stress cache effects more so than CPU or disk.
 
+This workload does not benefit very much from larger core or socket counts. Relation building does not fill a second CCD or a second socket; extra cores mostly add package watts. The 9600X→9950X swap barely moved OSM score.
+
 <!-- osm-leaderboard-traces:begin -->
 
 The board leader is **R9 9950X** (PostgreSQL 19, `fsync=off`, OSM score **1480**). Both traces are minute buckets of the owned **1-second** collectors on that run: Average is what a minute-grained sample would report; Maximum is the peak 1-second reading in that minute — the cliffs a delegated 60-second poll never stored. Disk is combined read+write on data volume `nvme2n1`.
@@ -109,6 +111,8 @@ Mean across repeats (4 faces). **tps_1** is the old single-core cell; **tps_32**
 | localhost TCP | 68,924 | 65.2 | 1,066 | 997,097 | 199.6 | 5,040 |
 
 <!-- select-leaderboard:end -->
+
+`;` (`SCRIPT=empty`) can hit **280K TPS on a single client**. That's web scale. At one client the rates are just the inverse of the latency times: empty is the 3.6 μs protocol floor, then planning, execution, and TCP connection split the rest. Breakdown: [1-client latency pieces]({{ '/workloads/#1-client-latency-pieces' | relative_url }}). Not on this ranking.
 
 Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/select-leaderboard.py --from-db`. Older mixed-protocol grid: [pgbench SELECT (PG18 snapshot)]({{ '/results-summary/pg18/pgbench-select/' | relative_url }}). Workload notes: [pgbench grids]({{ '/workloads/' | relative_url }}).
 
