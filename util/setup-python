@@ -1,0 +1,45 @@
+#!/bin/bash
+# Pin a CPython for pgbent collectors, not Homebrew's `python3`.
+#
+# Shebangs are `#!/usr/bin/env python3` (pgsysinfo, csv2gnuplot,
+# timed-os-stats). Put this venv first on PATH so those scripts stay
+# stable across brew upgrades. Linux can keep using distro python3.
+#
+# Usage (from pgbent root or anywhere):
+#   ./util/setup-python
+set -e
+cd "$(dirname "$0")/.."
+ROOT="$PWD"
+VENV="$ROOT/.venv"
+REQ="$ROOT/requirements-collect.txt"
+
+if [ "$(uname -s)" = "Linux" ]; then
+  echo "Linux: distro python3 is the collector runtime. Optional venv:"
+  echo "  python3 -m venv $VENV && $VENV/bin/pip install -r $REQ"
+  if python3 -c "import dateutil" 2>/dev/null; then
+    echo "dateutil already importable on $(command -v python3)"
+    exit 0
+  fi
+  echo "WARNING: dateutil missing on $(command -v python3) — install python3-dateutil or create the venv above."
+  exit 1
+fi
+
+# macOS: official CPython via uv, not brew python3 / Apple 3.9 / conda.
+export PATH="$HOME/.local/bin:$PATH"
+if ! command -v uv >/dev/null 2>&1; then
+  echo "Installing uv (official CPython builds, not Homebrew)..."
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  export PATH="$HOME/.local/bin:$PATH"
+fi
+
+uv python install 3.12
+if [ ! -x "$VENV/bin/python" ]; then
+  uv venv "$VENV" --python 3.12
+fi
+uv pip install -r "$REQ" --python "$VENV/bin/python"
+
+echo
+echo "Pinned: $("$VENV/bin/python" -c 'import sys; print(sys.executable, sys.version.split()[0])')"
+echo "Put this first on PATH (after brew shellenv, so psql stays Homebrew):"
+echo "  export PATH=\"$VENV/bin:\$PATH\""
+echo "Smoke test:  PATH=\"$VENV/bin:\$PATH\" ./pgsysinfo"

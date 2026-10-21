@@ -56,7 +56,7 @@ Phoronix-comparable **SELECT** cells: **90s**, scale 100.  The standard Postgres
 
 Phoronix switched to `-M prepared` a few years ago (PTS pgbench 1.13) and that reset the public face for a lot of viewers. Numbers went up, query planning in Postgres takes time. This lab still runs **all four faces** to SELECT performance — sockets vs localhost TCP, simple vs prepared. The [PG18 connection study]({{ '/results-summary/pg18/pgbench-select/' | relative_url }}) made the method public. Prepared is the Phoronix-shaped ranking cell. OpenBenchmarking’s multi-million TPS numbers involve multi-socket systems on DC network hardware, not localhost and not unix sockets sharing the server with pgbench.
 
-The single socket leader board here is **siren** (R9 9950X) on PostgreSQL **19rc1**. Hold `conn_method` constant when comparing versions — mixing sockets with localhost TCP can look like a 25% hole. See [Comparing versions]({{ '/workloads/#comparing-versions' | relative_url }}).
+The single socket leader board here is **siren** (R9 9950X) on PostgreSQL **19rc1**. Hold `conn_method` constant when comparing versions — mixing sockets with localhost TCP can look like a 25% hole. See [Comparing versions]({{ '/workloads/select/#comparing-versions' | relative_url }}).
 
 Package power sits on the same row as TPS on the **sockets** face (one machine, complete accounting). Combining client and server watts across boxes is out of scope--that's the harder to observe data center shaped problem. **Transactions per joule** is the energy-efficiency number for each client count — the same 1-second `PkgWatt` integral as OSM kJ. Better performance is also more work per watt-second; the PG community cares about that as a virtuous side effect of code improvements, so this lab publishes it.
 
@@ -81,9 +81,9 @@ Mean across repeats (4 faces). **tps_1** is the old single-core cell; **tps_32**
 
 <!-- select-leaderboard:end -->
 
-`;` (`SCRIPT=nothing`) **sockets prepared** can hit **280K TPS on a single client**. That's web scale. At one client the rates are just the inverse of the latency times: that face is the 3.6 μs protocol floor, then planning, execution, and TCP connection split the rest. The interesting next test is whether **preparation** moves `nothing` — no query to plan. Breakdown: [1-client latency pieces]({{ '/workloads/#1-client-latency-pieces' | relative_url }}). Not on this ranking.
+`;` (`SCRIPT=nothing`) hits **280K TPS on a single client** (simple **281,019**, prepared **280,201**) and peaks at **3.96M** simple / **3.68M** prepared at 32 clients — the protocol ceiling. That's web scale. No query to plan, so preparation does not help; at many clients simple is a few percent ahead. `constant` (`SELECT 1`) is **179,635** at one client — 5.6 μs, halfway between the 3.6 μs `;` floor and the 7.6 μs prepared accounts SELECT. At one client the rates are just the inverse of the latency times. Breakdown: [1-client latency pieces]({{ '/workloads/select/#1-client-latency-pieces' | relative_url }}). Not on this ranking.
 
-Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/select-leaderboard.py --from-db`. Older mixed-protocol grid: [pgbench SELECT (PG18 snapshot)]({{ '/results-summary/pg18/pgbench-select/' | relative_url }}). Workload notes: [pgbench grids]({{ '/workloads/' | relative_url }}).
+Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/select-leaderboard.py --from-db`. Older mixed-protocol grid: [pgbench SELECT (PG18 snapshot)]({{ '/results-summary/pg18/pgbench-select/' | relative_url }}). Workload notes: [pgbench SELECT]({{ '/workloads/select' | relative_url }}).
 
 ### Sockets
 

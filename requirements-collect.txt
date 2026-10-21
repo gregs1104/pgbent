@@ -1,0 +1,3 @@
+# Collector runtime (pgsysinfo, csv2gnuplot, timed-os-stats).
+# Not the graphing stack — that is .venv-graph (pandas/matplotlib) on the laptop.
+python-dateutil

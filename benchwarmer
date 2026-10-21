@@ -551,6 +551,10 @@ fi
 if [ -z "$trans" ] ; then
   trans=0
 fi
+lat_n=`echo $trans | tr -d ' '`
+if [ -z "$lat_n" ]; then
+  lat_n=0
+fi
 $RESULTPSQL -q -c "UPDATE tests SET tps='$tps',trans='$trans', trans_latency='$trans' WHERE server='${SERVERNAME}' AND test=$TEST"
 
 # Give OSM runs TPS numbers based on kNodes/second total load time
@@ -612,7 +616,12 @@ if [ "$OS" = "Linux" ] ; then
 fi
 
 # Save high level summary of latency broken into equal sized buckets of transactions
-# 20 5% buckets
+# 20 5% buckets. OFFSET on every timing row does not finish at millions of
+# TPS (court set 6 died here at 55M rows and `set -e` dumped the other faces).
+# avg/max/P90 are already on tests. See docs/plans/plotting.md.
+if [ "$lat_n" -gt 10000000 ]; then
+  echo Skipping latency-20 buckets at $lat_n rows
+else
 $RESULTPSQL -c "DROP TABLE buckets" >> /dev/null 2>&1
 $RESULTPSQL -c "CREATE TABLE buckets AS SELECT trans,0.05 as bucket_size,0.0 as bucket_left,0.05*generate_series(1,20) AS bucket_right,0.0 as offset_left,0.0 as offset_right,0.0 as latency_left,0.0 as latency_right FROM tests WHERE server='${SERVERNAME}' AND test=$TEST"
 $RESULTPSQL -c "UPDATE buckets SET bucket_left=bucket_right - bucket_size;"
@@ -623,9 +632,10 @@ $RESULTPSQL -c "ALTER TABLE buckets DROP COLUMN trans"
 $RESULTPSQL -c "ALTER TABLE buckets DROP COLUMN bucket_size"
 # DEBUG $RESULTPSQL -c "SELECT * FROM buckets ORDER BY bucket_left"
 $RESULTPSQL -c "\copy (SELECT * FROM buckets) TO 'latency-20.csv' WITH DELIMITER ',' CSV HEADER"
+fi
 
 # 100 1% buckets
-if [ "$LARGEBUCKETS" -eq "1" ] ; then
+if [ "$LARGEBUCKETS" -eq "1" ] && [ "$lat_n" -le 10000000 ] ; then
 $RESULTPSQL -c "DROP TABLE buckets"
 $RESULTPSQL -c "CREATE TABLE buckets AS SELECT trans,0.01 as bucket_size,0.0 as bucket_left,0.01*generate_series(1,100) AS bucket_right,0.0 as offset_left,0.0 as offset_right,0.0 as latency_left,0.0 as latency_right FROM tests WHERE tests.test=$TEST"
 $RESULTPSQL -c "UPDATE buckets SET bucket_left=bucket_right - bucket_size;"
@@ -651,8 +661,12 @@ if [ ! -z $GNUPLOT ] && [ -x $GNUPLOT ]; then
   $RESULTPSQL -A -t -F' ' -c "select extract(epoch from date_trunc('second',ts)),count(*) from timing where server='${SERVERNAME}' AND test=$TEST group by date_trunc('second',ts) order by date_trunc('second',ts)" > tpsdata.txt
   $GNUPLOT $BASEDIR/plots/tps.plot
 
+  if [ "$lat_n" -gt 10000000 ]; then
+    echo Skipping per-row latency.plot at $lat_n rows
+  else
   $RESULTPSQL -A -t -F' ' -c "select extract(epoch from ts),latency from timing WHERE server='${SERVERNAME}' AND test=$TEST" > latency.txt
   $GNUPLOT $BASEDIR/plots/latency.plot
+  fi
   if [ -f dirtydata.txt ] ; then
     $GNUPLOT $BASEDIR/plots/dirty.plot
   fi

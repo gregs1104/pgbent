@@ -120,6 +120,24 @@ sudo pip3 install dateutils --break-system-packages
 (`--break-system-packages` is a trailing pip option; putting it before `install`
 fails.) Re-run that after brew Python updates when `pgsysinfo` starts ImportErroring.
 
+Abbey login is Homebrew **python3 3.15**. Agent SSH without `-l` hits Apple
+`/usr/bin/python3` 3.9 — wrong interpreter. Reinstall `dateutil` on the brew
+`pip3`. Apple `pip3` 21.2 has no `--break-system-packages`. Always `bash -lc`.
+
+**Better than brew Python for pgbent:** a dedicated venv, same idea as
+`.venv-graph` on the laptop. Bootstrap from a **python.org** macOS installer
+(3.12/3.13) or `uv python install 3.12` — official CPython, not `brew
+python3`. Pin `dateutil` (and later pandas) in that venv; put it first on PATH
+for `pgsysinfo` / `csv2gnuplot` / `timed-os-stats` (`#!/usr/bin/env python3`).
+Do not use Apple 3.9, conda, or whatever brew last upgraded. Brew Python 3.15
+is a moving target and is what makes post-process hard to troubleshoot.
+
+**PG19 on abbey.** Not during RC. Brew lags PGDG; every major still gets
+tested on brew, **after** the release bottles (PostGIS linked). Court is
+the ARM OSM platform the community cares about. Abbey RC work is four-face
+SELECT + `nothing` / `constant` on **PG18**. Python env: [Setup](../../../docs/setup.md)
+§ Python for collectors (`./util/setup-python`, `.venv`, not brew `python3`).
+
 ### Planned: abbey post-process Python crash (after PG18 numbers)
 
 OSM loads on abbey often finish (`osm2pgsql took … overall`) but post-process

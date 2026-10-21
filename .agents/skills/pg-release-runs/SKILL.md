@@ -43,13 +43,29 @@ Hands-on on siren (no agent SSH):
    **20261006**, `debug_assertions` off).
 2. **Empty `;`** (`wl/empty-grid`, `SCRIPT=nothing`) on the existing
    scale-100 database (`SKIPINIT=1`). Same cell as SELECT: 90s,
-   `SETTIMES=2`, clients `1 2 4 8 16 32 64`. **Sockets prepared 1 client
-   is 280K TPS**; **8 clients already 1,459,014** — that's web scale.
-   The pause is `pgbench -l` COPY into `timing` (~131M rows in 90s),
-   not the run; `tests.tps` is stored first. The interesting test
-   coming next is whether **preparation** impacts `nothing` runs: `;`
-   has no query to plan, so sockets simple vs that prepared cell is the
-   measurement. Then TCP faces if the box is staying up. Then OSM.
+   `SETTIMES=2`, clients `1 2 4 8 16 32 64`. **Sockets simple and
+   prepared finished** (set 107): 1 client **281,019** / **280,201**;
+   peak **3.96M** simple / **3.68M** prepared at 32, flat at 64 —
+   that's web scale. Preparation does not help `;`; simple is a few
+   percent ahead at many clients. The pause is `pgbench -l` COPY into
+   `timing`; 32/64 latency columns are empty because that pipeline
+   filled the **31GB free** then on siren (~330–360M rows; old
+   uncompressed upload archives). `tests.tps` is stored first. Clearing
+   those archives put the boot drive back to **121GB free**, so later
+   grids should land latency. `constant` (`SELECT 1`) 1-client is
+   **179,635** (5.6 μs).    **2026-10-21 — giant latency COPY in flight:**
+   `COPY 342704901` (~3.81M TPS × 90s). `tests.tps` is already stored.
+   The known ingest failure is **disk full**, not a sort (court’s 55M
+   wrap-up died in a watchdog reboot, not OFFSET). At ~6GB of files per
+   55M rows on court, 343M is tens of GB of `pgbench.log` + `timing.csv`
+   + heap — 121GB should hold one cell if leftovers from the first
+   nothing fill are gone. After this grid, **re-run `nothing` at 32 and
+   64** if this COPY is `constant`. Then TCP faces if the box is staying
+   up. Then OSM.
+   Breaking latency into components this way is a long-term goal;
+   collect all of it now that the drive can hold the ingest. Accurate
+   power on all platforms was the blocker — the question was how many
+   watts `nothing` burns.
 3. One full **OSM** (~4h) with `OSMRELPROF=1` and the 1h Relation stop.
    That re-tests rc1 and keeps a validated 9950X Relation `perf`.
 4. Then **9600X**.
@@ -63,7 +79,7 @@ beta4 rows anyway. Not worth chasing; cover the whole connection grid once
 the RC is ready. Always sweep the four faces (sockets vs host, simple vs
 prepared): PG18 connection study, kept as a code exercise. Phoronix switched
 to prepared years ago and reset public history; numbers went up, few noticed.
-Public note: [Comparing versions](../../../docs/workloads/index.md).
+Public note: [Comparing versions](../../../docs/workloads/select.md).
 
 Scale 100 SELECT is ~1.6GB in RAM; a disk swap between pins does not matter.
 
@@ -324,20 +340,26 @@ temporary corporate inventory. Finish the OSM/PG19 cells on these boxes.
 
 | Host | CPU | Notes |
 |------|-----|--------|
-| **siren** | **9950X** (was **9600X**) | **2026-10-18 — OSM probe finished in 4.07h** (clean hold through Ways; replacement for the wiped cell). **2026-10-18 — 32 clients is the max**: **2,011,141** then **2,016,484 TPS** (PG18, sockets SELECT, 90s). The two sets agree; halt after the second — CPU-bound SELECT is this tight, so **`SETTIMES=2`** is the default and a third only if they diverge. The missing rear vent had been capping this chip; ~2M is the 9950X unlocked. `newset` **`pgbench SELECT`** on **PG18**: **on-box UNIX vs localhost TCP** (overhead only; split on `conn_method`). Set **106** sockets prepared: PG18 **2,011,141** / **2,016,484** at 32 clients. Early 19beta4 **1.50M** cells in that `latest_set` were **host prepared** (method error, not asserts). **19rc1** covered the whole connection grid; sockets prepared **2.06M**. **2026-10-20 — 19rc1 SELECT+OSM done on the 9950X** (as fast as 18, maybe a tiny faster; OSM import finished). Siren SELECT set is the **starter pgbench leaderboard**. **Retirement pack before 9600X:** empty `;` grid + one 4h OSM with `OSMRELPROF=1` (also re-tests rc1). Twilight already leads relations/s. Usual 18↔19 regression pair is **pgbench SELECT (small scale) + OSM (writes)**. True remote TCP at **128 clients** waits on the **new 2S**. `PREPARED=1` in params, `SUDODATA=1` already in `config`. Rear ST120 works **hard by the end of each 90s** and **harder during latency import** (`pgbench -l` at this TPS is a second heat spike). Thermal fix first was the right order. Rear **Lian Li ST120** exhaust is in; AIO pair also ST120s, **AIO cleaned of heavy dust**. Earlier heat had the new exhaust **maxed** (~**75°C**); it **chugged through Ways** (the old death phase) and in **Relation** the fan is at **medium** with **~60°C**. Chassis looks thermally fixed. **No agent SSH** — when a box is this fragile, Greg has to be hands-on to fix it; remote poking is how it gets worse. Data via `download`. **9950X SELECT** sockets grid is in (`wl/select-grid`, halt after two sets); then **9600X** for the OSM comparison SKU. The comparison / joules charts are done as graphics; they still have a **hole between high-power x86** (9950X **1046 kJ**, 13600K **824 kJ**) **and low-power ARM** (Apple **224 kJ**, NVIDIA **671 kJ**). **9600X** is that middle point — even better than the 9700X that was in the plan. OSM barely moved **9600X→9950X**. **2026-10-18 — Greg is looking for the 9600X** (the physical chip). PG19 sets 70/71 are enough for 18↔19. The **9600X** is the comparison SKU this box should publish: OSM barely used the 9950X’s second CCD (`Tccd2` ~43°C while Tctl/Tccd1 sat in the 80s), so the 16-core swap did not buy planet-load speed, only package watts (9950X **70 W** avg / **180 W** peak / **1046 kJ** vs Apple **8 W** / **37 W** / **224 kJ**). A 6-core **9600X** at nearly the same OSM score (~**47 W** avg / **89 W** peak on this board) is the bang-for-buck point on the system-comparison chart and a fairer fight against the Mac. **9950X** is still the short-pgbench / ~1M TPS chip; the 240mm AIO plus a missing rear fan could not hold OSM. Overhaul order: **1. rear airflow** done (Lian Li ST120 exhaust 2026-10-18, AIO ST120s cleaned). **1b. OSM probe** done: **4.07h**, held through Ways. Chassis is usable. **2. 19rc1 SELECT+OSM** done on the 9950X (2026-10-20). **3. retirement pack** (empty `;` + 4h OSM with `OSMRELPROF=1`). **4. switch to 9600X** for the OSM / system-comparison SKU. Do not keep the 9950X here hoping AC will hold Ways. **2026-10-16 evening — parked.** Died in **Ways** again. Do **not** retry PG18 low-durability / thin-WAL on this chassis; that corner is what trips the board, and those cells get re-run after the WAL vs fsync split anyway. Downloaded set **70** (PG18.3 durable) vs set **71** (PG19 fast 2974/2975/3009/3010 and durable 3011–3013) is enough for the 18↔19 regression; twilight 117 vs 118 and abbey 11 fill the rest of the fleet. Rear case fan was the first fix (installed 2026-10-18); the 2026-10-16 Ways deaths were hot air staying in a chassis with none. Cooler is a **240mm AIO** (undersized for 9950X; 9600X was stable). **9600X→9950X barely moved OSM**, as expected (second CCD idle); the buy was for **short pgbench / ~1M TPS** (perceptually important). OSM *might* improve on a 9950X **after a larger heatsink**, not in this chassis. Workaround is the **room AC**, same as keeping the lab alive at **100°F** outside — not a CPU swap mid-grid. `wl/osm-import` `RECOVERY=3600` is an **informed** hour between planet loads (AIO/room heat dump); Greg expected another crash and wanted **`k10temp` live**. 2026-10-15 hard off; 2026-10-16 way ingest (`Node(10791148k …) Way(1133809k …) Relation(0)`); same-day restart still heat-soaked, `sensors` **Tctl 79°C / Tccd1 78.5 / Tccd2 42.6**, died in **Node** phase. Later the same day, cooled+AC **cleared Nodes at peak Tctl 87°C**; Ways sat ~**77°C** for a while with intake ~**68°F** (room normally **71°F**), then **still died in Ways** — 3°F of AC was not enough for the rest of that pass. Delete incomplete tests; thermal **starts as the host vanishing**. After the beta cells: rear fan (done), OSM probe (**4.07h**, done), then 9950X SELECT cells, then 9600X. Confirmed chip **`k10temp-pci-00c3`**: collect `sensors -u k10temp-*` (no sudo) → `Tctl_temp1_input` (package, vis 9) plus `Tccd1`/`Tccd2` (split, vis 5) — **do not average the CCDs**. The split is the teaching sample: **Tccd2 stayed ~43°C while Tccd1/Tctl sat in the 80s** — the second CCD is not on the OSM critical path, so extra cores on that die do not help a struggling load (and dump all the watts onto one hot chiplet). Live samples work; shutdown looks like the **motherboard cutting power near 90°C Tctl**, before the 9950X hits Tjmax throttle. Hands-on only — do not SSH. |
+| **siren** | **9950X** (was **9600X**) | **2026-10-18 — OSM probe finished in 4.07h** (clean hold through Ways; replacement for the wiped cell). **2026-10-18 — 32 clients is the max**: **2,011,141** then **2,016,484 TPS** (PG18, sockets SELECT, 90s). The two sets agree; halt after the second — CPU-bound SELECT is this tight, so **`SETTIMES=2`** is the default and a third only if they diverge. The missing rear vent had been capping this chip; ~2M is the 9950X unlocked. `newset` **`pgbench SELECT`** on **PG18**: **on-box UNIX vs localhost TCP** (overhead only; split on `conn_method`). Set **106** sockets prepared: PG18 **2,011,141** / **2,016,484** at 32 clients. Early 19beta4 **1.50M** cells in that `latest_set` were **host prepared** (method error, not asserts). **19rc1** covered the whole connection grid; sockets prepared **2.06M**. **2026-10-20 — 19rc1 SELECT+OSM done on the 9950X** (as fast as 18, maybe a tiny faster; OSM import finished). Siren SELECT set is the **starter pgbench leaderboard**. **Retirement pack before 9600X:** empty `;` + `constant` + nothing 32/64 re-run (latency + watts, both configs) + one 4h OSM with `OSMRELPROF=1` (also re-tests rc1). Twilight already leads relations/s. Usual 18↔19 regression pair is **pgbench SELECT (small scale) + OSM (writes)**. True remote TCP at **128 clients** waits on the **new 2S**. `PREPARED=1` in params, `SUDODATA=1` already in `config`. Rear ST120 works **hard by the end of each 90s** and **harder during latency import** (`pgbench -l` at this TPS is a second heat spike). Thermal fix first was the right order. Rear **Lian Li ST120** exhaust is in; AIO pair also ST120s, **AIO cleaned of heavy dust**. Earlier heat had the new exhaust **maxed** (~**75°C**); it **chugged through Ways** (the old death phase) and in **Relation** the fan is at **medium** with **~60°C**. Chassis looks thermally fixed. **No agent SSH** — when a box is this fragile, Greg has to be hands-on to fix it; remote poking is how it gets worse. Data via `download`. **9950X SELECT** sockets grid is in (`wl/select-grid`, halt after two sets); then **9600X** for the OSM comparison SKU. The comparison / joules charts are done as graphics; they still have a **hole between high-power x86** (9950X **1046 kJ**, 13600K **824 kJ**) **and low-power ARM** (Apple **224 kJ**, NVIDIA **671 kJ**). **9600X** is that middle point — even better than the 9700X that was in the plan. OSM barely moved **9600X→9950X**. **2026-10-18 — Greg is looking for the 9600X** (the physical chip). PG19 sets 70/71 are enough for 18↔19. The **9600X** is the comparison SKU this box should publish: OSM barely used the 9950X’s second CCD (`Tccd2` ~43°C while Tctl/Tccd1 sat in the 80s), so the 16-core swap did not buy planet-load speed, only package watts (9950X **70 W** avg / **180 W** peak / **1046 kJ** vs Apple **8 W** / **37 W** / **224 kJ**). A 6-core **9600X** at nearly the same OSM score (~**47 W** avg / **89 W** peak on this board) is the bang-for-buck point on the system-comparison chart and a fairer fight against the Mac. **9950X** is still the short-pgbench / ~1M TPS chip; the 240mm AIO plus a missing rear fan could not hold OSM. Overhaul order: **1. rear airflow** done (Lian Li ST120 exhaust 2026-10-18, AIO ST120s cleaned). **1b. OSM probe** done: **4.07h**, held through Ways. Chassis is usable. **2. 19rc1 SELECT+OSM** done on the 9950X (2026-10-20). **3. retirement pack** (empty `;` + `constant` + nothing 32/64 re-run + 4h OSM with `OSMRELPROF=1`). **4. switch to 9600X** for the OSM / system-comparison SKU. Do not keep the 9950X here hoping AC will hold Ways. **2026-10-16 evening — parked.** Died in **Ways** again. Do **not** retry PG18 low-durability / thin-WAL on this chassis; that corner is what trips the board, and those cells get re-run after the WAL vs fsync split anyway. Downloaded set **70** (PG18.3 durable) vs set **71** (PG19 fast 2974/2975/3009/3010 and durable 3011–3013) is enough for the 18↔19 regression; twilight 117 vs 118 and abbey 11 fill the rest of the fleet. Rear case fan was the first fix (installed 2026-10-18); the 2026-10-16 Ways deaths were hot air staying in a chassis with none. Cooler is a **240mm AIO** (undersized for 9950X; 9600X was stable). **9600X→9950X barely moved OSM**, as expected (second CCD idle); the buy was for **short pgbench / ~1M TPS** (perceptually important). OSM *might* improve on a 9950X **after a larger heatsink**, not in this chassis. Workaround is the **room AC**, same as keeping the lab alive at **100°F** outside — not a CPU swap mid-grid. `wl/osm-import` `RECOVERY=3600` is an **informed** hour between planet loads (AIO/room heat dump); Greg expected another crash and wanted **`k10temp` live**. 2026-10-15 hard off; 2026-10-16 way ingest (`Node(10791148k …) Way(1133809k …) Relation(0)`); same-day restart still heat-soaked, `sensors` **Tctl 79°C / Tccd1 78.5 / Tccd2 42.6**, died in **Node** phase. Later the same day, cooled+AC **cleared Nodes at peak Tctl 87°C**; Ways sat ~**77°C** for a while with intake ~**68°F** (room normally **71°F**), then **still died in Ways** — 3°F of AC was not enough for the rest of that pass. Delete incomplete tests; thermal **starts as the host vanishing**. After the beta cells: rear fan (done), OSM probe (**4.07h**, done), then 9950X SELECT cells, then 9600X. Confirmed chip **`k10temp-pci-00c3`**: collect `sensors -u k10temp-*` (no sudo) → `Tctl_temp1_input` (package, vis 9) plus `Tccd1`/`Tccd2` (split, vis 5) — **do not average the CCDs**. The split is the teaching sample: **Tccd2 stayed ~43°C while Tccd1/Tctl sat in the 80s** — the second CCD is not on the OSM critical path, so extra cores on that die do not help a struggling load (and dump all the watts onto one hot chiplet). Live samples work; shutdown looks like the **motherboard cutting power near 90°C Tctl**, before the 9950X hits Tjmax throttle. Hands-on only — do not SSH. |
 | **twilight** | **13600K** (was **14900K**) | **188GB** RAM, **Fury G5 4TB**. Roles used to be reversed: the **14900K** made twilight the unstable box. Back on a cool-running **13600K** it is trouble-free again — preferred host for long PG19 matrices. **2026-10-19 — PG19 rc1 catalog version bump.** The PG19 **test** instance cannot be started or `pg_upgrade`d; recreate **from scratch**. Greg will lead — that datadir is partitioned (Fury), not a stock PGDG path. Do not `initdb` or wipe until he says. Results cluster stays put. Abbey has not gotten PG19 yet. |
 
 Other machines:
 
-- **abbey** — Mac Studio on Homebrew. Has **not** installed PG19 yet. PG17 on the 2026 planet finished (sets 8–10).
-  **2026-10-16 — PG18 set 11 parked.** Four finished `osm2pgsql-2.0` cells, loop
-  idle (`runset complete` 16:15): fast 64/66 (7.43h/404, 7.49h/400) and durable
-  67/68 (11.17h/268, 11.10h/270). Two tight repeats per bundled corner is enough
-  for now; do not start another load. Uploaded **2026-10-16**
-  (`abbey-20261016-172359.tar.gz`); set 11 is in the assembly DB on decade.
-  No `conf.d`; fold `conf/18/conf.d` into the single `postgresql.conf`
-  (see `pg-release-config`). After brew Python updates, reinstall `dateutil`
-  and confirm with `./pgsysinfo`. Capacity-constrained; not the exploration host.
+- **abbey** — Mac Studio on Homebrew. **No PG19 during RC** — brew lags
+  PGDG; every major still gets a brew pass **after** release bottles
+  (PostGIS linked). Court is the ARM OSM cell. Abbey RC work is four-face
+  SELECT + `nothing` / `constant` on **PG18**. PG17 planet sets 8–10 done.
+  **2026-10-16 — PG18 set 11 parked.** Four finished `osm2pgsql-2.0` cells:
+  fast 64/66 (7.43h/404, 7.49h/400) and durable 67/68 (11.17h/268, 11.10h/270).
+  Do not start another OSM. Uploaded **2026-10-16**. No `conf.d`; fold
+  `conf/18/conf.d` into `postgresql.conf`. Capacity-constrained; not the
+  exploration host. **Collector Python:** `./util/setup-python` → `.venv`
+  (official CPython 3.12, not brew `python3` 3.15). PATH:
+  `$HOME/repos/pgbent/.venv/bin` **before** brew python, **after** brew
+  `shellenv` so `psql`/`pgbench` stay 18.6. Always `bash -lc`. After reboot
+  wait out Spotlight/`mds*` and the end-of-recovery checkpoint before
+  SELECT. `wl/select-faces` is copied; params still OSM until that driver
+  rewrites them.
 - **court** — NVIDIA DGX Spark (ARM64). As of 2026-10-14: **DGX OS 7.6.0 /
   Ubuntu 24.04.5**, kernel **`7.0.0-1019-nvidia`**. Spbm power works (test 13+);
   `DISKLIST="nvme0n1"` or `iostat.csv` is empty. **PG18 set 4:** fast 16/17
@@ -346,12 +368,33 @@ Other machines:
   with: durable **20/21/22** (8.73h/343, 8.78h/342, 8.50h/353) and fast **23**
   (8.30h/361, `fsync` off). **2026-10-19 — halted:** `stop-set cleanup` wiped
   unfinished **24**; `shutdown -h now`. SSH closed. Came back **2026-10-20**.
-  Do not start another court OSM. **2026-10-20 — PG19 rc1 SELECT** set **6**
-  (`PG19 rc1 SELECT`): four faces, scale 100, 90s, `SETTIMES=2`, clients
-  `1 2 4 8 16 32 64`, sockets prepared first (`/tmp/court-select-faces.sh`,
-  `select-faces.log`). Slowest ARM / Spark appliance cell for the public
-  txn/J board. Unreliable about booting; force-restart procedure not written
-  down yet.
+  Do not start another court OSM. **2026-10-21 — set 6 aborted because
+  the box rebooted**, not because a sort failed. Tests 26–32 were one
+  sockets-prepared pass; 64-client `COPY` of 55M `timing` rows was still
+  wrapping (`timing.csv` 2.5G at 23:54) when watchdog ping to
+  `192.168.50.1` failed and it **shut down at 00:07** (`Network is
+  unreachable`). Disk-full is the known ingest failure mode (siren 31GB);
+  court still has ~2T free. **Retest:** `wl/select-faces` (logs rc,
+  continues). Skip 20-bucket / per-row gnuplot above 10M rows is
+  optional time, not the court bug. New set, `SKIPINIT=1`. **Watchdog
+  off:** Debian `watchdog` was leftover from a resolved power-management
+  hang. Disabled the service and set `run_watchdog=0` /
+  `run_wd_keepalive=0`. Kernel `[watchdogd]` left alone. **Do not use
+  ping-to-gateway as a reboot trigger on this LAN.** The 10Gb segment
+  (`192.168.50.0/24`, court `enP7s7` at 10Gb) is not fully reliable.
+  Suspected path: **ARP handoff between the Mikrotik 10G switch and
+  the Asus consumer routers upstream of it**. Default **MAC aging
+  5 min** can drop court’s idle port mapping; next Mikrotik visit
+  raise Bridge Host Table Aging / MAC Aging Time to **2h+**. Same
+  signature as **~2s ping** until the ARP entry reappears; the
+  watchdog reboot was the miss that stayed `Network is unreachable`.
+  Do not configure the Mikrotik or Asus gear from here. A failed
+  ping to `192.168.50.1` is a LAN glitch, not a hung host. Treat SSH
+  drops the same way — retry, do not reboot. **Set 7 four faces:
+  finish then stop** — no OSM after. As of 2026-10-21 20:14 UTC:
+  sockets prepared 33–46 and sockets simple 47–60 done; host prepared
+  61–62 in wrap-up (`select-faces` still running). Then host simple.
+  Unreliable about booting; force-restart procedure not written down yet.
 
 ## Near-term deadline (lab downtime)
 

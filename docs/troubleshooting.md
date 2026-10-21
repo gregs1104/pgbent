@@ -21,3 +21,9 @@ at a shell prompt like this::
 
 To cleanup a single value use `./cleanup_singlevalue <testvaluenumber>`
 To cleanup all values from a particular starting point use `./cleanup_fromvalue <startingvalue>`
+
+## `dateutil` / Homebrew Python (macOS)
+
+`pgsysinfo` failing with `No module named 'dateutil'`, or OSM post-process dying in `csv2gnuplot` with `init_sys_streams` / `Bad file descriptor`, usually means pgbent is on **brew `python3`**. That interpreter moves; collector scripts should not.
+
+Fix: `./util/setup-python` and put `.venv/bin` first on PATH. See [Setup]({{ '/setup/#python-for-collectors' | relative_url }}). Do not `sudo pip3 install` into brew or Apple Python. `repair-osm-result` still recovers a finished OSM load whose post-process crashed.

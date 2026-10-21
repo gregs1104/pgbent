@@ -1,0 +1,60 @@
+#!/bin/bash
+# Four-face SELECT connection sweep: sockets vs localhost TCP × simple vs prepared.
+#
+# The /tmp driver used `set -e` around ./runset. One failed or killed cell
+# (gnuplot, latency ingest, 20-bucket OFFSET on tens of millions of rows)
+# dumped the remaining faces. This script logs the rc and continues.
+#
+# First face inits unless SKIPINIT=1 (existing scale-100). The rest always
+# skip init. Board cell: 90s, SETTIMES=2, clients 1 2 4 8 16 32 64, scale 100.
+#
+# Usage (from pgbent root):
+#   ./wl/select-faces
+#   SKIPINIT=1 ./wl/select-faces
+
+cd "$(dirname "$0")/.."
+
+SCRIPT=select
+SETTIMES=2
+RUNTIME=90
+
+echo "SCRIPT=$SCRIPT" > params
+echo "SETTIMES=$SETTIMES" >> params
+echo "RUNTIME=$RUNTIME" >> params
+./pgsysinfo >> params
+
+# Board cell on top of pgsysinfo's scale/client guesses (last assignment wins).
+cat >> params <<'EOF'
+SCALES=100
+SETCLIENTS="1 2 4 8 16 32 64"
+EOF
+
+pin() {
+  grep -vE "^${1}=" params > params.tmp
+  echo "${1}=${2}" >> params.tmp
+  mv params.tmp params
+}
+
+run_face() {
+  local sockets=$1 prepared=$2 skip=$3
+  pin SOCKETS "$sockets"
+  pin PREPARED "$prepared"
+  pin SKIPINIT "$skip"
+  echo "$(date -Is) face SOCKETS=$sockets PREPARED=$prepared SKIPINIT=$skip"
+  ./runset
+  local rc=$?
+  echo "$(date -Is) face done rc=$rc SOCKETS=$sockets PREPARED=$prepared"
+  if [ "$rc" -ne 0 ]; then
+    echo "WARNING: runset exited $rc — continuing remaining faces"
+  fi
+}
+
+# Do not abort the sweep if a face's runset fails.
+set +e
+
+SKIP_FIRST=${SKIPINIT:-0}
+run_face 1 1 "$SKIP_FIRST"
+run_face 1 0 1
+run_face 0 1 1
+run_face 0 0 1
+echo "$(date -Is) four faces done"
