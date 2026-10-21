@@ -264,9 +264,9 @@ def joules_markdown(df: pd.DataFrame) -> str:
         body = f"{body}\n\n{takeaway}"
     return (
         f"{JOULES_BEGIN}\n\n"
-        f"{body}\n\n"
         "![OSM score vs package energy]"
         "({{ '/images/osm-leaderboard-joules.png' | relative_url }})\n\n"
+        f"{body}\n\n"
         f"{JOULES_END}"
     )
 
