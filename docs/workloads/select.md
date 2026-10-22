@@ -1,7 +1,7 @@
 ---
 layout: home
 title: pgbench SELECT
-permalink: /workloads/select
+permalink: /workloads/select/
 nav_order: 5
 parent: Workloads
 ---

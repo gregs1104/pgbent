@@ -35,7 +35,7 @@ pgbent includes a mix of fixed-size and automatically scaling workloads. Traces 
 
 | Workload | What it exercises |
 |----------|-------------------|
-| [pgbench SELECT]({{ '/workloads/select' \| relative_url }}) | SELECT, nothing (`;`), and constant (`SELECT 1`) across client × size grids; sockets vs TCP, simple vs prepared |
+| [pgbench SELECT]({{ '/workloads/select/' \| relative_url }}) | SELECT, nothing (`;`), and constant (`SELECT 1`) across client × size grids; sockets vs TCP, simple vs prepared |
 | [OpenStreetMap import]({{ '/workloads/osm' \| relative_url }}) | Real-world bulk load via osm2pgsql—COPY, index builds, checkpoint pressure |
 | [Complete Block Check (CBC)]({{ '/workloads/cbc' \| relative_url }}) | Short synthetic storage stress test (CTAS, VACUUM, CLUSTER, index scans) |
 
