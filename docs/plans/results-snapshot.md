@@ -71,8 +71,8 @@ Otherwise export each study’s SQL result into
 
 ## Workflow (PG 19)
 
-1. [ ] Per study: write SQL → graph → page under `docs/results-summary/pg19/`
-2. [ ] Prefer `archive-results.py` or direct SQL export; do not require Streamlit Cloud
+1. [x] Starting hub + studies from published grids (OSM ranking, OSM power, pgbench SELECT) under `docs/results-summary/pg19/`
+2. [x] Prefer `archive-results.py` or direct SQL export; do not require Streamlit Cloud
 3. [ ] Link from docs index / tuning pages when the cycle closes
 
 ## Milestones

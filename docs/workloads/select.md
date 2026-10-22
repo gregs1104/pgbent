@@ -83,6 +83,6 @@ Once 19rc1 was ready, the same box ran the whole connection grid (sockets vs loc
 | PostgreSQL 19beta4 | localhost TCP prepared | 1,500,701 |
 | PostgreSQL 19rc1 | localhost TCP prepared | 1,517,063 |
 
-19rc1 is a hair faster than 18 on sockets, and a hair faster than 19beta4 on localhost TCP. The four-face [SELECT leaderboard]({{ '/leaderboards/' | relative_url }}) is that RC grid: sockets prepared **2.06M** vs localhost TCP prepared **1.52M**, a flat ~26% from 1 client through 64. At 1.5M TPS that protocol gap is not really bad.
+19 took the ranking cell with a tiny delta over 18 on sockets, and a similarly small step over 19beta4 on localhost TCP. The four-face [SELECT leaderboard]({{ '/leaderboards/' | relative_url }}) is that RC grid: sockets prepared **2.06M** vs localhost TCP prepared **1.52M**, a flat ~26% from 1 client through 64. At 1.5M TPS that protocol gap is not really bad. Snapshot of the same board: [pgbench SELECT (PG19)]({{ '/results-summary/pg19/pgbench-select/' | relative_url }}).
 
 Beta packages can still ship with `--enable-cassert`; CPU-bound SELECT is the canary, OSM barely moves. That was not this drop, and it was not worth chasing either way. Wiki: [Regression Testing with pgbench](https://wiki.postgresql.org/wiki/Regression_Testing_with_pgbench) (non-debug builds).

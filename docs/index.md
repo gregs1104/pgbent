@@ -70,7 +70,7 @@ pgbent workloads aim to reflect that reality. Databases have a broad set of use 
 ## Links
 
 - [Leaderboards]({{ '/leaderboards/' | relative_url }}) — OSM and pgbench SELECT rankings
-- [PostgreSQL 19 results]({{ '/results-summary/pg19/' | relative_url }}) — current-cycle studies (OSM power)
+- [PostgreSQL 19 results]({{ '/results-summary/pg19/' | relative_url }}) — 19rc1 starting snapshot (OSM ranking, OSM power, pgbench SELECT)
 - [PostgreSQL 18 results]({{ '/results-summary/pg18/' | relative_url }}) — full published study tables
 
 - TOC

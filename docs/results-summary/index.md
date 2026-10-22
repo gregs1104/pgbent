@@ -14,7 +14,7 @@ Static snapshots of published benchmark studies. The public ranking URL is **[Le
 
 | Version | Contents |
 |---------|----------|
-| [PostgreSQL 19]({{ '/results-summary/pg19/' | relative_url }}) | OSM power (in progress; current Planet) |
+| [PostgreSQL 19]({{ '/results-summary/pg19/' | relative_url }}) | 19rc1 starting snapshot: OSM ranking, OSM power, pgbench SELECT |
 | [PostgreSQL 18]({{ '/results-summary/pg18/' | relative_url }}) | OSM leaderboard, power, network, checkpoint, dirty memory; pgbench build and SELECT |
 
 ## Capturing a snapshot

@@ -31,6 +31,11 @@ optional local runs or PG18 reuse; registering a study in the live app and
 re-enabling https://pgbent.streamlit.app/ is **out of scope** unless Greg
 explicitly asks.
 
+**PG19 starting snapshot** (19rc1, catalog 20261006) is already under
+`docs/results-summary/pg19/`: OSM leaderboard, OSM power, pgbench SELECT.
+That is not cycle close. Network, checkpoint, dirty-memory, and pgbench-build
+are not in this snapshot unless they run.
+
 PG18 is the reference for *what a study looks like*. It ended with seven
 studies (OSM leaderboard, power, network, checkpoint, dirty memory, plus
 pgbench build and SELECT), published via Streamlit then snapshotted. Treat
