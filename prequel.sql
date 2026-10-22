@@ -355,3 +355,31 @@ ALTER TABLE tests ADD COLUMN client_info text;
 ALTER TABLE tests ADD COLUMN category text;
 CREATE UNIQUE INDEX idx_server_test_setting ON test_settings (server,test,name);
 
+-- One row per (uname, metric). Reload the map, then lock it.
+TRUNCATE table metrics_info;
+\copy metrics_info from 'init/metrics_map.csv' WITH (FORMAT CSV, header);
+CREATE UNIQUE INDEX metrics_info_uname_metric ON metrics_info (uname, metric);
+
+CREATE OR REPLACE VIEW test_metrics_decode AS
+SELECT
+  d.server,
+  d.test,
+  d.metric,
+  CASE WHEN mi.prefix='disk' THEN split_part(d.metric,'_',1) ELSE '' END AS disk,
+  CASE WHEN mi.metric_label IS null THEN d.metric ELSE mi.metric_label END AS label,
+  d.collected,
+  CASE WHEN mi.multi IS null THEN d.value ELSE d.value * mi.multi END AS value,
+  CASE WHEN mi.multi IS null THEN pg_size_pretty(d.value::int8) ELSE
+    pg_size_pretty((d.value * mi.multi)::int8) END AS value_p,
+  mi.units,
+  mi.category AS cat,
+  mi.visibility AS vis
+FROM
+  tests t,test_metrics_data d
+  LEFT OUTER JOIN metrics_info mi ON
+    (d.metric=mi.metric OR (mi.prefix='disk' AND d.metric LIKE ('%' || mi.metric)))
+WHERE
+  t.server=d.server AND t.test=d.test AND
+  (mi.uname=t.uname OR mi.uname IS null OR mi.uname='Database')
+;
+

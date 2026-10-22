@@ -55,6 +55,7 @@ release must fill, and not as a requirement to host Streamlit again.
 ```
 Study: <slug>
 - [ ] 0. ./download on the assembly machine to pull in new uploads
+- [ ] 0b. Reload metrics_info from init/metrics_map.csv; rebuild write_internals + submission
 - [ ] 1. Find the study's sets in central submission
 - [ ] 2. Write the study SQL (required — this is the deliverable)
 - [ ] 3. Graph it from that query / a Markdown table export
@@ -67,10 +68,37 @@ Study: <slug>
 The central results DB is built by `./download`. It imports every archive that
 participating machines have `./upload`ed since the last download, and each one fully
 replaces that server's data (details in `pg-release-runs`). The `submission`
-view is then computed over all servers. If a machine's runs are missing, check
+table is then rebuilt over all servers (step 0b). If a machine's runs are missing, check
 that it uploaded and that its archive filename starts with the right `SERVERNAME`.
 Fix wrong set descriptions or categories on the source machine and re-upload.
 Don't patch them centrally.
+
+### 0b. Reload `metrics_info`, then rebuild `submission`
+
+`./upload` is a data-only `pg_dump -a` of the whole results DB. That includes
+`metrics_info`, which has **no `server` column**. `wipe_server` does not touch
+it. Every download therefore **inserts another copy** of the catalog (seen as
+thousands of duplicate rows / 5× `soc_pkg_power2_input`). Collectors on the
+lab hosts do not need this table; the map is for decode, multipliers, and
+visibility on the assembly side.
+
+After `./download`, from the pgbent checkout against the assembly `results` DB:
+
+```bash
+psql -d results -c "TRUNCATE metrics_info;"
+psql -d results -c "\\copy metrics_info from 'init/metrics_map.csv' WITH (FORMAT CSV, HEADER)"
+psql -d results -f reports/write_internals.sql
+psql -d results -f reports/submission.sql
+```
+
+Expect one row per `(uname, metric)` after the copy (~147). Then `submission` is a fresh
+table from `write_internals`, not an increment. Do this even when the new
+archive looks complete in `tests` — OSM Power and the leaderboard read
+`submission`, not `tests`.
+
+This is a manual assembly step while the workflow is still being walked.
+Later it belongs in a helper that runs after `./download`; do not invent that
+script unless asked.
 
 ### 1. Find the sets
 

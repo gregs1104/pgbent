@@ -336,6 +336,8 @@ CREATE TABLE metrics_info (
   scale text
 );
 
+CREATE UNIQUE INDEX metrics_info_uname_metric ON metrics_info (uname, metric);
+
 DROP VIEW IF EXISTS test_metrics_decode;
 CREATE OR REPLACE VIEW test_metrics_decode AS
 SELECT
@@ -357,8 +359,7 @@ FROM
     (d.metric=mi.metric OR (mi.prefix='disk' AND d.metric LIKE ('%' || mi.metric)))
 WHERE
   t.server=d.server AND t.test=d.test AND
-  (mi.uname=t.uname OR mi.uname IS null OR mi.uname='Database') AND
-  mi.scale='bytes'
+  (mi.uname=t.uname OR mi.uname IS null OR mi.uname='Database')
 --ORDER BY t.server,t.test,d.metric,d.collected
 ;
 
