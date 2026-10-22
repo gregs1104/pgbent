@@ -12,13 +12,13 @@ Best current-Planet load per CPU for **PostgreSQL 19**, with the matching PG18 c
 
 ![OSM load leaderboard — best run per server configuration]({{ '/images/osm-leaderboard.png' | relative_url }})
 
-**R9 9950X** leads the 19rc1 fast cell at **1480** OSM score (**719** kNodes/s total, **4.17h**). **i5-13600K** is next at **1407** (**628** total, **4.78h**) and still leads relations/s (**4590**). Durable 19 (`fsync` on / `wal_level=replica`) is **1203** / **1099** on those two boxes. 19 took those top spots with a tiny delta over 18 on the same CPUs.
+**R9 9950X** leads the 19 fast cell at **1480** OSM score (**719** kNodes/s total, **4.17h**). **i5-13600K** is next at **1407** (**628** total, **4.78h**) and still leads relations/s (**4590**). Durable 19 (`fsync` on / `wal_level=replica`) is **1203** / **1099** on those two boxes. 19rc1 durable on siren was **4.49h** / **668** kNodes/s — same class as beta4. 19 took those top spots with a tiny delta over 18 on the same CPUs.
 
 This workload does not benefit very much from larger core or socket counts. Relation building does not fill a second CCD; extra cores mostly add package watts.
 
 Regenerate the live board: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/osm-leaderboard.py --from-db`. Query: `reports/osm-leaderboard.sql`. Power study: [OSM Power]({{ '/results-summary/pg19/osm-power/' | relative_url }}).
 
-Sets: siren **71** and twilight **118**. Fast = `fsync=off` / `wal_level=minimal`; durable = `fsync=on` / `wal_level=replica`. `max_wal_gb=100` on these 19 cells.
+Sets: siren **71** (beta4 best-of) and **108** (19rc1 durable 4.49h); twilight **118**. Fast = `fsync=off` / `wal_level=minimal`; durable = `fsync=on` / `wal_level=replica`. `max_wal_gb=100` on these 19 cells.
 
 | cpu | ver | fsync | wal_level | hours | score_kips | overall_kips | index_kips | rel_ps | avg_pkg | max_pkg | kj |
 | --- | ---: | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |

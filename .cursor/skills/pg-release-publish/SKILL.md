@@ -31,19 +31,18 @@ optional local runs or PG18 reuse; registering a study in the live app and
 re-enabling https://pgbent.streamlit.app/ is **out of scope** unless Greg
 explicitly asks.
 
-**PG19 starting snapshot** (19rc1, catalog 20261006) is already under
+**PG19 initial report** (19rc1, catalog 20261006) is under
 `docs/results-summary/pg19/`: OSM leaderboard, OSM power, pgbench SELECT.
-That is not cycle close. Remaining docs work is **OSM Power** once court
-finishes: put a **PG19** NVIDIA P4242 cell on kernel **7.0** into that
-table (the live row is still PG16). The other hardware already has
-concurrent GIS on 19; leaving Spark on 16 is not a fair mix. The page
-can stay public; do not share it as the finished Grace/power story until
-that refresh. Network,
-checkpoint, dirty-memory, and pgbench-build are not in this snapshot
-unless they run. After the 19rc1 results and experiments wrap: OS
-upgrades on **siren** and **twilight**, then re-test main SELECT faces
-and OSM on the same pin (newset by OS vintage). Do not start that
-cutover from docs work.
+19 took the top spots with a tiny delta over 18; siren 19rc1 durable OSM
+was **4.49h**, same class as beta4. That is not cycle close. Remaining
+docs work is **OSM Power** with a **PG19** NVIDIA P4242 cell on kernel
+**7.0** (the live row is still PG16). The other hardware already has
+concurrent GIS on 19; leaving Spark on 16 is not a fair mix. Do not share
+that page as the finished Grace/power story until that refresh. Network,
+checkpoint, dirty-memory, and pgbench-build are not in this report
+unless they run. Next lab phase: OS upgrades on **siren** and
+**twilight**, then re-test main SELECT faces and OSM on the same pin
+(newset by OS vintage). Do not start that cutover from docs work.
 
 PG18 is the reference for *what a study looks like*. It ended with seven
 studies (OSM leaderboard, power, network, checkpoint, dirty memory, plus

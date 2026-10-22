@@ -10,7 +10,7 @@ has_children: true
 
 Public OSM planet-load and pgbench SELECT rankings from the pgbent server farm personally run by Greg Smith. This page is updated when there are interesting new cells; it is not a live dashboard.
 
-PostgreSQL 19rc1 SELECT connection sweep and OSM import on siren completed 2026-10-20, based on rc1 2026-10-15 catalog 20261006. Study tables for that pin: [PostgreSQL 19 results]({{ '/results-summary/pg19/' | relative_url }}).
+Initial [PostgreSQL 19rc1 report]({{ '/results-summary/pg19/' | relative_url }}): 19 took the top leaderboard spots with a tiny delta over 18 (rc1 2026-10-15, catalog 20261006).
 
 ## OSM
 
