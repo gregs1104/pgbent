@@ -1,4 +1,15 @@
 #!/bin/bash -e
+# Snapshot of disk, DB/WAL size, nohup.out, and the current results.txt.
+# Follow the OSM loader:
+#   util/progress follow
+#   util/progress f
+FOLLOW=0
+case "$1" in
+  follow|f) FOLLOW=1 ;;
+  "" ) ;;
+  *) echo "Usage: $0 [follow|f]" >&2; exit 1 ;;
+esac
+
 . ./config
 . ./params
 TESTPSQL="psql -h $TESTHOST -U $TESTUSER -p $TESTPORT -d $TESTDB"
@@ -18,4 +29,9 @@ echo == Running automation:
 tail nohup.out
 echo
 echo == Running test:
-tail results/$RUNNING/results.txt
+if [ "$FOLLOW" -eq 1 ]; then
+  tail -f "results/$RUNNING/results.txt"
+else
+  tail "results/$RUNNING/results.txt"
+fi
+

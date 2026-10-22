@@ -1,0 +1,61 @@
+#!/bin/bash
+# Sockets simple + prepared for nothing (`;`) then constant (`SELECT 1`).
+#
+# Together with a finished select-faces sweep, 1-client TPS on this box
+# splits protocol / execute SELECT 1 / plan SELECT 1 / lookup.
+# Same board cell as select-faces: 90s, SETTIMES=2, clients 1–64, scale 100.
+# Logs runset rc and continues (no set -e).
+#
+# Usage (from pgbent root, existing scale-100):
+#   SKIPINIT=1 ./wl/component-faces
+
+cd "$(dirname "$0")/.."
+
+SETTIMES=2
+RUNTIME=90
+
+pin() {
+  grep -vE "^${1}=" params > params.tmp
+  echo "${1}=${2}" >> params.tmp
+  mv params.tmp params
+}
+
+setup_script() {
+  local script=$1
+  echo "SCRIPT=$script" > params
+  echo "SETTIMES=$SETTIMES" >> params
+  echo "RUNTIME=$RUNTIME" >> params
+  ./pgsysinfo >> params
+  cat >> params <<'EOF'
+SCALES=100
+SETCLIENTS="1 2 4 8 16 32 64"
+EOF
+}
+
+run_face() {
+  local sockets=$1 prepared=$2 skip=$3
+  pin SOCKETS "$sockets"
+  pin PREPARED "$prepared"
+  pin SKIPINIT "$skip"
+  echo "$(date -Is) face SCRIPT=$(grep ^SCRIPT= params | tail -1 | cut -d= -f2) SOCKETS=$sockets PREPARED=$prepared SKIPINIT=$skip"
+  ./runset
+  local rc=$?
+  echo "$(date -Is) face done rc=$rc SOCKETS=$sockets PREPARED=$prepared"
+  if [ "$rc" -ne 0 ]; then
+    echo "WARNING: runset exited $rc — continuing remaining faces"
+  fi
+}
+
+set +e
+
+SKIP_FIRST=${SKIPINIT:-0}
+
+setup_script nothing
+run_face 1 1 "$SKIP_FIRST"
+run_face 1 0 1
+
+setup_script constant
+run_face 1 1 1
+run_face 1 0 1
+
+echo "$(date -Is) component faces done"

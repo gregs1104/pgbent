@@ -34,8 +34,9 @@ variation graph are follow-up, not more validation.
 Retire **9950X + SK51** with a complete pack before the chip comes out.
 Twilight already **leads relations/s** (4590 vs 4529); this OSM is the
 9950X archive and a second rc1 pass, not a bid for the relations crown.
-Court is the slow `OSMRELPROF` peer after SELECT set 6 finishes — do not
-start another Spark planet load while that grid is in flight.
+**2026-10-22 — siren OSM in flight** (Greg; thermal / rc1 leaderboard
+check). No agent SSH. Court is the slow `OSMRELPROF` peer later — do
+not start another Spark planet load while set 8 pgbench components run.
 
 Hands-on on siren (no agent SSH):
 
@@ -43,29 +44,18 @@ Hands-on on siren (no agent SSH):
    **20261006**, `debug_assertions` off).
 2. **Empty `;`** (`wl/empty-grid`, `SCRIPT=nothing`) on the existing
    scale-100 database (`SKIPINIT=1`). Same cell as SELECT: 90s,
-   `SETTIMES=2`, clients `1 2 4 8 16 32 64`. **Sockets simple and
-   prepared finished** (set 107): 1 client **281,019** / **280,201**;
-   peak **3.96M** simple / **3.68M** prepared at 32, flat at 64 —
-   that's web scale. Preparation does not help `;`; simple is a few
-   percent ahead at many clients. The pause is `pgbench -l` COPY into
-   `timing`; 32/64 latency columns are empty because that pipeline
-   filled the **31GB free** then on siren (~330–360M rows; old
-   uncompressed upload archives). `tests.tps` is stored first. Clearing
-   those archives put the boot drive back to **121GB free**, so later
-   grids should land latency. `constant` (`SELECT 1`) 1-client is
-   **179,635** (5.6 μs).    **2026-10-21 — giant latency COPY in flight:**
-   `COPY 342704901` (~3.81M TPS × 90s). `tests.tps` is already stored.
-   The known ingest failure is **disk full**, not a sort (court’s 55M
-   wrap-up died in a watchdog reboot, not OFFSET). At ~6GB of files per
-   55M rows on court, 343M is tens of GB of `pgbench.log` + `timing.csv`
-   + heap — 121GB should hold one cell if leftovers from the first
-   nothing fill are gone. After this grid, **re-run `nothing` at 32 and
-   64** if this COPY is `constant`. Then TCP faces if the box is staying
-   up. Then OSM.
-   Breaking latency into components this way is a long-term goal;
-   collect all of it now that the drive can hold the ingest. Accurate
-   power on all platforms was the blocker — the question was how many
-   watts `nothing` burns.
+   `SETTIMES=2`, clients `1 2 4 8 16 32 64`. **Sockets `;` and
+   sockets simple `constant` are in** (set 107). `;` 1-client
+   **281,019** / **280,201**; peak **4.05M** simple / **3.81M**
+   prepared at 32 (re-run 3254 / 3251). 64-client prepared **3252**
+   is 3.65M TPS, avg 7 μs, P90 0, max **1.45 s** — repeating stalls
+   on the per-row plot, not a connect() artifact. That is why every
+   `pgbench -l` row is copied. `constant` sockets simple is in:
+   1-client **179,635** (5.6 μs), peak **2.48M** at 32, 1.79M at 64.
+   Sockets prepared `constant` 1-client is **212,745** (4.7 μs):
+   execute `SELECT 1` +1.1 μs, plan it +0.9 μs, lookup +2.9 μs.
+   Rest of that face still running (Greg; no agent SSH). Then TCP
+   faces if the box is staying up. Then OSM.
 3. One full **OSM** (~4h) with `OSMRELPROF=1` and the 1h Relation stop.
    That re-tests rc1 and keeps a validated 9950X Relation `perf`.
 4. Then **9600X**.
@@ -219,6 +209,10 @@ Rules for running studies in parallel:
 ```
 - [ ] In ~postgres/pgbent: `git stash && git pull && git stash apply`
       The server's checkout will not have `conf/<N>` until this pull. `config` and `params` are dirty on every host, so stash first and apply after.
+      **Ship `wl/` and `tests/` via the public repo, then pull.** Copying a
+      script onto the box is the exception (court set 8: checkout at
+      `8fc7fec` with dirty OSM `params`, `component-faces` not on origin
+      yet). Do not make scp the default.
 - [ ] Install PostgreSQL <N> (plus PostGIS, hstore for OSM) and deploy conf/<N>/conf.d
 - [ ] Edit ./config: TESTHOST/TESTPORT/TESTDB, RESULTHOST/RESULTDB, SERVERNAME, DISKLIST, ARCHIVE
 - [ ] **Linux `DISKLIST`** — set to the database disk device name(s) as they appear in
@@ -390,11 +384,22 @@ Other machines:
   watchdog reboot was the miss that stayed `Network is unreachable`.
   Do not configure the Mikrotik or Asus gear from here. A failed
   ping to `192.168.50.1` is a LAN glitch, not a hung host. Treat SSH
-  drops the same way — retry, do not reboot. **Set 7 four faces:
-  finish then stop** — no OSM after. As of 2026-10-21 20:14 UTC:
-  sockets prepared 33–46 and sockets simple 47–60 done; host prepared
-  61–62 in wrap-up (`select-faces` still running). Then host simple.
-  Unreliable about booting; force-restart procedure not written down yet.
+  drops the same way — retry, do not reboot. **Set 7 four faces
+  done** 2026-10-21 22:09 UTC (`four faces done`, tests 33–88, all
+  four `conn_method`s × 14). No OSM after. **Set 8** `PG19 rc1
+  nothing+constant sockets` in flight (`wl/component-faces`,
+  `SKIPINIT=1`): `;` then `SELECT 1`, sockets prepared then simple,
+  same 90s / `SETTIMES=2` / 1–64 grid. 1-client TPS on this set
+  plus set 7 SELECT is the Spark μs split for the pgbench page.
+  Started test 89. Unreliable about booting; force-restart
+  procedure not written down yet.
+- **rising** — **5950X** now (was **3950X** in the 2022 `SELECT 1` /
+  `;` notes). Still around; large pgbench + OSM archive on the box.
+  Parked. Greg can bring it up, refresh to current majors, and
+  publish anything interesting. Do not mix 2022 rising TPS into the
+  siren 19rc1 table; new cells after a version refresh are fair. Not
+  the 9600X joules-hole SKU. Do not start from here. CBC already
+  published a 5950X / 128GB / Inland 2TB point.
 
 ## Near-term deadline (lab downtime)
 
@@ -821,6 +826,7 @@ OSM loop control:
 
 ```bash
 watch util/progress   # live dashboard: disk use, DB/WAL size, tail of current results.txt and nohup.out
+util/progress f       # same snapshot, then tail -f results.txt (OSM loader)
 touch complete        # (in STATEDIR) stop after the current run finishes
 ./stop-set            # kill the loop / workload / collectors now
 ./stop-set cleanup    # same, and wipe the unfinished latest test

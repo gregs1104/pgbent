@@ -14,31 +14,33 @@ Developers working on PostgreSQL itself are often running benchmarks on the serv
 
 The same SELECT is also run simple and over localhost TCP. Phoronix switched to prepared statements a few years ago and kind of reset the public history; the numbers went up and not many people noticed. Sweeping all four faces (sockets vs localhost TCP, simple vs prepared) is the connection study from PostgreSQL 18, kept as a code exercise so a method change cannot hide. `wl/select-faces` runs that sweep (`SKIPINIT=1` against an existing scale-100 database). A failed `runset` logs the rc and continues; it used to live in `/tmp` with `set -e` and dump the remaining faces. Each client count also gets **transactions per joule** from the 1-second package-power integral — energy efficiency as the other side of that TPS fan. See the [SELECT leaderboard]({{ '/leaderboards/' | relative_url }}).
 
-Fantasy scripts under that SELECT: `SCRIPT=nothing` (`tests/nothing.sql`) is only `;` — protocol and `BEGIN`/`COMMIT`, no query. `SCRIPT=constant` (`tests/constant.sql`) is `SELECT 1;` — a query with no table lookup. The accounts SELECT is the lookup on top of that. Same connection faces. On siren sockets `nothing` hits **280K TPS on a single client** prepared or simple. `constant` is **179,635**. That's web scale. `think` is the other end of that axis (it adds sleep). `wl/empty-grid` writes the nothing params; run against an existing scale-100 database with `SKIPINIT=1`.
+Fantasy scripts under that SELECT: `SCRIPT=nothing` (`tests/nothing.sql`) is only `;` — protocol and `BEGIN`/`COMMIT`, no query. `SCRIPT=constant` (`tests/constant.sql`) is `SELECT 1;` — a query with no table lookup. The accounts SELECT is the lookup on top of that. Same connection faces. On siren sockets `nothing` hits **280K TPS on a single client** prepared or simple. Sockets simple `constant` is **179,635**. That's web scale. `think` is the other end of that axis (it adds sleep). `wl/empty-grid` writes the nothing params; run against an existing scale-100 database with `SKIPINIT=1`.
 
 ## 1-client latency pieces
 
-At one client these rates are just the inverse of the latency times. Planning takes some amount, execution some, and TCP connection adds some. The empty `;` floor plus the four SELECT faces on **siren** 19rc1 split most of that:
+At one client these rates are just the inverse of the latency times. Planning takes some amount, execution some, and TCP connection adds some. The empty `;` floor, both `SELECT 1` faces, and the four SELECT faces on **siren** 19rc1 (set 107) split that:
 
 | 1-client cell | TPS | 1/TPS |
 | --- | ---: | ---: |
-| sockets prepared `;` | 280,201 | 3.6 μs |
 | sockets `;` | 281,019 | 3.6 μs |
-| sockets prepared `SELECT 1` | 179,635 | 5.6 μs |
+| sockets prepared `;` | 280,201 | 3.6 μs |
+| sockets prepared `SELECT 1` | 212,745 | 4.7 μs |
+| sockets `SELECT 1` | 179,635 | 5.6 μs |
 | sockets prepared SELECT | 132,433 | 7.6 μs |
 | localhost TCP prepared | 96,566 | 10.4 μs |
 | sockets | 89,241 | 11.2 μs |
 | localhost TCP | 68,924 | 14.5 μs |
 
 - **Protocol + `BEGIN`/`COMMIT`:** 3.6 μs from sockets `;`. No query. Prepared **280,201** vs simple **281,019** — same floor; preparation does not move an empty transaction.
-- **`SELECT 1`:** +2.0 μs, sockets prepared `constant` minus sockets prepared `;`. A query, no table.
-- **Lookup:** +2.0 μs, sockets prepared SELECT minus sockets prepared `constant`. The accounts row. Together those two are the old +4.0 μs execution piece.
-- **Planning:** +3.6 μs on **SELECT**, sockets simple minus sockets prepared. Parse/plan every transaction versus skip it. Not present on `;`.
+- **Execute `SELECT 1`:** +1.1 μs, sockets prepared `constant` (212,745) minus sockets prepared `;`. A query, no table, plan skipped.
+- **Plan `SELECT 1`:** +0.9 μs, sockets simple `constant` (179,635) minus sockets prepared `constant`. Trivial plan; preparation *does* help here.
+- **Lookup:** +2.9 μs, sockets prepared SELECT minus sockets prepared `constant`. The accounts row on top of an already-planned query.
+- **Planning the accounts SELECT:** +3.6 μs, sockets simple minus sockets prepared. Heavier plan than `SELECT 1`.
 - **TCP Connection:** +2.8 μs, localhost TCP prepared minus sockets prepared. Already-open pgbench session — not `connect()`. Initial connect is a one-time pgbench line, not in these TPS numbers.
 
-Those four add to 14.0 μs against 14.5 μs on localhost TCP simple. Close enough to account for the cell. Multi-client TPS is the same latencies with more pipelines, not a different clock.
+Protocol + execute + lookup + accounts planning + TCP is 14.0 μs against 14.5 μs on localhost TCP simple. Close enough to account for the cell. The old mixed +2.0 μs (`SELECT 1` simple minus `;`) is plan + execute (0.9 + 1.1). The old mixed +4.0 μs (prepared SELECT minus prepared `;`) is execute + lookup (1.1 + 2.9). Multi-client TPS is the same latencies with more pipelines, not a different clock.
 
-Sockets `nothing` (`script=semi`, set 107) on siren 19rc1, 90s, scale 100. Peak is **3.96M** simple at 32 clients — the 16-core/32-thread ceiling. SELECT’s sockets-prepared peak on the same box is **2.06M** at 32; `;` is already past that at 16.
+Sockets `nothing` on siren 19rc1 set 107, 90s, scale 100. Peak is **4.05M** simple at 32 clients (tests 3254 / 3251 after the disk-full re-run). SELECT’s sockets-prepared peak on the same box is **2.06M** at 32; `;` is already past that at 16.
 
 | clients | sockets | sockets prepared |
 | ---: | ---: | ---: |
@@ -47,10 +49,26 @@ Sockets `nothing` (`script=semi`, set 107) on siren 19rc1, 90s, scale 100. Peak 
 | 4 | 966,910 | 929,901 |
 | 8 | 1,577,974 | 1,459,014 |
 | 16 | 2,221,108 | 2,138,539 |
-| 32 | 3,960,034 | 3,682,164 |
-| 64 | 3,921,947 | 3,763,165 |
+| 32 | 4,046,425 | 3,808,019 |
+| 64 | 3,947,315 | 3,649,678 |
 
-At one client they are the same 3.6 μs floor: no query to plan, so `-M prepared` does not help. At many clients simple is a few percent ahead (Bind/Execute/Sync vs a simple `Query`). Both go flat past 32. The pause after each run is `pgbench -l` COPY into `timing`. At 32 clients that is ~330–360 million rows — `pgbench.log`, the `sort` spill, and `timing.csv` filled the **31GB free** then on siren (old uncompressed upload archives), so avg/P90/max never landed on those `;` rows. `tests.tps` is stored before that import. Clearing those archives put the boot drive back to **121GB free**. After `constant` finishes, re-run `nothing` at **32 and 64**, sockets simple and prepared, for the latency columns and for package watts on the empty transaction. Breaking the 1-client times into protocol / query / lookup / planning / TCP is a long-term goal; collect all of it while the box can. Accurate power on every platform was what blocked this — the question was how many watts `nothing` burns. `constant` (`SELECT 1`) 1-client is **179,635** (5.6 μs); the rest of that grid is still collecting.
+At one client they are the same 3.6 μs floor: no query to plan, so `-M prepared` does not help. At many clients simple is a few percent ahead (Bind/Execute/Sync vs a simple `Query`). Both go flat past 32.
+
+Sockets simple `constant` on the same set. Peak **2.48M** at 32 — between `;` (4.05M) and prepared SELECT (2.06M). At 64 it falls to 1.79M (avg 34 μs, P90 46 μs, max 52 ms). Sockets prepared `constant` 1-client is **212,745** (4.7 μs); the rest of that face is still running.
+
+| clients | sockets `SELECT 1` | sockets prepared `SELECT 1` |
+| ---: | ---: | ---: |
+| 1 | 179,635 | 212,745 |
+| 2 | 339,650 | |
+| 4 | 614,640 | |
+| 8 | 995,009 | |
+| 16 | 1,561,063 | |
+| 32 | 2,478,846 | |
+| 64 | 1,793,332 | |
+
+The pause after each run is `pgbench -l` COPY into `timing`. At 32–64 clients that is ~330–360 million rows. `tests.tps` is stored first. The first `;` 32/64 pass filled the **31GB free** then on siren (old uncompressed upload archives); clearing those put the boot drive back to **121GB free** and the re-run landed TPS plus the max. Accurate power on every platform was what blocked collecting this — the question was how many watts `nothing` burns.
+
+pgbench’s own summary breaks down at this rate. Test **3252** (`;` sockets prepared, 64 clients, 3.65M TPS): avg 7 μs, **P90 0** (the 20-bucket `OFFSET` on 328M rows did not finish), max **1,448,031 μs** (1.45 s). Easy to throw that max away as a connect() blip. The per-row `latency.png` is why every `-l` line is copied: the floor is still microseconds (invisible on a 1600 ms axis) and the 200 ms–1.5 s stalls **repeat** through the file, including that 1.45 s point. Not one artifact. This is the 2007 ingest staying in the path on purpose.
 
 ## Comparing versions
 
