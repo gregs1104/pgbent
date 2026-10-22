@@ -74,7 +74,7 @@ Otherwise export each study’s SQL result into
 1. [x] Starting hub + studies from published grids (OSM ranking, OSM power, pgbench SELECT) under `docs/results-summary/pg19/`
 2. [x] Prefer `archive-results.py` or direct SQL export; do not require Streamlit Cloud
 3. [x] Initial 19rc1 report — 19 took the top spots with a tiny delta over 18; siren durable OSM **4.49h** matches beta4. Not cycle close.
-4. [ ] Refresh [OSM Power]({{ '/results-summary/pg19/osm-power/' | relative_url }}) once a **PG19** NVIDIA P4242 cell on kernel **7.0** is in the table (live row is still PG16). Do not share that study as the finished Grace/power story until then.
+4. [x] Refresh [OSM Power]({{ '/results-summary/pg19/osm-power/' | relative_url }}) with court **19rc1** NVIDIA (fast 8.30h / 521) and Abbey **PG18** as the Studio stand-in.
 5. [ ] After this pin: OS upgrades on **siren** and **twilight**, then re-test main SELECT faces + OSM (newset by OS vintage)
 
 ## Milestones

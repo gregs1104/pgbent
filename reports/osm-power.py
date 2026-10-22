@@ -65,6 +65,7 @@ SINGLE_CHART_LABEL_OVERRIDES: dict[str, dict[str, LabelOffset]] = {
 PG19_CHART_LABEL_OVERRIDES: dict[str, dict[str, LabelOffset]] = {
     "index_kips": {
         "Apple M4 Max Studio": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
+        "NVIDIA P4242": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
         "i5-13600K": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
         "R9 9950X": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
     },
@@ -225,7 +226,7 @@ def plot_single_throughput_vs_power(
         if pg != "18"
         else SINGLE_CHART_LABEL_OVERRIDES.get(metric_col)
     )
-    pin_nvidia_bottom = metric_col == "overall_kips" or pg != "18"
+    pin_nvidia_bottom = metric_col == "overall_kips"
     label_df = df[df["cpu"] != "NVIDIA P4242"] if pin_nvidia_bottom else df
     place_point_labels(
         ax,

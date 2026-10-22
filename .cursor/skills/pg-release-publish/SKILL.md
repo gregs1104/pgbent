@@ -34,13 +34,11 @@ explicitly asks.
 **PG19 initial report** (19rc1, catalog 20261006) is under
 `docs/results-summary/pg19/`: OSM leaderboard, OSM power, pgbench SELECT.
 19 took the top spots with a tiny delta over 18; siren 19rc1 durable OSM
-was **4.49h**, same class as beta4. That is not cycle close. Remaining
-docs work is **OSM Power** with a **PG19** NVIDIA P4242 cell on kernel
-**7.0** (the live row is still PG16). The other hardware already has
-concurrent GIS on 19; leaving Spark on 16 is not a fair mix. Do not share
-that page as the finished Grace/power story until that refresh. Network,
-checkpoint, dirty-memory, and pgbench-build are not in this report
-unless they run. Next lab phase: OS upgrades on **siren** and
+was **4.49h**, same class as beta4. That is not cycle close. OSM Power
+now pins court **19rc1** for NVIDIA Spark and Abbey **PG18** for the
+Studio (no 19 during RC; 18 and 19 are close enough on this load).
+Network, checkpoint, dirty-memory, and pgbench-build are not in this
+report unless they run. Next lab phase: OS upgrades on **siren** and
 **twilight**, then re-test main SELECT faces and OSM on the same pin
 (newset by OS vintage). Do not start that cutover from docs work.
 
@@ -99,6 +97,17 @@ archive looks complete in `tests` — OSM Power and the leaderboard read
 This is a manual assembly step while the workflow is still being walked.
 Later it belongs in a helper that runs after `./download`; do not invent that
 script unless asked.
+
+When `test_metrics_data` gets slow on the analysis host (dead tuples from
+`wipe_server` / download; `write_internals` taking tens of minutes), CLUSTER
+it on `idx_test_metrics_test`:
+
+```bash
+psql -d results -c "CLUSTER test_metrics_data USING idx_test_metrics_test;"
+```
+
+That rewrites the live heap in `(server, test)` order and drops the dead
+tuples. Do this on the analysis host, not on a box that is still collecting.
 
 ### 1. Find the sets
 
