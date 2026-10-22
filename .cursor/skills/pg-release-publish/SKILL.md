@@ -33,8 +33,17 @@ explicitly asks.
 
 **PG19 starting snapshot** (19rc1, catalog 20261006) is already under
 `docs/results-summary/pg19/`: OSM leaderboard, OSM power, pgbench SELECT.
-That is not cycle close. Network, checkpoint, dirty-memory, and pgbench-build
-are not in this snapshot unless they run.
+That is not cycle close. Remaining docs work is **OSM Power** once court
+finishes: put a **PG19** NVIDIA P4242 cell on kernel **7.0** into that
+table (the live row is still PG16). The other hardware already has
+concurrent GIS on 19; leaving Spark on 16 is not a fair mix. The page
+can stay public; do not share it as the finished Grace/power story until
+that refresh. Network,
+checkpoint, dirty-memory, and pgbench-build are not in this snapshot
+unless they run. After the 19rc1 results and experiments wrap: OS
+upgrades on **siren** and **twilight**, then re-test main SELECT faces
+and OSM on the same pin (newset by OS vintage). Do not start that
+cutover from docs work.
 
 PG18 is the reference for *what a study looks like*. It ended with seven
 studies (OSM leaderboard, power, network, checkpoint, dirty memory, plus

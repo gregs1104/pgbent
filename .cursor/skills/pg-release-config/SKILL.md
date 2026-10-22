@@ -77,14 +77,17 @@ is a sentence, not a column: package date plus catalog number, e.g. PostgreSQL
 19rc1 SELECT connection sweep and OSM import on siren completed 2026-10-20,
 based on rc1 2026-10-15 catalog 20261006.
 
-**PG19 rc1 catalog bump (2026-10-19).** A beta4 (or earlier 19) data directory
-will not start on rc1. **Twilight’s** PG19 **test** instance must be recreated
-from scratch — Greg leads because that datadir is **partitioned** on the Fury
-volumes, not a stock PGDG path. Do not `pg_upgrade`, do not `initdb` into the
-live path until he walks it. Keep the results instance; only the test cluster
-is thrown away. **This is why results stay on a 1GB previous-major cluster** —
-never in the beta. After a catalog bump the beta datadir can be unreadable.
-**Abbey has not gotten PG19 yet.**
+**PG19 rc1 catalog bump (2026-10-19 / done on twilight 2026-10-22).** A beta4
+(or earlier 19) data directory will not start on rc1. Twilight’s 19 **test**
+cluster is a symlink onto Fury (`/var/lib/postgresql/19/main` →
+`/fury1/19/main`). Debian does not support a raw `initdb` for that catalog
+change — only the `pg_*` wrappers. Recreate with `pg_dropcluster` /
+`pg_createcluster`, park the old tree as `main.orig`, rsync the new cluster
+onto Fury, relink, then start — see `pg-release-runs` **Twilight boot + Fury
+19 recreate**. Do not `pg_upgrade`. Do not `initdb` into the Fury path. Keep the results instance; only the test
+cluster is thrown away. **This is why results stay on a 1GB previous-major
+cluster** — never in the beta. After a catalog bump the beta datadir can be
+unreadable. **Abbey has not gotten PG19 yet.**
 
 **Brew PG restarts are a struggle.** `brew services restart postgresql@<N>` often
 claims success while the **old postmaster keeps running** (idle `gis` backends,
@@ -268,20 +271,24 @@ Larger WAL (256GB, 60 min) is faster but may not fit on 2TB drives. 100GB / 30 m
 
 The published baseline is **production durability**: `wal_level=replica`,
 `fsync` / `synchronous_commit` on, `full_page_writes` on. Those are **three
-independent pairs** in `conf/19/conf.d` (`osm-wal-*`, `osm-fsync-*`,
-`osm-fpw-*`). Default files are the `.conf` side of each pair. Conf 16–18
+independent pairs** in `conf/18` and `conf/19` (`osm-wal-*`, `osm-fsync-*`,
+`osm-fpw-*`). Default files are the `.conf` side of each pair. Conf 16–17
 keep the bundled `osm-sync-fast` / `osm-sync-durable` pair.
 
 Abbey PG18 set 11 showed a **severe** bundled penalty (fast 7.45h / 404
 kNodes/s vs durable 11.1h / 270). Some systems are WAL-volume driven; abbey
-is suspected **Darwin fsync**. Further PG19 testing flips WAL level and fsync
-separately (FPW held on unless WAL bytes still need explaining). A `git pull`
-on siren is fine; do **not** copy into `/etc/postgresql/19/main/conf.d` (or
-reload) until the current PG19 grid cells finish.
+is suspected **Darwin fsync**. **2026-10-22 — abbey OSM 2×2 open** on set
+11: fold `osm-wal-*` × `osm-fsync-*` into Homebrew `postgresql.conf` (no
+`conf.d`), FPW held on. First corner is **replica + fsync off** (fat WAL,
+no sync waits). Stay on set 11; `test_settings` splits the cells. A
+`git pull` on siren is fine; do **not** copy into
+`/etc/postgresql/19/main/conf.d` (or reload) until the current PG19 grid
+cells finish.
 
 `SHOW fsync; SHOW wal_level; SHOW full_page_writes;` after each flip. Stay
-on the existing PG19 set — corners are told apart by `test_settings`.
+on the existing set — corners are told apart by `test_settings`.
 
-**First PG19 study** is durability / WAL volume vs throughput on the 100GB·30min
-envelope: 2×2 (`osm-wal-*` × `osm-fsync-*`, FPW on) on PG19 only. See
-`pg-release-runs`.
+**First durability study** is WAL volume vs throughput on the 100GB·30min
+envelope: 2×2 (`osm-wal-*` × `osm-fsync-*`, FPW on). Abbey PG18 is the
+Darwin fsync-suspect; twilight is the Linux comparison once set 119 OSM
+starts. See `pg-release-runs`.

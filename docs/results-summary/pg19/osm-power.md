@@ -8,7 +8,7 @@ nav_order: 1
 
 # OSM Power
 
-OSM load throughput vs package power draw on the current Planet (**10.79 billion** nodes). **R9 9950X** and **i5-13600K** are PostgreSQL 19; Apple Studio and NVIDIA Spark are the same extract on 17 and 16. Package watts for the 9950X are turbostat `PkgWatt` from the corrected siren import. Ranking cells for this pin: [OSM Leaderboard]({{ '/results-summary/pg19/osm-leaderboard/' | relative_url }}).
+OSM load throughput vs package power draw on the current Planet (**10.79 billion** nodes). **R9 9950X** and **i5-13600K** are PostgreSQL 19; Apple Studio and NVIDIA Spark are the same extract on 17 and 16. Leaving Spark on 16 while the other boxes already have concurrent GIS on 19 is not a fair mix; that NVIDIA row waits on court **19rc1** with kernel **7.0**. Package watts for the 9950X are turbostat `PkgWatt` from the corrected siren import. Ranking cells for this pin: [OSM Leaderboard]({{ '/results-summary/pg19/osm-leaderboard/' | relative_url }}).
 
 ![OSM total throughput vs maximum package power]({{ '/images/pg19-osm-power-total.png' | relative_url }})
 

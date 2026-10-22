@@ -31,12 +31,21 @@ cloned at.  Example:
 
 # Open Street Map osm2pgsql examples
 
-There are two OSM loading durability examples, one with standard durability
-and a default one intended to be as fast as possible instead.
-To switch from the fast version to the durable, replication aware version:
+WAL volume, fsync waits, and full-page writes are **separate** pairs.
+Exactly one of each is `.conf`. Default is production: replica + fsync on +
+FPW on. Historical bundled `osm-sync-fast` / `osm-sync-durable` are `.off`.
 
-    mv osm-sync-durable.conf osm-sync-durable.off
-    mv osm-sync-fast.conf osm-sync-fast.off
+    # thin WAL, keep fsync (and FPW) on
+    mv osm-wal-replica.conf osm-wal-replica.off
+    mv osm-wal-minimal.off osm-wal-minimal.conf
+
+    # no fsync waits, keep replica WAL
+    mv osm-fsync-on.conf osm-fsync-on.off
+    mv osm-fsync-off.off osm-fsync-off.conf
+
+    # FPW off only if WAL bytes still need explaining (not the 2×2 default)
+    mv osm-fpw-on.conf osm-fpw-on.off
+    mv osm-fpw-off.off osm-fpw-off.conf
 
 There are 3 different OSM memory size examples.  These assume you are
 running osm2pgsql on the server itself, so settings like

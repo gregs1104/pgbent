@@ -44,6 +44,6 @@ Fair 32-client means, same box:
 
 1-client `;` / `SELECT 1` / lookup split (protocol 3.6 μs, execute `SELECT 1` +1.1 μs, plan `SELECT 1` +0.9 μs, accounts lookup +2.9 μs): [1-client latency pieces]({{ '/workloads/select/#1-client-latency-pieces' | relative_url }}). Those fantasy scripts are not on this ranking.
 
-Court Spark four-face SELECT (set 7) is in the results DB as the ARM end of the same grid. It is not on this starter table until the 1-client μs pack (set 8) lands and the ranking cell is checked.
+Court Spark four-face SELECT (set 7) is in the results DB as the ARM end of the same grid. Set 8 sockets `;` / `SELECT 1` is in: 1-client **100,843** / **94,911** nothing and **70,185** / **83,630** constant (simple / prepared). Not on this ranking table.
 
 Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/select-leaderboard.py --from-db`. Query: `reports/select-leaderboard.sql`. Older mixed-protocol dump: [pgbench SELECT (PG18 snapshot)]({{ '/results-summary/pg18/pgbench-select/' | relative_url }}).

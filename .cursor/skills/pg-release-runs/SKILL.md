@@ -35,9 +35,12 @@ variation graph are follow-up, not more validation.
 Retire **9950X + SK51** with a complete pack before the chip comes out.
 Twilight already **leads relations/s** (4590 vs 4529); this OSM is the
 9950X archive and a second rc1 pass, not a bid for the relations crown.
-**2026-10-22 — siren OSM in flight** (Greg; thermal / rc1 leaderboard
-check). No agent SSH. Court is the slow `OSMRELPROF` peer later — do
-not start another Spark planet load while set 8 pgbench components run.
+**2026-10-22 — 19rc1 durable OSM done: 4.49h**, same class as beta4
+durable (set 71 4.34–4.44h). **Low-durability OSM in flight** (Greg;
+hoping closer to the ~4.03–4.17h fast cells). After that: **power down
+and swap to 9600X**. No agent SSH. Do not pull from here while that
+load runs. Court is the slow `OSMRELPROF` peer later — do not start
+another Spark planet load while set 8 pgbench components run.
 
 Hands-on on siren (no agent SSH):
 
@@ -51,15 +54,14 @@ Hands-on on siren (no agent SSH):
    prepared at 32 (re-run 3254 / 3251). 64-client prepared **3252**
    is 3.65M TPS, avg 7 μs, P90 0, max **1.45 s** — repeating stalls
    on the per-row plot, not a connect() artifact. That is why every
-   `pgbench -l` row is copied. `constant` sockets simple is in:
-   1-client **179,635** (5.6 μs), peak **2.48M** at 32, 1.79M at 64.
-   Sockets prepared `constant` 1-client is **212,745** (4.7 μs):
-   execute `SELECT 1` +1.1 μs, plan it +0.9 μs, lookup +2.9 μs.
-   Rest of that face still running (Greg; no agent SSH). Then TCP
-   faces if the box is staying up. Then OSM.
-3. One full **OSM** (~4h) with `OSMRELPROF=1` and the 1h Relation stop.
-   That re-tests rc1 and keeps a validated 9950X Relation `perf`.
-4. Then **9600X**.
+   `pgbench -l` row is copied. Sockets `constant` is in both faces:
+   simple 1-client **179,635** (5.6 μs), peak **2.48M** at 32, 1.79M at 64;
+   prepared 1-client **212,745** (4.7 μs), peak **2.96M** at 32, 2.24M at 64.
+   Execute `SELECT 1` +1.1 μs, plan it +0.9 μs, lookup +2.9 μs.
+   Then TCP faces if the box is staying up. Then OSM.
+3. **OSM 19rc1 durable 4.49h** (same as beta4). Low-durability pass in
+   flight (aim ~4h). Then power down.
+4. Swap to **9600X**.
 
 ## Comparing versions
 
@@ -336,19 +338,21 @@ temporary corporate inventory. Finish the OSM/PG19 cells on these boxes.
 | Host | CPU | Notes |
 |------|-----|--------|
 | **siren** | **9950X** (was **9600X**) | **2026-10-18 — OSM probe finished in 4.07h** (clean hold through Ways; replacement for the wiped cell). **2026-10-18 — 32 clients is the max**: **2,011,141** then **2,016,484 TPS** (PG18, sockets SELECT, 90s). The two sets agree; halt after the second — CPU-bound SELECT is this tight, so **`SETTIMES=2`** is the default and a third only if they diverge. The missing rear vent had been capping this chip; ~2M is the 9950X unlocked. `newset` **`pgbench SELECT`** on **PG18**: **on-box UNIX vs localhost TCP** (overhead only; split on `conn_method`). Set **106** sockets prepared: PG18 **2,011,141** / **2,016,484** at 32 clients. Early 19beta4 **1.50M** cells in that `latest_set` were **host prepared** (method error, not asserts). **19rc1** covered the whole connection grid; sockets prepared **2.06M**. **2026-10-20 — 19rc1 SELECT+OSM done on the 9950X** (took the top leaderboard spots, tiny delta over 18; OSM import finished). Siren SELECT set is the **starter pgbench leaderboard**. **Retirement pack before 9600X:** empty `;` + `constant` + nothing 32/64 re-run (latency + watts, both configs) + one 4h OSM with `OSMRELPROF=1` (also re-tests rc1). Twilight already leads relations/s. Usual 18↔19 regression pair is **pgbench SELECT (small scale) + OSM (writes)**. True remote TCP at **128 clients** waits on the **new 2S**. `PREPARED=1` in params, `SUDODATA=1` already in `config`. Rear ST120 works **hard by the end of each 90s** and **harder during latency import** (`pgbench -l` at this TPS is a second heat spike). Thermal fix first was the right order. Rear **Lian Li ST120** exhaust is in; AIO pair also ST120s, **AIO cleaned of heavy dust**. Earlier heat had the new exhaust **maxed** (~**75°C**); it **chugged through Ways** (the old death phase) and in **Relation** the fan is at **medium** with **~60°C**. Chassis looks thermally fixed. **No agent SSH** — when a box is this fragile, Greg has to be hands-on to fix it; remote poking is how it gets worse. Data via `download`. **9950X SELECT** sockets grid is in (`wl/select-grid`, halt after two sets); then **9600X** for the OSM comparison SKU. The comparison / joules charts are done as graphics; they still have a **hole between high-power x86** (9950X **1046 kJ**, 13600K **824 kJ**) **and low-power ARM** (Apple **224 kJ**, NVIDIA **671 kJ**). **9600X** is that middle point — even better than the 9700X that was in the plan. OSM barely moved **9600X→9950X**. **2026-10-18 — Greg is looking for the 9600X** (the physical chip). PG19 sets 70/71 are enough for 18↔19. The **9600X** is the comparison SKU this box should publish: OSM barely used the 9950X’s second CCD (`Tccd2` ~43°C while Tctl/Tccd1 sat in the 80s), so the 16-core swap did not buy planet-load speed, only package watts (9950X **70 W** avg / **180 W** peak / **1046 kJ** vs Apple **8 W** / **37 W** / **224 kJ**). A 6-core **9600X** at nearly the same OSM score (~**47 W** avg / **89 W** peak on this board) is the bang-for-buck point on the system-comparison chart and a fairer fight against the Mac. **9950X** is still the short-pgbench / ~1M TPS chip; the 240mm AIO plus a missing rear fan could not hold OSM. Overhaul order: **1. rear airflow** done (Lian Li ST120 exhaust 2026-10-18, AIO ST120s cleaned). **1b. OSM probe** done: **4.07h**, held through Ways. Chassis is usable. **2. 19rc1 SELECT+OSM** done on the 9950X (2026-10-20). **3. retirement pack** (empty `;` + `constant` + nothing 32/64 re-run + 4h OSM with `OSMRELPROF=1`). **4. switch to 9600X** for the OSM / system-comparison SKU. Do not keep the 9950X here hoping AC will hold Ways. **2026-10-16 evening — parked.** Died in **Ways** again. Do **not** retry PG18 low-durability / thin-WAL on this chassis; that corner is what trips the board, and those cells get re-run after the WAL vs fsync split anyway. Downloaded set **70** (PG18.3 durable) vs set **71** (PG19 fast 2974/2975/3009/3010 and durable 3011–3013) is enough for the 18↔19 regression; twilight 117 vs 118 and abbey 11 fill the rest of the fleet. Rear case fan was the first fix (installed 2026-10-18); the 2026-10-16 Ways deaths were hot air staying in a chassis with none. Cooler is a **240mm AIO** (undersized for 9950X; 9600X was stable). **9600X→9950X barely moved OSM**, as expected (second CCD idle); the buy was for **short pgbench / ~1M TPS** (perceptually important). OSM *might* improve on a 9950X **after a larger heatsink**, not in this chassis. Workaround is the **room AC**, same as keeping the lab alive at **100°F** outside — not a CPU swap mid-grid. `wl/osm-import` `RECOVERY=3600` is an **informed** hour between planet loads (AIO/room heat dump); Greg expected another crash and wanted **`k10temp` live**. 2026-10-15 hard off; 2026-10-16 way ingest (`Node(10791148k …) Way(1133809k …) Relation(0)`); same-day restart still heat-soaked, `sensors` **Tctl 79°C / Tccd1 78.5 / Tccd2 42.6**, died in **Node** phase. Later the same day, cooled+AC **cleared Nodes at peak Tctl 87°C**; Ways sat ~**77°C** for a while with intake ~**68°F** (room normally **71°F**), then **still died in Ways** — 3°F of AC was not enough for the rest of that pass. Delete incomplete tests; thermal **starts as the host vanishing**. After the beta cells: rear fan (done), OSM probe (**4.07h**, done), then 9950X SELECT cells, then 9600X. Confirmed chip **`k10temp-pci-00c3`**: collect `sensors -u k10temp-*` (no sudo) → `Tctl_temp1_input` (package, vis 9) plus `Tccd1`/`Tccd2` (split, vis 5) — **do not average the CCDs**. The split is the teaching sample: **Tccd2 stayed ~43°C while Tccd1/Tctl sat in the 80s** — the second CCD is not on the OSM critical path, so extra cores on that die do not help a struggling load (and dump all the watts onto one hot chiplet). Live samples work; shutdown looks like the **motherboard cutting power near 90°C Tctl**, before the 9950X hits Tjmax throttle. Hands-on only — do not SSH. |
-| **twilight** | **13600K** (was **14900K**) | **188GB** RAM, **Fury G5 4TB**. Roles used to be reversed: the **14900K** made twilight the unstable box. Back on a cool-running **13600K** it is trouble-free again — preferred host for long PG19 matrices. **2026-10-19 — PG19 rc1 catalog version bump.** The PG19 **test** instance cannot be started or `pg_upgrade`d; recreate **from scratch**. Greg will lead — that datadir is partitioned (Fury), not a stock PGDG path. Do not `initdb` or wipe until he says. Results cluster stays put. Abbey has not gotten PG19 yet. |
+| **twilight** | **13600K** (was **14900K**) | **188GB** RAM, **Fury G5 4TB**. Roles used to be reversed: the **14900K** made twilight the unstable box. Back on a cool-running **13600K** it is trouble-free again — preferred host for long PG19 matrices. **2026-10-22 — up, no expected downtime.** Unused majors **14/15/17/18** `start.conf` **manual** (they all come up `auto` each boot; stop them). Results **16:5432** stays. **19rc1** test cluster recreated on the Fury symlink (`/var/lib/postgresql/19/main` → `/fury1/19/main`, catalog **202610061**). Set **119** `PG19 rc1`: sockets prepared SELECT **done** (2610 init, 2611–2624; 64-client **838k** / **757k**). **2026-10-22 11:06 ET — boot `/` hit 100%** during 2624 post-process: leftover **PG15** logs (179G + stuck `logrotate` copying 128G onto `postgresql-15-main.log.1`). 15 is down and its datadir is gone. Killed logrotate 1056, truncated both files as postgres (`/` back to ~34% / 296G). Empty `params` made face 2 fly through 0-TPS host cells; wiped 2625–2662 junk; **do not wipe 2610–2624**. 2622–2624 have TPS but no latency import. Remaining three faces resumed 11:11 (`remaining-faces.sh`). **Four faces done 13:22** (14 ok cells each face, 0 blank TPS). **OSM started 13:35** `repeat-gis` on set **119** (durable; do not `wl/osm-import`). TRIM was short on the fresh cluster (`/fury1` 4.5 GiB); first loop skipped the 3600s recovery. Test **2706** `osm2pgsql-1.11` / 5 clients / scale 75000. Nodes done 13:48 (10791148k @ 14.6M/s). **Ways healthy 14:01** (~99M @ 126k/s); live iostat writes on **nvme0n1** `/fury1` (~90 MB/s), not boot **nvme3n1**; planet reads **nvme2n1**; nodes.db on **nvme1n1**. gis 104 GB, WAL 33 GB. Pins: 19rc1 catalog **202610061**, fsync on / `wal_level=replica`, 48GB buffers. Do not `touch complete` yet (first load). `pgbent_perf` still not installed — no `OSMRELPROF`. See **Twilight boot + Fury 19 recreate**. Abbey has not gotten PG19 yet. |
 
 Other machines:
 
 - **abbey** — Mac Studio on Homebrew. **No PG19 during RC** — brew lags
   PGDG; every major still gets a brew pass **after** release bottles
   (PostGIS linked). Court is the ARM OSM cell. Abbey RC work is four-face
-  SELECT + `nothing` / `constant` on **PG18**. PG17 planet sets 8–10 done.
-  **2026-10-16 — PG18 set 11 parked.** Four finished `osm2pgsql-2.0` cells:
-  fast 64/66 (7.43h/404, 7.49h/400) and durable 67/68 (11.17h/268, 11.10h/270).
-  Do not start another OSM. Uploaded **2026-10-16**. No `conf.d`; fold
-  `conf/18/conf.d` into `postgresql.conf`. Capacity-constrained; not the
-  exploration host. **Collector Python:** `./util/setup-python` → `.venv`
+  SELECT + `nothing` / `constant` on **PG18** plus the OSM WAL vs fsync
+  2×2. PG17 planet sets 8–10 done. **2026-10-16 — PG18 set 11 bundled
+  cells:** fast 64/66 (7.43h/404, 7.49h/400) and durable 67/68
+  (11.17h/268, 11.10h/270). Uploaded **2026-10-16**. **2026-10-22 — OSM
+  2×2 unparked** on the same set: `wal_level` and `fsync` as separate
+  controls, FPW on. First corner **replica + fsync off**. Do not
+  `wl/osm-import` (it `newset "OSM"`). No `conf.d`; fold `conf/18/conf.d`
+  into `postgresql.conf`. Capacity-constrained; not the exploration host. **Collector Python:** `./util/setup-python` → `.venv`
   (official CPython 3.12, not brew `python3` 3.15). PATH:
   `$HOME/repos/pgbent/.venv/bin` **before** brew python, **after** brew
   `shellenv` so `psql`/`pgbench` stay 18.6. Always `bash -lc`. After reboot
@@ -363,7 +367,10 @@ Other machines:
   with: durable **20/21/22** (8.73h/343, 8.78h/342, 8.50h/353) and fast **23**
   (8.30h/361, `fsync` off). **2026-10-19 — halted:** `stop-set cleanup` wiped
   unfinished **24**; `shutdown -h now`. SSH closed. Came back **2026-10-20**.
-  Do not start another court OSM. **2026-10-21 — set 6 aborted because
+  Do not start another court OSM. **OSM Power** stays public with the
+  PG16 Spark row; the other boxes already have concurrent GIS on 19, so
+  that mix is not a fair board. Do not share that study as finished until
+  a **PG19** cell on kernel **7.0** is in the table (after set 8). **2026-10-21 — set 6 aborted because
   the box rebooted**, not because a sort failed. Tests 26–32 were one
   sockets-prepared pass; 64-client `COPY` of 55M `timing` rows was still
   wrapping (`timing.csv` 2.5G at 23:54) when watchdog ping to
@@ -387,20 +394,19 @@ Other machines:
   ping to `192.168.50.1` is a LAN glitch, not a hung host. Treat SSH
   drops the same way — retry, do not reboot. **Set 7 four faces
   done** 2026-10-21 22:09 UTC (`four faces done`, tests 33–88, all
-  four `conn_method`s × 14). No OSM after. **Set 8** `PG19 rc1
-  nothing+constant sockets` in flight (`wl/component-faces`,
-  `SKIPINIT=1`): `;` then `SELECT 1`, sockets prepared then simple,
-  same 90s / `SETTIMES=2` / 1–64 grid. 1-client TPS on this set
-  plus set 7 SELECT is the Spark μs split for the pgbench page.
-  Started test 89. Unreliable about booting; force-restart
+  four `conn_method`s × 14).   No OSM after. **Set 8 done** 2026-10-22 20:21 UTC
+  (`component faces done`, tests 89–144, sockets nothing+constant
+  × prepared/simple × 14, 0 blank). 1-client means: `;` **100,843**
+  simple / **94,911** prepared; `SELECT 1` **70,185** simple /
+  **83,630** prepared. Unreliable about booting; force-restart
   procedure not written down yet.
 - **rising** — **5950X** now (was **3950X** in the 2022 `SELECT 1` /
-  `;` notes). Still around; large pgbench + OSM archive on the box.
-  Parked. Greg can bring it up, refresh to current majors, and
-  publish anything interesting. Do not mix 2022 rising TPS into the
-  siren 19rc1 table; new cells after a version refresh are fair. Not
-  the 9600X joules-hole SKU. Do not start from here. CBC already
-  published a 5950X / 128GB / Inland 2TB point.
+  `;` notes). Large pgbench + OSM archive on the box. **2026-10-22 —
+  will not start.** SSD may have lost state after a long power-down,
+  or it needs a BIOS fix; Greg has not sorted which. Do not mix 2022
+  rising TPS into the siren 19rc1 table. Not the 9600X joules-hole
+  SKU. Do not start, probe the disk, or flash BIOS from here. CBC
+  already published a 5950X / 128GB / Inland 2TB point.
 
 ## Near-term deadline (lab downtime)
 
@@ -434,12 +440,14 @@ met. After the outage, resume the PG19 study sequence below.
 **2026-10-16 — twilight parked (set 118 done).** Set 118 (`PG19 beta4`) is in
 the assembly DB (`twilight-20261016-163051.tar.gz`): fast 2593–2595
 (~4.8h / 623–628) and durable 2596, 2597, 2600, 2601 (~5.05h / 586–597),
-about **+6%**. Box is **powered down** (2026-10-18).
+about **+6%**. Box was powered down 2026-10-18; **back 2026-10-22** on 19rc1
+(set 119). Four-face SELECT done 13:22 after the PG15-log disk-full (see
+twilight host note). OSM `repeat-gis` started 13:35, same set; test **2706** **Ways healthy 14:01** (Fury `nvme0n1` writes confirmed).
 
 **Siren retirement `OSMRELPROF` is the 9950X archive**, not the x86 peer
 slot. Twilight still **leads relations/s** and remains the later control.
 
-**Next on twilight (when it is up): 128GB + `OSMRELPROF` vs court.** The
+**After set 119 SELECT + usual OSM:** 128GB + `OSMRELPROF` vs court. The
 comparison chart’s x86 peer for court’s relation `perf` is twilight:
 **i5-13600K** is reliable, almost matches 9950X score (1407 vs 1480), and
 **leads relations/s** (4590 vs 4529) at less package energy. Court’s Spark
@@ -486,6 +494,24 @@ before opening the next; do not fan out a second matrix on PG18.
 3. **Node cache vs `shared_buffers`** (after durable baselines match across hosts)
 4. **`maintenance_work_mem` sweep** (after memory packing is settled)
 
+## After 19rc1 wrap: OS upgrades (siren, twilight)
+
+Do **not** start this until the 19rc1 results and experiments have wrapped
+(siren dump, twilight set 119 SELECT+OSM, abbey WAL/fsync 2×2, court set 8,
+OSM Power Spark cell as needed). Then:
+
+1. Upgrade **siren** and **twilight** to the new OS releases (Greg names
+   the targets; do not guess Debian/Ubuntu versions).
+2. Re-test the main **SELECT faces** and **OSM** on the same 19 pin so an
+   OS/kernel move cannot hide as a Postgres change. Usual pair: pgbench
+   SELECT (small scale) + OSM (writes).
+3. `./newset` with an OS-vintage batch so assembly can split pre/post OS.
+
+Hands-on on siren (no agent SSH). Agent SSH twilight. Abbey and court
+are not in this cutover unless asked. `super` already showed a 24.04 vs
+26.04 SELECT drop and then died — treat an OS retest as environment
+until a second host agrees.
+
 **Execution.** Once a study’s matrix is written down here (and any conf fragments
 are in git), Greg points the agent at **twilight** to run it. Repeat / validate
 on other hosts only after twilight shows which corners matter — and prefer
@@ -502,17 +528,19 @@ kNodes/s vs durable 11.10–11.17h / 270–268. Some systems are WAL-volume
 driven; abbey is suspected **Darwin fsync** (APFS / `fsync` behavior, not
 `wal_level`). Bundled `osm-sync-fast` / `osm-sync-durable` (conf 16–18) flipped
 all of `wal_level`, `fsync`, `synchronous_commit`, and `full_page_writes` at
-once and cannot answer that. PG19 splits them:
+once and cannot answer that. Conf 18 and 19 split them:
 
-| File pair | Axis | PG19 default |
+| File pair | Axis | Default |
 |---|---|---|
 | `osm-wal-replica` / `osm-wal-minimal` | WAL volume (`max_wal_senders=0` with minimal) | replica |
 | `osm-fsync-on` / `osm-fsync-off` | `fsync` + `synchronous_commit` | on |
 | `osm-fpw-on` / `osm-fpw-off` | full-page writes | on |
 
-**PG19 2×2** (same set; `test_settings`; **FPW held on**). Siren is parked
-(Ways deaths). Twilight when unparked is the Linux comparison; abbey is the
-Mac fsync-suspect (set 11 is enough to park, not a third bundled repeat).
+**2×2** (same set; `test_settings`; **FPW held on**). **2026-10-22 — abbey
+set 11 is running it on PG18** (Homebrew fold; Darwin fsync-suspect).
+First corner **replica + fsync off**. Siren is parked (Ways deaths).
+Twilight after set 119 OSM is the Linux comparison. Do not run a third
+bundled fast/durable repeat.
 
 | | `osm-fsync-on` | `osm-fsync-off` |
 |---|---|---|
@@ -534,8 +562,9 @@ the probe (**4.07h** 2026-10-18, replacement for the wiped cell). Hands-on only 
 **18↔19 from data already on decade.** Siren set **70** PG18.3 durable
 (2970–2973, 4.45–4.52 h / 663–673) vs set **71** PG19 durable (3011–3013,
 4.34–4.44 h / 675–690) and PG19 fast (2974/2975/3009/3010, 4.03–4.17 h /
-719–744). Twilight 117 (PG18.3 fast) vs 118 (PG19 fast+durable). Abbey set
-11 is PG18 only (Mac). Court is still on its second PG18 durable overnight.
+719–744). **19rc1 durable 4.49h** matches that beta4 durable band. Twilight
+117 (PG18.3 fast) vs 118 (PG19 fast+durable). Abbey set 11 is PG18 only
+(Mac).
 
 ### Study 2: checksum overhead
 
@@ -702,7 +731,65 @@ Also stop every major that is neither test nor results (`pg_lsclusters` /
 `systemctl stop postgresql@…`) so idle clusters are not sitting on memory.
 Siren’s pattern: results on 17, test on 19, everything else stopped. Court’s
 PG18 cutover (2026-10-15): results on **16:5432 @ 1GB**, test on **18:5433 @
-48GB**.
+48GB**. Twilight after the 2026-10-22 boot: results **16:5432**, test
+**19:5437**, **14/15/17/18** stopped and `start.conf` **manual**.
+
+### Twilight boot + Fury 19 recreate
+
+Twilight keeps many PGDG majors installed. `postgresql.service` starts every
+cluster with `start.conf` **auto**, so a reboot brings up 14+16+17+18+19
+together (15’s datadir is already gone). **Each boot:** `pg_lsclusters`,
+stop every major that is not results or test, and set those
+`/etc/postgresql/<N>/main/start.conf` lines to **manual** plus
+`systemctl daemon-reload` so the next boot does not repeat the pile-up.
+Leave **16/main** (results, port 5432) and **19/main** (test, port 5437)
+**auto**. Packages stay installed.
+
+**PG15 logs on boot `/`.** 15’s datadir is gone but
+`/var/log/postgresql/postgresql-15-main.log` was **179G** (2023–2025).
+Boot `logrotate` (pid 1056, 2026-10-22) copied it to `.log.1` and filled
+`/` (0 bytes free). `stop-set` does not kill `wl/select-faces`; kill that
+PID too. Truncate 15 logs **as postgres** (`sudo truncate` as gsmith was
+denied). Empty `params` (disk-full `pin()` / `mv`) makes later faces
+0-TPS — restore params before resuming.
+
+**19 datadir is a symlink** (`/var/lib/postgresql/19/main` →
+`/fury1/19/main`). A catalog bump (beta4 → rc1) cannot `pg_upgrade`. Debian
+PostgreSQL also does **not** support running `initdb` directly when a catalog
+change needs a new data directory. The only supported route is the
+`pg_*` wrappers exclusively (`pg_dropcluster`, `pg_createcluster`,
+`pg_ctlcluster`). That is why this looks odd: create on the boot-disk
+default path with `pg_createcluster`, then rsync/relink onto Fury. Do not
+`initdb -D /fury1/19/main`.
+
+1. Save `/etc/postgresql/19` (conf.d, `pg_hba`, port).
+2. `pg_ctlcluster 19 main stop`.
+3. `mv /fury1/19/main /fury1/19/main.orig` **before** dropcluster follows
+   the link (that tree was ~919GB of beta4 `gis`).
+4. `rm` the dangling `/var/lib/postgresql/19/main` symlink.
+5. `pg_dropcluster 19 main` (warns if the data directory is already gone).
+6. `apt-get install` `postgresql-19` **rc1** (and jit / PostGIS).
+7. `pg_createcluster 19 main --port 5437 --locale en_US.UTF-8` on the boot
+   disk (do not `--start` yet).
+8. `rsync -aHAX` that new `main/` to `/fury1/19/main/`.
+9. Remove the boot-disk copy, `ln -s /fury1/19/main /var/lib/postgresql/19/main`.
+10. Restore saved `conf.d` + `pg_hba.conf`; keep the rc1 `postgresql.conf`.
+11. `systemctl start postgresql@19-main`. If the unit fails, start with
+    `pg_ctlcluster 19 main start` and read
+    `/var/log/postgresql/postgresql-19-main.log`.
+
+Confirm `version()` is 19rc1, `pg_control_system()` catalog **202610061**,
+`debug_assertions` off, `fsync` on / `wal_level=replica`, `shared_buffers=48GB`.
+Results stay on 16. Fresh cluster has no `pgbench` database — `createdb -p 5437
+pgbench` before `wl/select-faces` (benchwarmer’s checkpoint wait connects to
+`$TESTDB`). Then `./newset 'PG19 rc1'` and the four-face sweep; `util/newgis`
+waits until OSM (Fury TRIM tax).
+
+During OSM validation, a brief `iostat` look confirms writes landed on the
+Fury datadir disk (`nvme0n1` = `/fury1`), not the boot SSD (`nvme3n1`).
+Nodes/`nodes.db` is `/fury0` (`nvme1n1`); the planet file is `/fury2`
+(`nvme2n1`). Wait until the **Way** phase — that is when write volume to
+the database shows up. Earlier phases will not prove the symlink.
 
 Migrate results onto the new major only when ready (see **Migrating the
 results database** below); until then, `RESULTPORT` stays on the shrunk old
@@ -860,6 +947,9 @@ stack back-to-back newgis cycles when debugging TRIM itself.
 - After each `runset`, `repeat-gis` reads the latest test's `tps`. A blank or zero TPS means the run failed, often because the disk filled, and the loop stops instead of starting another load.
 - Configured `max_wal_size` is 100GB. That plus the planet database barely fits a 2TB drive, so a 2TB host has to move the previous major's cluster off that disk first. 256GB `max_wal_size` will not fit on 2TB. A 4TB host does not need that disk shuffle.
 - A crashed run can leave orphaned OS stats collectors (`timed-os-stats`, iostat, vmstat). Check `ps` before restarting.
+- After a datadir move or catalog recreate, a brief live `iostat` check during
+  OSM validation: wait for the **Way** phase before judging write volume to
+  the database disk. Nodes and planet-file reads will not show that.
 
 ## Validate each finished run
 
@@ -876,6 +966,7 @@ WHERE t.server = '<host>' ORDER BY t.test DESC LIMIT 5;
 - [ ] test_settings shows the study variable at the intended value
 - [ ] test_metrics_data rows exist (power rows too if SUDODATA=1; `Tctl_temp1_input` on AMD hosts with k10temp)
 - [ ] Run appears in submission; OSM studies need non-null max_write_mbps
+- [ ] OSM after a disk move / catalog recreate: live `iostat` in the **Way** phase shows writes on the database disk
 - [ ] Spot-check graphs: python3 metview.py <server> <test>
 ```
 

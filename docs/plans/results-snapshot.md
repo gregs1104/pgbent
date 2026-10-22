@@ -73,7 +73,9 @@ Otherwise export each study’s SQL result into
 
 1. [x] Starting hub + studies from published grids (OSM ranking, OSM power, pgbench SELECT) under `docs/results-summary/pg19/`
 2. [x] Prefer `archive-results.py` or direct SQL export; do not require Streamlit Cloud
-3. [ ] Link from docs index / tuning pages when the cycle closes
+3. [ ] Refresh [OSM Power]({{ '/results-summary/pg19/osm-power/' | relative_url }}) once **court** finishes on **PG19** with kernel **7.0** (NVIDIA P4242 row is still PG16). The desktops already have concurrent GIS on 19; leaving Spark on 16 is not a fair board. Pages are already public; do not share that study as finished until the Grace cell is 19.
+4. [ ] Link from docs index / tuning pages when the cycle closes
+5. [ ] After 19rc1 wrap: OS upgrades on **siren** and **twilight**, then re-test main SELECT faces + OSM on the same pin (newset by OS vintage)
 
 ## Milestones
 

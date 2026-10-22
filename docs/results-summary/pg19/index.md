@@ -11,7 +11,7 @@ has_children: true
 
 Starting snapshot of the **19rc1** cycle. Package date **2026-10-15**, catalog **20261006**. The public ranking URL is still **[Leaderboards]({{ '/leaderboards/' | relative_url }})**. Pages here keep the study tables and the 18↔19 notes.
 
-19 took the top leaderboard spots, with a tiny delta over 18. That's how this lab judges a release; it's easier than tracking medians. CPU-bound SELECT is the canary; OSM barely moved. This is not a frozen close-out—siren is retesting OSM, court is filling the Spark SELECT μs split—but the grids that matter for a first look are in.
+19 took the top leaderboard spots, with a tiny delta over 18. That's how this lab judges a release; it's easier than tracking medians. CPU-bound SELECT is the canary; OSM barely moved. This is not a frozen close-out—siren is retesting OSM, court is filling the Spark SELECT μs split. [OSM Power]({{ '/results-summary/pg19/osm-power/' | relative_url }}) still has NVIDIA Spark on PG16 while the desktops already ran concurrent GIS on 19; that isn't a fair board, so the Grace cell waits on court finishing 19rc1 with kernel **7.0**.
 
 ## Pin
 
@@ -40,5 +40,5 @@ Network Mbps, checkpoint timeout, and dirty-memory sweeps from PG18 have not bee
 | --- | --- | --- |
 | siren | R9 9950X | SELECT four faces (19rc1); OSM fast + durable |
 | twilight | i5-13600K | OSM fast + durable |
-| court | NVIDIA Spark | OSM set 5 (enough to start); SELECT four faces in the results DB, not on the ranking yet |
+| court | NVIDIA Spark | SELECT four faces in the results DB; OSM Power still the PG16 cell — not a fair concurrent-GIS mix vs the 19 desktops until a 19rc1 / kernel 7.0 row is assembled |
 | abbey | M4 Max Studio | PG17/18 OSM on the current Planet; no PG19 during RC |

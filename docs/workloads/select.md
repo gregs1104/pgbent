@@ -54,17 +54,17 @@ Sockets `nothing` on siren 19rc1 set 107, 90s, scale 100. Peak is **4.05M** simp
 
 At one client they are the same 3.6 μs floor: no query to plan, so `-M prepared` does not help. At many clients simple is a few percent ahead (Bind/Execute/Sync vs a simple `Query`). Both go flat past 32.
 
-Sockets simple `constant` on the same set. Peak **2.48M** at 32 — between `;` (4.05M) and prepared SELECT (2.06M). At 64 it falls to 1.79M (avg 34 μs, P90 46 μs, max 52 ms). Sockets prepared `constant` 1-client is **212,745** (4.7 μs); the rest of that face is still running.
+Sockets `constant` (`SELECT 1`) on the same set. Simple peaks **2.48M** at 32 — between `;` (4.05M) and prepared SELECT (2.06M). Prepared is higher: **2.96M** at 32, **2.24M** at 64. At 64 simple falls to 1.79M (avg 34 μs, P90 46 μs, max 52 ms); prepared stays ahead (avg 27 μs, P90 38 μs, max 623 ms). Preparation helps `SELECT 1` at every client count; it does not help `;`.
 
 | clients | sockets `SELECT 1` | sockets prepared `SELECT 1` |
 | ---: | ---: | ---: |
 | 1 | 179,635 | 212,745 |
-| 2 | 339,650 | |
-| 4 | 614,640 | |
-| 8 | 995,009 | |
-| 16 | 1,561,063 | |
-| 32 | 2,478,846 | |
-| 64 | 1,793,332 | |
+| 2 | 339,650 | 403,393 |
+| 4 | 614,640 | 715,299 |
+| 8 | 995,009 | 1,173,454 |
+| 16 | 1,561,063 | 1,792,701 |
+| 32 | 2,478,846 | 2,956,507 |
+| 64 | 1,793,332 | 2,237,216 |
 
 The pause after each run is `pgbench -l` COPY into `timing`. At 32–64 clients that is ~330–360 million rows. `tests.tps` is stored first. The first `;` 32/64 pass filled the **31GB free** then on siren (old uncompressed upload archives); clearing those put the boot drive back to **121GB free** and the re-run landed TPS plus the max. Accurate power on every platform was what blocked collecting this — the question was how many watts `nothing` burns.
 
