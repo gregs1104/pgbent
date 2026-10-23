@@ -480,9 +480,10 @@ captures.
 
 **19rc1 OSM on court:** set 5 durable 20/21/22 plus fast 23 is enough to
 start the report. Set **9** test **145** finished (8.32h); relation
-`perf` hit the 1h cap but the report is unreadable (`data size 0`) until
-the flush fix above is installed and a cell is re-run. Community rc1
-testing deadline is **2026-11-12**; this lab should be weeks ahead.
+`perf` hit the 1h cap but the report is unreadable (`data size 0`).
+**2026-10-23 — set 10** test **146** is the durable + `OSMRELPROF` retry
+with the flush-wait `pgbent_perf` installed (`complete` armed). Community
+rc1 testing deadline is **2026-11-12**; this lab should be weeks ahead.
 
 Fleet notes (update as needed):
 
@@ -912,7 +913,8 @@ Aim for **at least three finished runs** on a given config before judging the re
 
 | Workload | How to run | `script` in submission |
 |----------|------------|------------------------|
-| OSM planet load | `wl/osm-import`, then `nohup util/repeat-gis &` | `osm2pgsql%` |
+| OSM planet load (loop) | `wl/osm-import`, then `nohup util/repeat-gis &` | `osm2pgsql%` |
+| OSM one-shot | `util/newgis` (if needed), then `nohup ./runset &` — not `repeat-gis` + `complete` | `osm2pgsql%` |
 | pgbench SELECT grid | `wl/select-grid && ./runset` | `select` |
 | pgbench init (build time) | Recorded automatically by `runset` before each scale when `NEWINIT=1` | `:-i%` |
 | Single point | `./benchwarmer <clients>` | as configured |
@@ -934,7 +936,13 @@ study — scale 100 SELECT is not reviewing build time.
 
 `wl/osm-import` writes the standard `params` for this loop, including `RECOVERY=3600`. Run it, then edit those parameters if this host needs a change. `repeat-gis` does not invent that file. `wl/osm-import` also calls `./newset "OSM"`; if this host is already on the right batch (e.g. `PG19 beta4`), run `./newset` again only when that batch boundary is wrong — not for each GUC tweak.
 
-OSM loop control:
+**One-shot vs loop.** For a single OSM (or other) cell, use `./runset`
+directly — do not start `repeat-gis` and then try to arm `complete`.
+`repeat-gis` clears `complete` at start and is for multi-run collection.
+Greg’s usual one-cell path: set GUCs / `params`, `util/newgis` if the DB
+needs a fresh `gis`, then `nohup ./runset &` (or `setsid nohup ./runset`).
+
+OSM loop control (`repeat-gis` only):
 
 ```bash
 watch util/progress   # live dashboard: disk use, DB/WAL size, tail of current results.txt and nohup.out
