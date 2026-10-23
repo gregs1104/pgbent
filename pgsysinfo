@@ -48,56 +48,79 @@ except:
     # see http://groups.google.com/groups?hl=en&lr=&client=firefox-a&threadm=b%25B_8.3255%24Dj6.2964%40nwrddc04.gnilink.net&rnum=2&prev=/groups%3Fhl%3Den%26lr%3D%26client%3Dfirefox-a%26q%3DHARDWARE%255CRESOURCEMAP%255CSystem%2BResources%255CPhysical%2BMemory%26btnG%3DSearch
     pass
 
+def apply_config_port():
+    """
+    psql defaults to 5432. If PGPORT is unset, take TESTPORT from ./config
+    so non-default lab pins (PG17 on another port) work without exporting it.
+    """
+    if os.environ.get("PGPORT"):
+        return
+    cfg = os.path.join(os.path.dirname(os.path.abspath(__file__)) or ".", "config")
+    try:
+        with open(cfg, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("TESTPORT="):
+                    port = line.split("=", 1)[1].strip().strip("'\"")
+                    if port:
+                        os.environ["PGPORT"] = port
+                    return
+    except OSError:
+        pass
+
+
 def spawn_read(cmd):
     """
     Basic wrapper to spawn programs like psql and consume a line of output.
-    If there's an error, None is returned.
+    If there's an error, None is returned. Diagnostics go to stderr so a
+    `./pgsysinfo >> params` redirect cannot pollute the params file.
     """
 
-    from os import path
-    from shutil import which
-
-    wn=which("psql")
-    if not wn is None:
-        psqlbin=path.join(wn,cmd)
-    else:
-        psqlbin=cmd
-
-    if (False):
-        print ("psqlbin=",psqlbin)
-        print("Command line ",wn)
-
-    p = Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
+    p = Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE,
               close_fds=True, encoding='utf-8')
 
-    out=p.communicate()[0].rstrip()
+    out, err = p.communicate()
+    out = (out or "").rstrip()
+    err = (err or "").rstrip()
     exit_code = p.returncode
-    
-    if exit_code==127:
-        print("Error 127:  your psql is not in the path where this Python script can find it")
+
+    if exit_code == 127:
+        print(
+            "Error 127: psql is not in the PATH where this Python script can find it",
+            file=sys.stderr,
+        )
         sys.exit(exit_code)
-    
+
     if exit_code > 0:
-        print("exit code is '%s'" % exit_code)
-        print("bad command:  '%s'" % cmd)
+        print("exit code is '%s'" % exit_code, file=sys.stderr)
+        print("bad command:  '%s'" % cmd, file=sys.stderr)
+        if err:
+            print(err, file=sys.stderr)
+        elif out:
+            print(out, file=sys.stderr)
         return None
 
     return out
 
 def pg_version():
     """
-    Try connecting to the database to find out its version.
-    If that fails try checking the version of psql.
-
-    Prefer querying because it give a nice clean version number,
-    and it can ask a remote database server--assuming the right PG*
-    enviroment variables.
+    Connect to the database and read server_version.
+    Aborts if psql cannot connect — do not fall back to `psql --version`
+    or write size hints that look like a successful probe.
     """
 
     # TODO When bindings like psycopg2 are around, use them for this query
-    v=spawn_read('psql -Atc "show server_version"')
+    v = spawn_read('psql -Atc "show server_version"')
     if v is None:
-        v=spawn_read('psql --version')
+        port = os.environ.get("PGPORT", "5432")
+        print(
+            "pgsysinfo: cannot connect with psql (tried port %s). "
+            "Set PGPORT or TESTPORT in config to the Postgres under test, "
+            "then retry. Refusing to write params."
+            % port,
+            file=sys.stderr,
+        )
+        sys.exit(2)
     return v
 
 def check_config(guc):
@@ -397,6 +420,7 @@ def check_tracking():
 
 def main(program_args):
     test_parsing()
+    apply_config_port()
     pg_ver=version_parse(pg_version())
     print("# PostgreSQL version",pg_ver)
 

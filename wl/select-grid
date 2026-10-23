@@ -1,10 +1,9 @@
 #!/bin/bash -ex
 # select-grid workload for pgbench automation
 
-# TODO pgsysinfo runs psql to check the version without looking up parameters.
-# When the server is on another port that fails:
-#   exit code is '2' / bad command:  'psql -Atc "show server_version"'
-# Should at least set PGPORT based on config before calling it.
+# pgsysinfo reads TESTPORT from config when PGPORT is unset, and aborts
+# (stderr only) if psql cannot connect — so a failed probe cannot append
+# garbage into params.
 
 SCRIPT="select"
 SETTIMES=3
