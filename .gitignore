@@ -2,3 +2,8 @@
 /results
 .venv/
 .venv-graph/
+.DS_Store
+.matplotlib-cache/
+/archive/
+docs/.bundle/
+__pycache__/
