@@ -70,6 +70,20 @@ CPU_COLORS: dict[str, str] = {
 
 MARKERS = ("o", "s", "D", "^", "v", "P", "X", "*", "h", "p")
 
+# Provisional sockets-prepared peaks until the matching set lands in results.
+# Dropped automatically once a real row exists for the same cpu × major.
+PLACEHOLDER_POINTS: list[dict] = [
+    {
+        "cpu_hist": "R9 9950X",
+        "major": 17,
+        "tps": 2_074_343,
+        "server": "siren",
+        "batch_id": None,
+        "batch": "placeholder PG17 sockets prepared",
+        "conn": "sockets prepared",
+    },
+]
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -209,7 +223,28 @@ def best_by_cpu_major(df: pd.DataFrame) -> pd.DataFrame:
         .groupby(["cpu_hist", "major"], as_index=False)
         .first()
     )
-    return best.sort_values(["cpu_hist", "major"]).reset_index(drop=True)
+    return apply_placeholders(best)
+
+
+def apply_placeholders(best: pd.DataFrame) -> pd.DataFrame:
+    """Fill missing cpu × major cells from PLACEHOLDER_POINTS; never override DB."""
+    if not PLACEHOLDER_POINTS:
+        return best.sort_values(["cpu_hist", "major"]).reset_index(drop=True)
+    rows = []
+    have = {(r.cpu_hist, int(r.major)) for r in best.itertuples(index=False)}
+    for ph in PLACEHOLDER_POINTS:
+        key = (ph["cpu_hist"], int(ph["major"]))
+        if key in have:
+            continue
+        rows.append(ph)
+        print(
+            f"placeholder: {ph['cpu_hist']} PG{ph['major']} "
+            f"{float(ph['tps']):,.0f} TPS ({ph.get('batch', 'provisional')})"
+        )
+    if not rows:
+        return best.sort_values(["cpu_hist", "major"]).reset_index(drop=True)
+    filled = pd.concat([best, pd.DataFrame(rows)], ignore_index=True, sort=False)
+    return filled.sort_values(["cpu_hist", "major"]).reset_index(drop=True)
 
 
 def cpu_color(cpu: str) -> str:
