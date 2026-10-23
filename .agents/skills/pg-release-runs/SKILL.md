@@ -468,21 +468,21 @@ durable 19rc1** planet loads with `OSMRELPROF=1` (same path as court:
 `pgbent_perf`, artifacts in the test dir). Not the big GUC matrix; TRIM
 still taxes each `newgis`.
 
-**Before `OSMRELPROF=1` on twilight:** install the 2026-10-18 `pgbent_perf`
-stop path. Court’s relation `perf` never died — `SIGINT` hit `sudo`, not
-root’s `perf record`, and postgres cannot signal that child — so tests 20/21
-left **121 GB + 56 GB** `osm-rel-perf.data` after COPY ended (deleted, not
-worth processing). Copy `util/pgbent_perf` to `/usr/local/bin/pgbent_perf`
-(NOPASSWD already), `git pull` so `osm-rel-prof` / `osm-importer` / `stop-set`
-call `sudo pgbent_perf stop`, then enable profiling. Confirm no leftover
+**Before `OSMRELPROF=1` on twilight (reinstall on court too):** use the
+`pgbent_perf` that waits up to **10 minutes** for a flush after SIGINT
+(`PGBENT_PERF_FLUSH_SEC`, default 600). Court 22/23/145 still got `data
+size field is 0` because stop SIGKILLed after 15–20s mid-flush on an ~8GB
+sample. Earlier 20/21 never died at all (SIGINT hit sudo only). Copy
+`util/pgbent_perf` to `/usr/local/bin/pgbent_perf` (NOPASSWD already),
+`git pull` so `osm-rel-prof` matches, then profile. Confirm no leftover
 `perf record` after the first relation phase. Do not reuse court’s hung
 captures.
 
 **19rc1 OSM on court:** set 5 durable 20/21/22 plus fast 23 is enough to
-start the report. Set **9** test **145** is the extra durable cell plus
-the `OSMRELPROF` retry (1h cap). Do not queue a second planet load while
-145 runs. Community rc1 testing deadline is **2026-11-12**; this lab
-should be weeks ahead.
+start the report. Set **9** test **145** finished (8.32h); relation
+`perf` hit the 1h cap but the report is unreadable (`data size 0`) until
+the flush fix above is installed and a cell is re-run. Community rc1
+testing deadline is **2026-11-12**; this lab should be weeks ahead.
 
 Fleet notes (update as needed):
 

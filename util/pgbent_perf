@@ -20,6 +20,13 @@
 # `record` must not exec perf: SIGINT to sudo does not always reach the perf
 # child, and postgres cannot signal a root perf.  This wrapper traps signals,
 # and `stop` is the sudoers-allowed way to reap leftover recorders.
+#
+# Stopping must wait for perf to flush — same idea as a Postgres shutdown
+# with a large shared_buffers: SIGINT / smart stop, then give it a long
+# time to write before escalating.  A one-hour system-wide sample is
+# multi-GB; a 15–20s wait then SIGKILL leaves osm-rel-perf.data with
+# "data size field is 0" (court 22/23/145).  Default flush budget is 10
+# minutes (`PGBENT_PERF_FLUSH_SEC`).
 
 PERF=/usr/bin/perf
 if [ ! -x "$PERF" ]; then
@@ -28,6 +35,12 @@ fi
 if [ -z "$PERF" ] || [ ! -x "$PERF" ]; then
   echo "pgbent_perf: perf not found" >&2
   exit 1
+fi
+
+if [ -z "$PGBENT_PERF_FLUSH_SEC" ] || [ "$PGBENT_PERF_FLUSH_SEC" = "0" ]; then
+  FLUSH_SEC=600
+else
+  FLUSH_SEC="$PGBENT_PERF_FLUSH_SEC"
 fi
 
 output_from_args() {
@@ -44,27 +57,46 @@ output_from_args() {
 
 # PIDs whose cmdline is a pgbent relation-phase recorder for $out (or any
 # osm-rel-perf.data if $out is empty).  Does not match `pgbent_perf stop`.
+# Prefer the pgbent_perf wrapper; bare `perf record` is a fallback.
 recorder_pids() {
-  local out="$1" pid cmd
+  local out="$1" mode="$2" pid cmd
   for pid in /proc/[0-9]*; do
     pid=${pid#/proc/}
+    [ -r "/proc/$pid/cmdline" ] || continue
     cmd=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null) || continue
     case "$cmd" in
       *pgbent_perf\ stop*) continue ;;
     esac
-    case "$cmd" in
-      *pgbent_perf\ record*|*perf\ record*)
-        if [ -n "$out" ]; then
-          case "$cmd" in
-            *"$out"*) printf '%s\n' "$pid" ;;
-          esac
-        else
-          case "$cmd" in
-            *osm-rel-perf.data*) printf '%s\n' "$pid" ;;
-          esac
-        fi
+    case "$mode" in
+      wrapper)
+        case "$cmd" in
+          *pgbent_perf\ record*) ;;
+          *) continue ;;
+        esac
+        ;;
+      perf)
+        case "$cmd" in
+          *pgbent_perf\ record*) continue ;;
+          *perf\ record*) ;;
+          *) continue ;;
+        esac
+        ;;
+      *)
+        case "$cmd" in
+          *pgbent_perf\ record*|*perf\ record*) ;;
+          *) continue ;;
+        esac
         ;;
     esac
+    if [ -n "$out" ]; then
+      case "$cmd" in
+        *"$out"*) printf '%s\n' "$pid" ;;
+      esac
+    else
+      case "$cmd" in
+        *osm-rel-perf.data*) printf '%s\n' "$pid" ;;
+      esac
+    fi
   done
 }
 
@@ -77,45 +109,77 @@ signal_pids() {
   done
 }
 
-wait_gone() {
-  local seconds="$1" pid
+any_alive() {
+  local pid
+  for pid in "$@"; do
+    [ -z "$pid" ] && continue
+    if [ -d "/proc/$pid" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+# Wait until recorders exit.  Overall budget is FLUSH_SEC — multi-GB
+# system-wide samples need minutes to write the data-file trailer.
+wait_flush() {
+  local out="$1"
   shift
+  local pids="$*"
   local i=0
-  while [ "$i" -lt "$seconds" ]; do
-    local any=0
-    for pid in "$@"; do
-      [ -z "$pid" ] && continue
-      if [ -d "/proc/$pid" ]; then
-        any=1
-        break
-      fi
-    done
-    [ "$any" -eq 0 ] && return 0
+  while [ "$i" -lt "$FLUSH_SEC" ]; do
+    pids=$(recorder_pids "$out" all | sort -u | tr '\n' ' ')
+    # shellcheck disable=SC2086
+    if [ -z "$(echo $pids | tr -d '[:space:]')" ]; then
+      return 0
+    fi
+    # shellcheck disable=SC2086
+    if ! any_alive $pids; then
+      return 0
+    fi
     sleep 1
     i=$((i + 1))
   done
+  pids=$(recorder_pids "$out" all | sort -u | tr '\n' ' ')
+  # shellcheck disable=SC2086
+  if [ -z "$(echo $pids | tr -d '[:space:]')" ] || ! any_alive $pids; then
+    return 0
+  fi
   return 1
 }
 
 stop_recorders() {
   local out="$1"
   local pids
-  pids=$(recorder_pids "$out" | sort -u)
+  # INT the wrapper first so its trap asks perf to flush the data file.
+  pids=$(recorder_pids "$out" wrapper | sort -u)
+  if [ -z "$pids" ]; then
+    pids=$(recorder_pids "$out" perf | sort -u)
+  fi
   if [ -z "$pids" ]; then
     return 0
   fi
-  # INT first so `record`'s trap can ask perf to flush.
   # shellcheck disable=SC2086
   signal_pids INT $pids
   # shellcheck disable=SC2086
-  wait_gone 20 $pids || true
-  pids=$(recorder_pids "$out" | sort -u)
-  if [ -n "$pids" ]; then
-    # shellcheck disable=SC2086
-    signal_pids KILL $pids
-    # shellcheck disable=SC2086
-    wait_gone 5 $pids || true
+  if wait_flush "$out" $pids; then
+    return 0
   fi
+  pids=$(recorder_pids "$out" all | sort -u)
+  if [ -z "$pids" ]; then
+    return 0
+  fi
+  echo "pgbent_perf: recorders still running after ${FLUSH_SEC}s flush wait; sending SIGKILL (data may be unreadable)" >&2
+  # shellcheck disable=SC2086
+  signal_pids KILL $pids
+  local i=0
+  while [ "$i" -lt 10 ]; do
+    # shellcheck disable=SC2086
+    any_alive $pids || return 0
+    sleep 1
+    i=$((i + 1))
+  done
+  return 1
 }
 
 if [ "$1" = "stop" ]; then
@@ -137,7 +201,15 @@ if [ "$1" = "record" ]; then
   shutdown() {
     if [ -n "$child" ]; then
       kill -INT "$child" 2>/dev/null || true
-      wait_gone 15 "$child" || kill -KILL "$child" 2>/dev/null || true
+      local i=0
+      while [ "$i" -lt "$FLUSH_SEC" ] && [ -d "/proc/$child" ]; do
+        sleep 1
+        i=$((i + 1))
+      done
+      if [ -d "/proc/$child" ]; then
+        echo "pgbent_perf: perf record still running after ${FLUSH_SEC}s; SIGKILL (data may be unreadable)" >&2
+        kill -KILL "$child" 2>/dev/null || true
+      fi
       wait "$child" 2>/dev/null || true
       child=""
     fi
