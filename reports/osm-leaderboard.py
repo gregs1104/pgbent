@@ -458,10 +458,17 @@ def plot_leaderboard(df: pd.DataFrame, output: Path, show: bool = False) -> None
     n = len(df)
     y = list(range(n))
     bar_h = 0.24
-    series = (
-        (df["score_kips"], [i + bar_h for i in y], NODES_COLOR, "OSM score", None),
-        (df["overall_kips"], y, TOTAL_COLOR, "Total", "total"),
-        (df["index_kips"], [i - bar_h for i in y], INDEX_COLOR, "Index", "index"),
+    # PG18 snapshot predates score_kips; live board has all three.
+    series: list[tuple] = []
+    if "score_kips" in df.columns:
+        series.append(
+            (df["score_kips"], [i + bar_h for i in y], NODES_COLOR, "OSM score (kN/s)", None)
+        )
+    series.extend(
+        (
+            (df["overall_kips"], y, TOTAL_COLOR, "Total (kN/s)", "total"),
+            (df["index_kips"], [i - bar_h for i in y], INDEX_COLOR, "Index (kN/s)", "index"),
+        )
     )
 
     fig, ax = plt.subplots(figsize=(10, max(6, 1.15 * n + 1.8)))

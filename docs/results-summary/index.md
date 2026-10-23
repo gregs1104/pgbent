@@ -2,7 +2,7 @@
 layout: home
 title: Results summary
 permalink: /results-summary/
-nav_order: 6
+nav_order: 1
 has_children: true
 ---
 

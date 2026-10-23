@@ -11,6 +11,8 @@ has_children: true
 
 Initial **19rc1** report. Package date **2026-10-15**, catalog **20261006**. The public ranking URL is still **[Leaderboards]({{ '/leaderboards/' | relative_url }})**. Pages here keep the study tables and the 18↔19 notes.
 
+![OSM load leaderboard — best run per server configuration]({{ '/images/osm-leaderboard.png' | relative_url }})
+
 19 took the top leaderboard spots, with a tiny delta over 18. That's how this lab judges a release; it's easier than tracking medians. CPU-bound SELECT is the canary; OSM barely moved. Siren 19rc1 OSM set **108** closed the 9950X pack: durable **4.49h**, alternate **4.14h**. [OSM Power]({{ '/results-summary/pg19/osm-power/' | relative_url }}) uses court **19rc1** for NVIDIA Spark and Abbey **PG18** for the Studio (no 19 during RC).
 
 ## Pin

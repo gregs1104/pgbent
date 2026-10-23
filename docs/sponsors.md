@@ -2,7 +2,7 @@
 layout: home
 title: Sponsors
 permalink: /Sponsors/
-nav_order: 9
+nav_order: 10
 ---
 
 # Sponsor notes

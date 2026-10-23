@@ -2,7 +2,7 @@
 layout: home
 title: Troubleshooting
 permalink: /troubleshooting/
-nav_order: 6
+nav_order: 8
 ---
 
 # Troubleshooting

@@ -2,7 +2,7 @@
 layout: home
 title: Reports
 permalink: /reports/
-nav_order: 5
+nav_order: 6
 ---
 
 # Reports

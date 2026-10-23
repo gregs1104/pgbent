@@ -2,7 +2,7 @@
 layout: home
 title: Setup
 permalink: /setup/
-nav_order: 2
+nav_order: 3
 ---
 
 # Setup

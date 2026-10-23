@@ -3,7 +3,7 @@ layout: home
 title: OSM Power
 permalink: /results-summary/pg19/osm-power/
 parent: PostgreSQL 19
-nav_order: 1
+nav_order: 2
 ---
 
 # OSM Power

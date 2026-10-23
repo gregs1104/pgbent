@@ -2,7 +2,7 @@
 layout: home
 title: How it works
 permalink: /introduction/
-nav_order: 1
+nav_order: 2
 ---
 
 # How pgbent works

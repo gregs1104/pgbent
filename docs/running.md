@@ -2,7 +2,7 @@
 layout: home
 title: Running
 permalink: /running/
-nav_order: 3
+nav_order: 4
 ---
 
 # Running tests

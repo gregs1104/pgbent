@@ -3,7 +3,7 @@ layout: home
 title: OSM Leaderboard
 permalink: /results-summary/pg19/osm-leaderboard/
 parent: PostgreSQL 19
-nav_order: 2
+nav_order: 1
 ---
 
 # OSM Leaderboard

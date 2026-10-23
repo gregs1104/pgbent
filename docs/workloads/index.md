@@ -2,7 +2,7 @@
 layout: home
 title: Workloads
 permalink: /workloads/
-nav_order: 6
+nav_order: 7
 has_children: true
 ---
 
