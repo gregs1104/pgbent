@@ -171,7 +171,11 @@ def plot_relation_efficiency(df: pd.DataFrame, output: Path, title: str, show: b
         text_width = _text_width_data(ax, label, BAR_LABEL_FONTSIZE, renderer)
         bar_color = colors[i]
 
-        if text_width + inner_pad * 2 <= bar_width:
+        # Right-aligned inside labels must keep their left edge clear of the
+        # y-axis. Probe width understates the glyph box a bit; inflate so
+        # borderline bars (PG19 R9 9950X) go outside instead of clipping.
+        left_edge = bar_width - inner_pad - text_width * 1.25
+        if left_edge >= pad:
             ax.text(
                 bar_width - inner_pad,
                 i,

@@ -12,7 +12,7 @@ The osm2pgsql loading program populates the entire Open Street Map planet data s
 
  The main downside of this test is that you can't reach the high speeds unless you have a client available capable of caching the entire `nodes` data file, which is growing steadily toward where the popular 96GB threshold can barely host it.  That size has only recently become feasible on Apple Silicon Mac hardware, and that's limited the practicality this workload to measure OS X fairly so far.  Correspondingly that's made it hard for this one workload to be a fully general PostgreSQL testing platform.
 
-This load does not benefit very much from larger core or socket counts. Relation building is the hard CPU phase and it does not fill a second CCD or a second socket; extra cores mostly add package watts. The 9600X→9950X swap barely moved OSM score.
+You can potentially triple the OSM score running on the fastest x86 instead of ARM, but it costs 4–5× as much energy to juice up the processors to do it. This load does not benefit very much from larger core or socket counts. Relation building is the hard CPU phase and it does not fill a second CCD or a second socket; extra cores mostly add package watts. The 9600X→9950X swap barely moved OSM score.
 
 ![osm2pgsql workload](/images/twilight-1494-read-write.png)
 

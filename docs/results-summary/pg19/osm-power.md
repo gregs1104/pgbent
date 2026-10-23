@@ -22,7 +22,7 @@ Index build only—**i5-13600K** leads raw index throughput at **410** kNodes/s.
 
 Throughput per peak watt favors Apple Silicon. **Apple M4 Max Studio** leads on both total and index load. Spark’s 19rc1 peak (**89 W**) puts it with the desktop Intel/AMD parts on kNodes/s per watt; the **9950X** still moves the most nodes overall at the highest envelope.
 
-This workload does not benefit very much from larger core or socket counts. Relation building does not fill a second CCD or a second socket; extra cores mostly add package watts. The 9600X→9950X swap barely moved OSM score.
+You can potentially triple the OSM score running on the fastest x86 instead of ARM, but it costs 4–5× as much energy to juice up the processors to do it. This workload does not benefit very much from larger core or socket counts. Relation building does not fill a second CCD or a second socket; extra cores mostly add package watts. The 9600X→9950X swap barely moved OSM score.
 
 Regenerate throughput charts: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/osm-power.py --pg 19` (reads the first table below). Query: `reports/osm-power.sql`. The table pins PostgreSQL 19 per CPU; Abbey is the PG18 stand-in. The live query still picks the best score on any major.
 

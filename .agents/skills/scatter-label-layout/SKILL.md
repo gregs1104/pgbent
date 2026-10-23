@@ -140,7 +140,10 @@ descriptive value string (e.g. `1,666 rel · 5 W avg`).
 1. After drawing bars, measure each label’s **text width in data coordinates**
    (probe with `alpha=0.0`, not `visible=False` — invisible text returns zero width).
 2. Compare to **bar width** (`rel_per_watt` or equivalent x value).
-3. **Fits** (`text_width + 2 * inner_pad <= bar_width`):
+3. **Fits** (right-aligned inside label’s left edge clears the axis:
+   `bar_width - inner_pad - text_width * 1.25 >= pad` — inflate width; the
+   probe understates glyphs and `clip_on=True` otherwise eats the left of
+   strings like `4,529 rel · 70 W avg`):
    - Place **inside the bar**, `ha="right"`, x = `bar_width - inner_pad`.
    - Set text color with **`_contrast_text_color(bar_color)`** (white on dark bars).
    - Enable `clip_on=True`.
