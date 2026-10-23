@@ -8,9 +8,9 @@ layout: home
 
 **[Leaderboards]({{ '/leaderboards/' | relative_url }})** — OSM planet load and pgbench SELECT rankings. Initial [PostgreSQL 19rc1 report]({{ '/results-summary/pg19/' | relative_url }}): 19 took the top spots with a tiny delta over 18 (rc1 2026-10-15, catalog 20261006).
 
-![PostgreSQL 18 OSM load: throughput per watt by CPU]({{ '/images/pg18-osm-power-efficiency.png' | relative_url }})
+![OSM score history by x86 CPU across PostgreSQL majors]({{ '/images/osm-history.png' | relative_url }})
 
-As a performance regression tool, pgbent has helped catch packaging and integration issues across PostgreSQL releases 16–18. Years of trace history document how Postgres—and the hardware it runs on—has progressed in both software and storage performance. Agent docs support reproducibility, and starting with PG19 the bulk of the data has been collected by agents.
+The pgbent **OSM Score** grades how well PostgreSQL releases run on popular CPUs. The long-term history shows six years of tracked progress even as the underlying Planet extract has kept growing—a counterweight that slows the exponential hardware and software speedups so release-to-release and chip-to-chip gains stay readable. The same traces have also caught packaging and integration issues across PostgreSQL 16–18. Agent docs support reproducibility, and starting with PG19 the bulk of the data has been collected by agents.
 
 ## Workloads
 

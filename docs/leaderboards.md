@@ -52,11 +52,17 @@ Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bi
 
 ### History
 
-Best OSM score per **x86** CPU across PostgreSQL majors (Apple and NVIDIA omitted). CPU labels are reconstructed from set names (and carried forward on reused chassis) so siren’s 7700X→9700X→9950X swaps show as separate series. Planet extracts grew from ~8B to **10.79B** nodes over this span—scores are kNodes/s, not a fixed-size extract.
+Best OSM score per **x86** CPU across PostgreSQL majors (Apple and NVIDIA omitted). The score grades how releases run on popular chips; six years of history stay readable even as the Planet extract grew from ~8B to **10.79B** nodes—a growing dataset as counterweight to hardware and software speedups. CPU labels are reconstructed from set names (and carried forward on reused chassis) so siren’s 7700X→9700X→9950X swaps show as separate series.
 
 ![OSM score history by CPU across PostgreSQL majors]({{ '/images/osm-history.png' | relative_url }})
 
 Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/osm-history.py` (runs `reports/osm-history.sql`).
+
+Best peak disk **R/W** on those same loads — `max(max_write_mbps, max_read_mbps)` per run, then the best per CPU × major. Same x86 series and set-name CPU reconstruction. Storage and software keep pushing the ceiling up even as the Planet extract grows.
+
+![OSM peak disk R/W history by x86 CPU across PostgreSQL majors]({{ '/images/osm-disk-history.png' | relative_url }})
+
+Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/osm-disk-history.py` (runs `reports/osm-disk-history.sql`).
 
 ## pgbench SELECT
 
@@ -92,6 +98,16 @@ Mean across repeats (4 faces). **tps_1** is the old single-core cell; **tps_32**
 `;` (`SCRIPT=nothing`) hits **280K TPS on a single client** (simple **281,019**, prepared **280,201**) and peaks at **4.05M** simple / **3.81M** prepared at 32 clients — the protocol ceiling. That's web scale. No query to plan, so preparation does not help; at many clients simple is a few percent ahead. Sockets `constant` (`SELECT 1`) at one client is **212,745** prepared (4.7 μs) / **179,635** simple (5.6 μs), and peaks at **2.96M** prepared / **2.48M** simple at 32. Execute of that query is +1.1 μs, planning it +0.9 μs, accounts lookup +2.9 μs on top. Unlike `;`, preparation helps `SELECT 1`. At one client the rates are just the inverse of the latency times. Breakdown: [1-client latency pieces]({{ '/workloads/select/#1-client-latency-pieces' | relative_url }}). Not on this ranking.
 
 Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/select-leaderboard.py --from-db`. 19rc1 snapshot: [pgbench SELECT (PG19)]({{ '/results-summary/pg19/pgbench-select/' | relative_url }}). Older mixed-protocol grid: [pgbench SELECT (PG18 snapshot)]({{ '/results-summary/pg18/pgbench-select/' | relative_url }}). Workload notes: [pgbench SELECT]({{ '/workloads/select/' | relative_url }}).
+
+### History
+
+Best **sockets prepared** SELECT TPS per **x86** CPU across PostgreSQL majors — the same face as the starter board above. Older archives rarely stored `conn_method`; those points come from set names that said `Sockets Prepared`. The series is thin (rising 5950X, twilight i9, siren 9950X) but enough to anchor a trend.
+
+![pgbench SELECT sockets-prepared history by x86 CPU]({{ '/images/select-history.png' | relative_url }})
+
+The steep PG15 drop on the 5950X is a **false negative**, not a Postgres regression. The server had `log_min_duration_statement=0`, which drowned the workload in logging; it was [reported to hackers](https://www.postgresql.org/message-id/CAHLJuCUFGcDb1OkBcLtuWoXv5aPbWMj9uSm3q-AR3CA9CcYp_Q%40mail.gmail.com) and then rescinded once profile dumps made the mistake obvious. The archive row stays; that incident is when this lab got serious about recording settings with every run.
+
+Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/select-history.py` (runs `reports/select-history.sql`).
 
 ### Sockets
 
