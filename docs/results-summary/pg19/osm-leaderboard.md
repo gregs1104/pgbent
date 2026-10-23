@@ -18,7 +18,7 @@ This workload does not benefit very much from larger core or socket counts. Rela
 
 Regenerate the live board: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/osm-leaderboard.py --from-db`. Query: `reports/osm-leaderboard.sql`. Power study: [OSM Power]({{ '/results-summary/pg19/osm-power/' | relative_url }}).
 
-Sets: siren **71** (beta4 best-of) and **108** (19rc1 durable 4.49h); twilight **118**. Fast = `fsync=off` / `wal_level=minimal`; durable = `fsync=on` / `wal_level=replica`. `max_wal_gb=100` on these 19 cells.
+Sets: siren **71** (beta4 best-of) and **108** (19rc1 durable 4.49h + alternate 4.14h; 9950X testing closed); twilight **118**. Fast = `fsync=off` / `wal_level=minimal`; durable = `fsync=on` / `wal_level=replica`. `max_wal_gb=100` on these 19 cells.
 
 | cpu | ver | fsync | wal_level | hours | score_kips | overall_kips | index_kips | rel_ps | avg_pkg | max_pkg | kj |
 | --- | ---: | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |

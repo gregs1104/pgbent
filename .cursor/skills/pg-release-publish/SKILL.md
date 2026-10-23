@@ -99,15 +99,27 @@ Later it belongs in a helper that runs after `./download`; do not invent that
 script unless asked.
 
 When `test_metrics_data` gets slow on the analysis host (dead tuples from
-`wipe_server` / download; `write_internals` taking tens of minutes), CLUSTER
-it on `idx_test_metrics_test`:
+`wipe_server` / download; `write_internals` taking tens of minutes), rewrite
+it on the analysis host — not on a box that is still collecting.
+
+If there is enough free disk for a second copy of the live heap plus the
+index, `CLUSTER` keeps `(server, test)` order:
 
 ```bash
 psql -d results -c "CLUSTER test_metrics_data USING idx_test_metrics_test;"
 ```
 
-That rewrites the live heap in `(server, test)` order and drops the dead
-tuples. Do this on the analysis host, not on a box that is still collecting.
+When space is tight (tens of GB free, heap still hundreds of GB from
+deleted servers), drop the index, shrink with `VACUUM FULL`, then rebuild:
+
+```bash
+psql -d results -c "DROP INDEX idx_test_metrics_test;"
+psql -d results -c "VACUUM FULL test_metrics_data;"
+psql -d results -c "CREATE INDEX idx_test_metrics_test ON test_metrics_data (server, test);"
+```
+
+`VACUUM FULL` does not cluster by that index; rebuild after the heap
+shrinks. Dropping the index first frees its size for the rewrite.
 
 ### 1. Find the sets
 

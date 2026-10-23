@@ -35,12 +35,13 @@ variation graph are follow-up, not more validation.
 Retire **9950X + SK51** with a complete pack before the chip comes out.
 Twilight already **leads relations/s** (4590 vs 4529); this OSM is the
 9950X archive and a second rc1 pass, not a bid for the relations crown.
-**2026-10-22 — 19rc1 durable OSM done: 4.49h**, same class as beta4
-durable (set 71 4.34–4.44h). **Low-durability OSM in flight** (Greg;
-hoping closer to the ~4.03–4.17h fast cells). After that: **power down
-and swap to 9600X**. No agent SSH. Do not pull from here while that
-load runs. Court is the slow `OSMRELPROF` peer later — do not start
-another Spark planet load while set 8 pgbench components run.
+**2026-10-23 — 9950X testing closed.** Set **108** has durable **3265**
+(4.49h / 668 overall / score 1176) and alternate **3266** (4.14h / 725 /
+1454; `fsync` off / `wal_level=minimal` / FPW off) — in the beta4 fast
+band. Next hands-on: **power down and swap to 9600X**. No agent SSH.
+Court set 8 is done; **set 9 test 145** is the durable 19rc1 OSM +
+`OSMRELPROF` retry (1h cap). Do not start a second Spark planet load
+while 145 runs.
 
 Hands-on on siren (no agent SSH):
 
@@ -59,8 +60,8 @@ Hands-on on siren (no agent SSH):
    prepared 1-client **212,745** (4.7 μs), peak **2.96M** at 32, 2.24M at 64.
    Execute `SELECT 1` +1.1 μs, plan it +0.9 μs, lookup +2.9 μs.
    Then TCP faces if the box is staying up. Then OSM.
-3. **OSM 19rc1 durable 4.49h** (same as beta4). Low-durability pass in
-   flight (aim ~4h). Then power down.
+3. **OSM 19rc1** set **108**: durable **3265** 4.49h; alternate **3266**
+   4.14h. That closes 9950X tests. Power down.
 4. Swap to **9600X**.
 
 ## Comparing versions
@@ -367,7 +368,7 @@ Other machines:
   with: durable **20/21/22** (8.73h/343, 8.78h/342, 8.50h/353) and fast **23**
   (8.30h/361, `fsync` off). **2026-10-19 — halted:** `stop-set cleanup` wiped
   unfinished **24**; `shutdown -h now`. SSH closed. Came back **2026-10-20**.
-  Do not start another court OSM. **OSM Power** stays public with the
+  OSM stayed parked through set 8 SELECT. **OSM Power** stays public with the
   PG16 Spark row; the other boxes already have concurrent GIS on 19, so
   that mix is not a fair board. Do not share that study as finished until
   a **PG19** cell on kernel **7.0** is in the table (after set 8). **2026-10-21 — set 6 aborted because
@@ -398,7 +399,15 @@ Other machines:
   (`component faces done`, tests 89–144, sockets nothing+constant
   × prepared/simple × 14, 0 blank). 1-client means: `;` **100,843**
   simple / **94,911** prepared; `SELECT 1` **70,185** simple /
-  **83,630** prepared. Unreliable about booting; force-restart
+  **83,630** prepared. Wiped aborted set-6 **32** (5.9G `pgbench -l`
+  leftovers) and init **25**. **2026-10-22 20:58 UTC — OSM unparked:**
+  set **9** `PG19 rc1 OSM durable OSMRELPROF`, test **145**, durable
+  (`fsync` on / `wal_level=replica` / FPW on), `OSMRELPROF=1` with
+  **1h cap** (`OSMRELPROF_MAX_SEC=3600`). `complete` armed so this is
+  one cell. PG18 stopped (`start.conf` **manual**); 16/19 stay up.
+  Prior profiles failed: 20/21 leftover `perf` (deleted 121G+56G);
+  22/23 hit the 8GB cap and are unreadable. Do not start a second
+  court OSM while 145 runs. Unreliable about booting; force-restart
   procedure not written down yet.
 - **rising** — **5950X** now (was **3950X** in the 2022 `SELECT 1` /
   `;` notes). Large pgbench + OSM archive on the box. **2026-10-22 —
@@ -469,12 +478,11 @@ call `sudo pgbent_perf stop`, then enable profiling. Confirm no leftover
 `perf record` after the first relation phase. Do not reuse court’s hung
 captures.
 
-**19rc1 OSM on court is in hand — enough to start with.** Set 5 durable
-20/21/22 plus fast 23. Unfinished 24 was wiped. Do not queue more court
-planet loads. Box is **up** (2026-10-20); set **6** is the SELECT connection
-sweep (same process as siren). Tooling work for this major is
-done; other hosts can use this pin as the published 19 cell. Community rc1
-testing deadline is **2026-11-12**; this lab should be weeks ahead.
+**19rc1 OSM on court:** set 5 durable 20/21/22 plus fast 23 is enough to
+start the report. Set **9** test **145** is the extra durable cell plus
+the `OSMRELPROF` retry (1h cap). Do not queue a second planet load while
+145 runs. Community rc1 testing deadline is **2026-11-12**; this lab
+should be weeks ahead.
 
 Fleet notes (update as needed):
 
@@ -685,11 +693,12 @@ Expect `osm-rel-perf.data` / report / `osm-rel-prof.log` under each new test
 dir. If `perf record` fails on Spark (permissions / PMU), fix from that log;
 do not block durability collection.
 
-**Court PG19 rc1 is enough to start with.** Set 5: durable **20/21/22**
-(8.73–8.78h / 342–353) and fast **23** (8.30h / 361). **2026-10-19 —
-powered down** (`stop-set cleanup` wiped unfinished 24, then halt). Do not
-start another court OSM. The matching x86 `perf` series is **twilight at
-`mem=128G`**, not siren — wait until that box is up.
+**Court PG19 rc1 set 5** is enough to start: durable **20/21/22**
+(8.73–8.78h / 342–353) and fast **23** (8.30h / 361). **2026-10-22 —
+set 9 test 145** is the extra durable cell with `OSMRELPROF=1` and the
+1h stop (22/23 were unreadable after the 8GB cap). Do not start a
+second court OSM while 145 runs. The matching x86 `perf` series is
+**twilight at `mem=128G`**, not siren.
 
 ### Two majors in parallel (test + results)
 
@@ -907,6 +916,21 @@ Aim for **at least three finished runs** on a given config before judging the re
 | pgbench SELECT grid | `wl/select-grid && ./runset` | `select` |
 | pgbench init (build time) | Recorded automatically by `runset` before each scale when `NEWINIT=1` | `:-i%` |
 | Single point | `./benchwarmer <clients>` | as configured |
+
+### Wiping bad tests
+
+Failed pgbench runs leave a lot of junk (`pgbench_log.*`, huge `timing.csv`);
+TPS is usually junk too, so they are easy to find. Suspect init rows
+(`script` like `:-i%`) can usually be wiped unless this set is a build-time
+study — scale 100 SELECT is not reviewing build time.
+
+```bash
+./cleanup_singlevalue <test>
+./webreport          # always, so index.htm and charts drop the gone rows
+```
+
+`./stop-set cleanup` wipes only the unfinished latest test; still run
+`./webreport` after.
 
 `wl/osm-import` writes the standard `params` for this loop, including `RECOVERY=3600`. Run it, then edit those parameters if this host needs a change. `repeat-gis` does not invent that file. `wl/osm-import` also calls `./newset "OSM"`; if this host is already on the right batch (e.g. `PG19 beta4`), run `./newset` again only when that batch boundary is wrong — not for each GUC tweak.
 

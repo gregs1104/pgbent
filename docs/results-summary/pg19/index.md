@@ -11,7 +11,7 @@ has_children: true
 
 Initial **19rc1** report. Package date **2026-10-15**, catalog **20261006**. The public ranking URL is still **[Leaderboards]({{ '/leaderboards/' | relative_url }})**. Pages here keep the study tables and the 18↔19 notes.
 
-19 took the top leaderboard spots, with a tiny delta over 18. That's how this lab judges a release; it's easier than tracking medians. CPU-bound SELECT is the canary; OSM barely moved. 19rc1 durable OSM on siren was **4.49h**, same class as beta4. [OSM Power]({{ '/results-summary/pg19/osm-power/' | relative_url }}) uses court **19rc1** for NVIDIA Spark and Abbey **PG18** for the Studio (no 19 during RC).
+19 took the top leaderboard spots, with a tiny delta over 18. That's how this lab judges a release; it's easier than tracking medians. CPU-bound SELECT is the canary; OSM barely moved. Siren 19rc1 OSM set **108** closed the 9950X pack: durable **4.49h**, alternate **4.14h**. [OSM Power]({{ '/results-summary/pg19/osm-power/' | relative_url }}) uses court **19rc1** for NVIDIA Spark and Abbey **PG18** for the Studio (no 19 during RC).
 
 ## Pin
 
@@ -38,7 +38,7 @@ Network Mbps, checkpoint timeout, and dirty-memory sweeps from PG18 have not bee
 
 | Host | CPU | In this report |
 | --- | --- | --- |
-| siren | R9 9950X | SELECT four faces; `;` / `SELECT 1` sockets; OSM fast (beta4) + 19rc1 durable **4.49h** |
+| siren | R9 9950X | SELECT four faces; `;` / `SELECT 1` sockets; OSM set **108** durable **4.49h** + alternate **4.14h** (9950X testing closed) |
 | twilight | i5-13600K | SELECT four faces; OSM fast + durable (beta4) |
 | court | NVIDIA Spark | SELECT four faces + sockets `;` / `SELECT 1`; OSM Power 19rc1 fast cell |
 | abbey | M4 Max Studio | PG18 OSM on the current Planet (OSM Power stand-in); no PG19 during RC |
