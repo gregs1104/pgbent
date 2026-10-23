@@ -50,6 +50,14 @@ _Query returned 11 rows._
 
 Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/osm-leaderboard.py --from-db` (runs `reports/osm-leaderboard.sql`). Disk and power studies: [OSM Leaders: Performance vs. Power]({{ '/leaderboards/osm-performance-power/' | relative_url }}). 19rc1 cells vs PG18 on the same CPUs: [OSM Leaderboard (PG19)]({{ '/results-summary/pg19/osm-leaderboard/' | relative_url }}). Previous cycle used a smaller Planet (~9.3B nodes): [OSM Leaderboard (PG18 snapshot)]({{ '/results-summary/pg18/osm-leaderboard/' | relative_url }}). Workload notes: [OSM]({{ '/workloads/osm' | relative_url }}).
 
+### History
+
+Best OSM score per **x86** CPU across PostgreSQL majors (Apple and NVIDIA omitted). CPU labels are reconstructed from set names (and carried forward on reused chassis) so siren’s 7700X→9700X→9950X swaps show as separate series. Planet extracts grew from ~8B to **10.79B** nodes over this span—scores are kNodes/s, not a fixed-size extract.
+
+![OSM score history by CPU across PostgreSQL majors]({{ '/images/osm-history.png' | relative_url }})
+
+Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/osm-history.py` (runs `reports/osm-history.sql`).
+
 ## pgbench SELECT
 
 Phoronix-comparable **SELECT** cells: **90s**, scale 100.  The standard Postgres on Linux SELECT lab numbers published are at [OpenBenchmarking.org pts/pgbench](https://openbenchmarking.org/test/pts/pgbench); these are a comparable TPS collected by pgbent.
