@@ -23,10 +23,15 @@
 #
 # Stopping must wait for perf to flush — same idea as a Postgres shutdown
 # with a large shared_buffers: SIGINT / smart stop, then give it a long
-# time to write before escalating.  A one-hour system-wide sample is
-# multi-GB; a 15–20s wait then SIGKILL leaves osm-rel-perf.data with
-# "data size field is 0" (court 22/23/145).  Default flush budget is 10
-# minutes (`PGBENT_PERF_FLUSH_SEC`).
+# time to write before escalating.  A multi-GB system-wide sample needs
+# minutes; SIGKILL mid-flush leaves osm-rel-perf.data with
+# "data size field is 0" (court 22/23/145/146).  Default flush budget is
+# 10 minutes (`PGBENT_PERF_FLUSH_SEC`).
+#
+# Court 146 lesson: do not SIGINT `sudo` (it matches the cmdline but does
+# not forward INT to the wrapper/perf). Target the real `pgbent_perf record`
+# bash and/or `/usr/bin/perf record`. Give stop a longer wait than the
+# record trap so stop does not SIGKILL the wrapper mid-flush.
 
 PERF=/usr/bin/perf
 if [ ! -x "$PERF" ]; then
@@ -42,6 +47,11 @@ if [ -z "$PGBENT_PERF_FLUSH_SEC" ] || [ "$PGBENT_PERF_FLUSH_SEC" = "0" ]; then
 else
   FLUSH_SEC="$PGBENT_PERF_FLUSH_SEC"
 fi
+# stop waits longer than record's own trap so it does not race-KILL mid-flush.
+STOP_FLUSH_SEC=$((FLUSH_SEC + FLUSH_SEC / 2))
+if [ "$STOP_FLUSH_SEC" -lt $((FLUSH_SEC + 60)) ]; then
+  STOP_FLUSH_SEC=$((FLUSH_SEC + 60))
+fi
 
 output_from_args() {
   local prev="" a
@@ -55,16 +65,25 @@ output_from_args() {
   return 1
 }
 
+read_cmdline() {
+  # cat avoids bash "No such file" noise when a PID vanishes mid-scan.
+  local raw
+  raw=$(cat "/proc/$1/cmdline" 2>/dev/null) || return 1
+  [ -n "$raw" ] || return 1
+  printf '%s' "$raw" | tr '\0' ' '
+  return 0
+}
+
 # PIDs whose cmdline is a pgbent relation-phase recorder for $out (or any
-# osm-rel-perf.data if $out is empty).  Does not match `pgbent_perf stop`.
-# Prefer the pgbent_perf wrapper; bare `perf record` is a fallback.
+# osm-rel-perf.data if $out is empty).  Skips `pgbent_perf stop` and sudo
+# (SIGINT to sudo was the court failure mode — recording kept going).
 recorder_pids() {
   local out="$1" mode="$2" pid cmd
   for pid in /proc/[0-9]*; do
     pid=${pid#/proc/}
-    [ -r "/proc/$pid/cmdline" ] || continue
-    cmd=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null) || continue
+    cmd=$(read_cmdline "$pid") || continue
     case "$cmd" in
+      sudo\ *|*/sudo\ *) continue ;;
       *pgbent_perf\ stop*) continue ;;
     esac
     case "$mode" in
@@ -120,14 +139,12 @@ any_alive() {
   return 1
 }
 
-# Wait until recorders exit.  Overall budget is FLUSH_SEC — multi-GB
-# system-wide samples need minutes to write the data-file trailer.
+# Wait until recorders exit.  Budget is the first argument (seconds).
 wait_flush() {
-  local out="$1"
-  shift
-  local pids="$*"
-  local i=0
-  while [ "$i" -lt "$FLUSH_SEC" ]; do
+  local budget="$1"
+  local out="$2"
+  local i=0 pids
+  while [ "$i" -lt "$budget" ]; do
     pids=$(recorder_pids "$out" all | sort -u | tr '\n' ' ')
     # shellcheck disable=SC2086
     if [ -z "$(echo $pids | tr -d '[:space:]')" ]; then
@@ -151,7 +168,7 @@ wait_flush() {
 stop_recorders() {
   local out="$1"
   local pids
-  # INT the wrapper first so its trap asks perf to flush the data file.
+  # INT the real wrapper (not sudo), then the perf child if needed.
   pids=$(recorder_pids "$out" wrapper | sort -u)
   if [ -z "$pids" ]; then
     pids=$(recorder_pids "$out" perf | sort -u)
@@ -161,15 +178,33 @@ stop_recorders() {
   fi
   # shellcheck disable=SC2086
   signal_pids INT $pids
+  # Also INT bare perf record for this output — reaches the flusher even
+  # when the wrapper trap is slow or sudo still owns the process tree.
+  pids=$(recorder_pids "$out" perf | sort -u)
   # shellcheck disable=SC2086
-  if wait_flush "$out" $pids; then
+  [ -n "$pids" ] && signal_pids INT $pids
+
+  if wait_flush "$STOP_FLUSH_SEC" "$out"; then
     return 0
   fi
+
+  # Second chance: INT again, short extra wait, then KILL.
   pids=$(recorder_pids "$out" all | sort -u)
   if [ -z "$pids" ]; then
     return 0
   fi
-  echo "pgbent_perf: recorders still running after ${FLUSH_SEC}s flush wait; sending SIGKILL (data may be unreadable)" >&2
+  echo "pgbent_perf: still running after ${STOP_FLUSH_SEC}s; re-INT then ${FLUSH_SEC}s more" >&2
+  # shellcheck disable=SC2086
+  signal_pids INT $pids
+  if wait_flush "$FLUSH_SEC" "$out"; then
+    return 0
+  fi
+
+  pids=$(recorder_pids "$out" all | sort -u)
+  if [ -z "$pids" ]; then
+    return 0
+  fi
+  echo "pgbent_perf: recorders still running after flush waits; sending SIGKILL (data may be unreadable)" >&2
   # shellcheck disable=SC2086
   signal_pids KILL $pids
   local i=0
@@ -180,6 +215,23 @@ stop_recorders() {
     i=$((i + 1))
   done
   return 1
+}
+
+# Make the growing data file size-visible to the postgres osm-rel-prof loop
+# (root:600 otherwise; size cap never fires — court 146 hit 15G).
+publish_data_file() {
+  local out="$1" i
+  [ -n "$out" ] || return 0
+  for i in 1 2 3 4 5 6 7 8 9 10 12 15 20 25 30; do
+    if [ -e "$out" ]; then
+      chmod a+r "$out" 2>/dev/null || true
+      if [ -n "$SUDO_USER" ]; then
+        chown "$SUDO_USER:" "$out" 2>/dev/null || true
+      fi
+      return 0
+    fi
+    sleep 1
+  done
 }
 
 if [ "$1" = "stop" ]; then
@@ -217,12 +269,16 @@ if [ "$1" = "record" ]; then
   trap shutdown INT TERM HUP
   "$PERF" record "$@" &
   child=$!
+  publish_data_file "$out" &
   wait "$child"
   rc=$?
   trap - INT TERM HUP
   child=""
-  if [ -n "$SUDO_USER" ] && [ -n "$out" ] && [ -e "$out" ]; then
-    chown "$SUDO_USER:" "$out" 2>/dev/null || true
+  if [ -n "$out" ] && [ -e "$out" ]; then
+    chmod a+r "$out" 2>/dev/null || true
+    if [ -n "$SUDO_USER" ]; then
+      chown "$SUDO_USER:" "$out" 2>/dev/null || true
+    fi
   fi
   exit $rc
 fi
