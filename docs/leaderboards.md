@@ -101,7 +101,7 @@ Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bi
 
 ### History
 
-Best **sockets prepared** SELECT TPS per **x86** CPU across PostgreSQL majors — the same face as the starter board above. Older archives rarely stored `conn_method`; those points come from set names that said `Sockets Prepared`. The series is thin (rising 5950X, twilight i9, siren 9950X) but enough to anchor a trend. The chart omits the known-bad **5950X PG15** and suspect **14900K PG16** archive peaks so the higher-highs line stays readable; finishing the modern story is four-face runs on **siren** for **PG16**, then **PG15**. The **9950X PG17** point (**2,074,343** TPS) is confirmed and held as a provisional peak until that set imports; the chart drops the placeholder once a real row lands.
+Best **sockets prepared** SELECT TPS per **x86** CPU across PostgreSQL majors — the same face as the starter board above. Older archives rarely stored `conn_method`; those points come from set names that said `Sockets Prepared`. The series is thin (rising 5950X, twilight i9, siren 9950X) but enough to anchor a trend. The chart omits the known-bad **5950X PG15** and suspect **14900K PG16** archive peaks so the higher-highs line stays readable; finishing the modern story is a four-face run on **siren** for **PG15**. Provisional **9950X** peaks until those sets import: **PG16** **1,844,854** TPS, **PG17** **2,074,343** TPS — the chart drops each placeholder once a real row lands.
 
 ![pgbench SELECT sockets-prepared history by x86 CPU]({{ '/images/select-history.png' | relative_url }})
 

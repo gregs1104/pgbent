@@ -75,6 +75,15 @@ MARKERS = ("o", "s", "D", "^", "v", "P", "X", "*", "h", "p")
 PLACEHOLDER_POINTS: list[dict] = [
     {
         "cpu_hist": "R9 9950X",
+        "major": 16,
+        "tps": 1_844_854,
+        "server": "siren",
+        "batch_id": None,
+        "batch": "placeholder PG16 sockets prepared",
+        "conn": "sockets prepared",
+    },
+    {
+        "cpu_hist": "R9 9950X",
         "major": 17,
         "tps": 2_074_343,
         "server": "siren",
