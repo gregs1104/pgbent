@@ -52,6 +52,10 @@ STOP_FLUSH_SEC=$((FLUSH_SEC + FLUSH_SEC / 2))
 if [ "$STOP_FLUSH_SEC" -lt $((FLUSH_SEC + 60)) ]; then
   STOP_FLUSH_SEC=$((FLUSH_SEC + 60))
 fi
+# Cap the stop wait so a stuck /proc scan cannot hang for hours.
+if [ "$STOP_FLUSH_SEC" -gt 900 ]; then
+  STOP_FLUSH_SEC=900
+fi
 
 output_from_args() {
   local prev="" a
@@ -65,45 +69,27 @@ output_from_args() {
   return 1
 }
 
-read_cmdline() {
-  # cat avoids bash "No such file" noise when a PID vanishes mid-scan.
-  local raw
-  raw=$(cat "/proc/$1/cmdline" 2>/dev/null) || return 1
-  [ -n "$raw" ] || return 1
-  printf '%s' "$raw" | tr '\0' ' '
-  return 0
-}
-
-# PIDs whose cmdline is a pgbent relation-phase recorder for $out (or any
-# osm-rel-perf.data if $out is empty).  Skips `pgbent_perf stop` and sudo
-# (SIGINT to sudo was the court failure mode — recording kept going).
+# Fast PID discovery via pgrep — full /proc walks are too slow on a busy
+# Spark and made court stop appear hung (minutes per flush second).
+# Skips sudo (SIGINT to sudo was the court 146 failure mode).
 recorder_pids() {
   local out="$1" mode="$2" pid cmd
-  for pid in /proc/[0-9]*; do
-    pid=${pid#/proc/}
-    cmd=$(read_cmdline "$pid") || continue
+  local pat="pgbent_perf record|perf record"
+  case "$mode" in
+    wrapper) pat="pgbent_perf record" ;;
+    perf) pat="perf record" ;;
+  esac
+  # -a prints "pid cmdline"; ignore pgrep's own exit 1 when empty.
+  while read -r pid cmd; do
+    [ -n "$pid" ] || continue
     case "$cmd" in
       sudo\ *|*/sudo\ *) continue ;;
       *pgbent_perf\ stop*) continue ;;
     esac
     case "$mode" in
-      wrapper)
-        case "$cmd" in
-          *pgbent_perf\ record*) ;;
-          *) continue ;;
-        esac
-        ;;
       perf)
         case "$cmd" in
           *pgbent_perf\ record*) continue ;;
-          *perf\ record*) ;;
-          *) continue ;;
-        esac
-        ;;
-      *)
-        case "$cmd" in
-          *pgbent_perf\ record*|*perf\ record*) ;;
-          *) continue ;;
         esac
         ;;
     esac
@@ -116,7 +102,7 @@ recorder_pids() {
         *osm-rel-perf.data*) printf '%s\n' "$pid" ;;
       esac
     fi
-  done
+  done < <(pgrep -af "$pat" 2>/dev/null || true)
 }
 
 signal_pids() {
@@ -281,6 +267,13 @@ if [ "$1" = "record" ]; then
     fi
   fi
   exit $rc
+fi
+
+# Data file is often chown'd to SUDO_USER for size-cap visibility; perf
+# report otherwise refuses non-root ownership without -f.
+if [ "$1" = "report" ]; then
+  shift
+  exec "$PERF" report -f "$@"
 fi
 
 exec "$PERF" "$@"
