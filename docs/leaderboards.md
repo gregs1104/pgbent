@@ -101,11 +101,13 @@ Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bi
 
 ### History
 
-Best **sockets prepared** SELECT TPS per **x86** CPU across PostgreSQL majors — the same face as the starter board above. Older archives rarely stored `conn_method`; those points come from set names that said `Sockets Prepared`. The series is thin (rising 5950X, twilight i9, siren 9950X) but enough to anchor a trend. The **9950X PG17** point (**2,074,343** TPS) is a provisional peak until the four-face set finishes collecting; the chart drops the placeholder once a real row lands.
+Best **sockets prepared** SELECT TPS per **x86** CPU across PostgreSQL majors — the same face as the starter board above. Older archives rarely stored `conn_method`; those points come from set names that said `Sockets Prepared`. The series is thin (rising 5950X, twilight i9, siren 9950X) but enough to anchor a trend. The chart omits the known-bad **5950X PG15** and suspect **14900K PG16** archive peaks so the higher-highs line stays readable; finishing the modern story is four-face runs on **siren** for **PG16**, then **PG15**. The **9950X PG17** point (**2,074,343** TPS) is confirmed and held as a provisional peak until that set imports; the chart drops the placeholder once a real row lands.
 
 ![pgbench SELECT sockets-prepared history by x86 CPU]({{ '/images/select-history.png' | relative_url }})
 
-The steep PG15 drop on the 5950X is a **false negative**, not a Postgres regression. The server had `log_min_duration_statement=0`, which drowned the workload in logging; it was [reported to hackers](https://www.postgresql.org/message-id/CAHLJuCUFGcDb1OkBcLtuWoXv5aPbWMj9uSm3q-AR3CA9CcYp_Q%40mail.gmail.com) and then rescinded once profile dumps made the mistake obvious. The archive row stays; that incident is when this lab got serious about recording settings with every run.
+Long-term analysis here looks just for higher highs over time. That is why the analysis structure is a leaderboard. The test parameters have tightened over time; the results for PG14–16 were very much still works in progress.
+
+The steep PG15 drop on the 5950X (not plotted) was a **false negative**, not a Postgres regression. The server had `log_min_duration_statement=0`, which drowned the workload in logging; it was [reported to hackers](https://www.postgresql.org/message-id/CAHLJuCUFGcDb1OkBcLtuWoXv5aPbWMj9uSm3q-AR3CA9CcYp_Q%40mail.gmail.com) and then rescinded once profile dumps made the mistake obvious. The archive row stays; that incident is when this lab got serious about recording settings with every run.
 
 Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/select-history.py` (runs `reports/select-history.sql`).
 

@@ -84,6 +84,13 @@ PLACEHOLDER_POINTS: list[dict] = [
     },
 ]
 
+# Omit from the published higher-highs chart (archives kept; see Leaderboards note).
+# (cpu_hist, major) — known-bad logging tax; suspect old twilight pin.
+SKIP_CPU_MAJOR: set[tuple[str, int]] = {
+    ("R9 5950X", 15),  # log_min_duration_statement=0 false negative
+    ("i9-14900K", 16),  # suspect; replace with siren four-face when collected
+}
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -223,7 +230,25 @@ def best_by_cpu_major(df: pd.DataFrame) -> pd.DataFrame:
         .groupby(["cpu_hist", "major"], as_index=False)
         .first()
     )
+    best = drop_skipped(best)
     return apply_placeholders(best)
+
+
+def drop_skipped(best: pd.DataFrame) -> pd.DataFrame:
+    if best.empty or not SKIP_CPU_MAJOR:
+        return best
+    mask = []
+    for row in best.itertuples(index=False):
+        key = (row.cpu_hist, int(row.major))
+        if key in SKIP_CPU_MAJOR:
+            print(
+                f"skip: {row.cpu_hist} PG{int(row.major)} "
+                f"{float(row.tps):,.0f} TPS (omitted from chart)"
+            )
+            mask.append(False)
+        else:
+            mask.append(True)
+    return best.loc[mask].reset_index(drop=True)
 
 
 def apply_placeholders(best: pd.DataFrame) -> pd.DataFrame:
