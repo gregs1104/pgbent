@@ -6,17 +6,25 @@ nav_order: 5
 parent: Workloads
 ---
 
-PostgreSQL pgbench running SELECT statements at a grid of client × size examples. You can reach a modest fraction of random I/O SSD speed this way on local runs. 2×–4× RAM is the recommended range to make caching of the whole data set impossible, while allowing indexes to fit easily in memory on tests that use them. A SELECT variation (`select-pages`) uses index range scans instead of single row lookups, and that one is much better at fetching enough blocks at a time to saturate SSD.
+You can study CPU capacity of PostgreSQL using pgbench running SELECT statements at a grid of client × size examples. You can reach a fraction of random I/O SSD speed this way on local runs. 2×–4× RAM is the recommended range to make caching of the whole data set impossible, while allowing indexes to fit easily in memory on tests that use them. A SELECT variation (`select-pages`) uses index range scans instead of single row lookups.  That one is much better at fetching enough blocks at a time to saturate SSD.  It runs based on a block multiplier.
 
 Cloud tests running simple SELECTs mainly measure latency between the client and server. Since some queries return cached data very fast, reviewing the minimum latency observed tracks very well with connection latency.
 
-Developers working on PostgreSQL itself are often running benchmarks on the server, often a capable workstation. For queries on the server, all the overhead of standard IP networking can be avoided if clients use the UNIX sockets connection method instead. Those rates can easily clear 1M TPS on modest desktop processors, representing fantasy speeds no regular client will see. That load is useful for people working on the database's internals.
+Each client count also gets **transactions per joule** from the 1-second package-power integral — energy efficiency as the other side of that TPS fan. See the [SELECT leaderboard]({{ '/leaderboards/' | relative_url }}).
 
-The same SELECT is also run simple and over localhost TCP. Phoronix switched to prepared statements a few years ago and kind of reset the public history; the numbers went up and not many people noticed. Sweeping all four faces (sockets vs localhost TCP, simple vs prepared) is the connection study from PostgreSQL 18, kept as a code exercise so a method change cannot hide. `wl/select-faces` runs that sweep (`SKIPINIT=1` against an existing scale-100 database). A failed `runset` logs the rc and continues; it used to live in `/tmp` with `set -e` and dump the remaining faces. Each client count also gets **transactions per joule** from the 1-second package-power integral — energy efficiency as the other side of that TPS fan. See the [SELECT leaderboard]({{ '/leaderboards/' | relative_url }}).
+# Protocol and preparation faces
 
-Fantasy scripts under that SELECT: `SCRIPT=nothing` (`tests/nothing.sql`) is only `;` — protocol and `BEGIN`/`COMMIT`, no query. `SCRIPT=constant` (`tests/constant.sql`) is `SELECT 1;` — a query with no table lookup. The accounts SELECT is the lookup on top of that. Same connection faces. On siren sockets `nothing` hits **280K TPS on a single client** prepared or simple. Sockets simple `constant` is **179,635**. That's web scale. `think` is the other end of that axis (it adds sleep). `wl/empty-grid` writes the nothing params; run against an existing scale-100 database with `SKIPINIT=1`.
+Developers working on PostgreSQL itself often run benchmarks on their server workstation. For queries on the server, all the overhead of standard IP networking can be avoided if clients use the UNIX sockets connection method instead. Those rates can easily clear 1M TPS on single modest desktop processor, representing fantasy speeds no regular client will see. That load is useful for people working on the database's internals.
 
-The four SELECT faces plus sockets `;` / `SELECT 1` on **siren** 19rc1 (set 107), scale 100, 90s. At 32 clients, sockets prepared SELECT is **2.06M**; sockets `;` is **4.05M** — take the executor out and the rate almost doubles. `SELECT 1` prepared (**2.96M**) sits between them. 19rc1 snapshot: [pgbench SELECT]({{ '/results-summary/pg19/pgbench-select/#select-components' | relative_url }}).
+pgbent provides tools to allow comparing the same SELECT run simple or prepared, and with either the default localhost TCP or with sockets, referred to here as the four connection faces.  Sweeping all four faces (sockets vs localhost TCP, simple vs prepared) provides a connection study.  Those are still ran regularly here as a regression code, so a method or preparation change doesn't obscure real results.
+
+`wl/select-faces` runs the sweep. These are intended to be comparable to the pgbench numbers published at [OpenBenchmarking.org pts/pgbench](https://openbenchmarking.org/test/pts/pgbench) (Phoronix Test Suite). Phoronix switched to `-M prepared` a few years ago (PTS pgbench **1.13**) and that reset the public history for a lot of viewers. The numbers went up — query planning in Postgres takes time — but that wasn't a real gain in the software under test. Prepared is the Phoronix-shaped ranking cell on the [SELECT leaderboard]({{ '/leaderboards/' | relative_url }}); this lab still publishes all four faces so a method change cannot hide. The [PG18 connection study]({{ '/results-summary/pg18/pgbench-select/' | relative_url }}) made that method public. OpenBenchmarking’s multi-million TPS numbers are multi-socket systems on DC network hardware, not localhost and not unix sockets sharing the server with pgbench.
+
+# Simpler scripts
+
+The standard pgbench SELECT runs an indexed lookup.  There are some fantasy scripts available in the tests to break that down further. `SCRIPT=nothing` (`tests/nothing.sql`) is only `;` — protocol and `BEGIN`/`COMMIT`, no query. `SCRIPT=constant` (`tests/constant.sql`) is `SELECT 1;` — a query with no table lookup. The accounts SELECT then layers its lookup on top of that. Same connection face options. On 9950X sockets `nothing` hits **280K TPS on a single client** prepared or simple. Sockets simple `constant` is **179,635**. That's web scale! `think` is the other end of that axis, it adds sleep. `wl/empty-grid` writes the nothing params.  You can either regenerate the pgbench database itself each run set, or run against an existing scale-100 database with `SKIPINIT=1`.
+
+The four SELECT faces plus sockets `;` / `SELECT 1` ran on **siren**, an AMD R9 9950X, for 19rc1 (set 107), scale 100, 90s. At 32 clients, sockets prepared SELECT is **2.06M**; sockets `;` is **4.05M** — take the executor out and the rate almost doubles. `SELECT 1` prepared (**2.96M**) sits between them. 19rc1 snapshot: [pgbench SELECT]({{ '/results-summary/pg19/pgbench-select/#select-components' | relative_url }}).
 
 ![pgbench SELECT components - Siren 9950X]({{ '/images/select-components.png' | relative_url }})
 
@@ -24,7 +32,7 @@ Simple (not prepared) query is the fastest way to do nothing (`;`). The prepared
 
 ## 1-client latency pieces
 
-At one client these rates are just the inverse of the latency times. Planning takes some amount, execution some, and TCP connection adds some. The empty `;` floor, both `SELECT 1` faces, and the four SELECT faces on **siren** 19rc1 (set 107) split that:
+At one client these rates represent the inverse of the latency times. Planning takes some amount, execution some, and the connection method adds some. The empty `;` floor, both `SELECT 1` faces, and the four SELECT faces on **siren** 19rc1 (set 107) split that:
 
 | 1-client cell | TPS | 1/TPS |
 | --- | ---: | ---: |
@@ -46,7 +54,7 @@ At one client these rates are just the inverse of the latency times. Planning ta
 
 Protocol + execute + lookup + accounts planning + TCP is 14.0 μs against 14.5 μs on localhost TCP simple. Close enough to account for the cell. The old mixed +2.0 μs (`SELECT 1` simple minus `;`) is plan + execute (0.9 + 1.1). The old mixed +4.0 μs (prepared SELECT minus prepared `;`) is execute + lookup (1.1 + 2.9). Multi-client TPS is the same latencies with more pipelines, not a different clock.
 
-Sockets `nothing` on siren 19rc1 set 107, 90s, scale 100. Peak is **4.05M** simple at 32 clients (tests 3254 / 3251 after the disk-full re-run). SELECT’s sockets-prepared peak on the same box is **2.06M** at 32; `;` is already past that at 16.
+Sockets `nothing` on siren 19rc1 (set 107, 90s, scale 100) peak is **4.05M** simple at 32 clients (tests 3254 / 3251). SELECT’s sockets-prepared peak on the same box is **2.06M** at 32; `;` is already past that at 16.
 
 | clients | sockets | sockets prepared |
 | ---: | ---: | ---: |
@@ -58,9 +66,9 @@ Sockets `nothing` on siren 19rc1 set 107, 90s, scale 100. Peak is **4.05M** simp
 | 32 | 4,046,425 | 3,808,019 |
 | 64 | 3,947,315 | 3,649,678 |
 
-At one client they are the same 3.6 μs floor. At many clients simple stays a few percent ahead. Both go flat past 32.
+At one client they are the same 3.6 μs floor. At many clients simple stays a few percent ahead. Both go flat or down past 32, the CPU core count.
 
-Sockets `constant` (`SELECT 1`) on the same set. Simple peaks **2.48M** at 32 — between `;` (4.05M) and prepared SELECT (2.06M). Prepared is higher: **2.96M** at 32, **2.24M** at 64. At 64 simple falls to 1.79M (avg 34 μs, P90 46 μs, max 52 ms); prepared stays ahead (avg 27 μs, P90 38 μs, max 623 ms). Preparation helps `SELECT 1` at every client count; it does not help `;`.
+Sockets `constant` (`SELECT 1`) ran on the same set. Simple peaks **2.48M** at 32 — between `;` (4.05M) and prepared SELECT (2.06M). Prepared is higher: **2.96M** at 32, **2.24M** at 64. At 64 simple falls to 1.79M (avg 34 μs, P90 46 μs, max 52 ms); prepared stays ahead (avg 27 μs, P90 38 μs, max 623 ms). Preparation helps `SELECT 1` at every client count; it does not help `;`.
 
 | clients | sockets `SELECT 1` | sockets prepared `SELECT 1` |
 | ---: | ---: | ---: |
@@ -72,15 +80,13 @@ Sockets `constant` (`SELECT 1`) on the same set. Simple peaks **2.48M** at 32 �
 | 32 | 2,478,846 | 2,956,507 |
 | 64 | 1,793,332 | 2,237,216 |
 
-The pause after each run is `pgbench -l` COPY into `timing`. At 32–64 clients that is ~330–360 million rows. `tests.tps` is stored first. The first `;` 32/64 pass filled the **31GB free** then on siren (old uncompressed upload archives); clearing those put the boot drive back to **121GB free** and the re-run landed TPS plus the max. Accurate power on every platform was what blocked collecting this — the question was how many watts `nothing` burns.
-
-pgbench’s own summary breaks down at this rate. Test **3252** (`;` sockets prepared, 64 clients, 3.65M TPS): avg 7 μs, **P90 0** (the 20-bucket `OFFSET` on 328M rows did not finish), max **1,448,031 μs** (1.45 s). Easy to throw that max away as a connect() blip. The per-row `latency.png` is why every `-l` line is copied: the floor is still microseconds (invisible on a 1600 ms axis) and the 200 ms–1.5 s stalls **repeat** through the file, including that 1.45 s point. Not one artifact. This is the 2007 ingest staying in the path on purpose.
+pgbent's own summary breaks down at the high end of these rates. On reference test **3252** (`;` sockets prepared, 64 clients, 3.65M TPS, avg 7 μs), The **P90 0**-built with a 20-bucket `OFFSET` on 328M rows-did not finish, and the max latency observed by pgbent was **1,448,031 μs** (1.45 s). That's not just a connect() blip. The per-row `latency.png` demonstrates why every `-l` line is copied: the floor is still microseconds (invisible on a 1600 ms axis) and the 200 ms–1.5 s stalls **repeat** through the file, including that 1.45 s point.   It's not one artifact and it's not just one of the startup/shutdown blips that happen sometimes either. This class of overloaded scheduler latency artifacts are why pgbent still has this heavy processing ingest phase analyzing latencies, those blips have been there since this project started in 2007.
 
 ## Comparing versions
 
-Hold `conn_method` constant. An early mixed `latest_set` on **siren** put PG18 sockets next to 19beta4 localhost TCP and looked ~25% down. That was a test-method error, not debug assertions and not a version regression. `SHOW debug_assertions` was off on those beta4 rows anyway. Scale 100 is about **1.6GB**; that SELECT stays in memory, so a disk swap between pins does not matter.
+Hold `conn_method` constant, if you're comparing different connection faces that will look like a regression of ~25%.  Scale 100 is about **1.6GB**; that SELECT stays in memory, so a disk swap between pins does not matter.
 
-Once 19rc1 was ready, the same box ran the whole connection grid (sockets vs localhost TCP, simple vs prepared). Fair version-only, 90s, 32 clients, mean of two `SETTIMES`:
+On 19rc1 the whole connection faces grid was run:  sockets vs localhost TCP, simple vs prepared.  90s, 32 clients, mean of two `SETTIMES`:
 
 | pin | conn_method | TPS |
 | --- | --- | ---: |
@@ -90,5 +96,3 @@ Once 19rc1 was ready, the same box ran the whole connection grid (sockets vs loc
 | PostgreSQL 19rc1 | localhost TCP prepared | 1,517,063 |
 
 19 took the ranking cell with a tiny delta over 18 on sockets, and a similarly small step over 19beta4 on localhost TCP. The four-face [SELECT leaderboard]({{ '/leaderboards/' | relative_url }}) is that RC grid: sockets prepared **2.06M** vs localhost TCP prepared **1.52M**, a flat ~26% from 1 client through 64. At 1.5M TPS that protocol gap is not really bad. Snapshot of the same board: [pgbench SELECT (PG19)]({{ '/results-summary/pg19/pgbench-select/' | relative_url }}).
-
-Beta packages can still ship with `--enable-cassert`; CPU-bound SELECT is the canary, OSM barely moves. That was not this drop, and it was not worth chasing either way. Wiki: [Regression Testing with pgbench](https://wiki.postgresql.org/wiki/Regression_Testing_with_pgbench) (non-debug builds).
