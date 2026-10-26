@@ -40,7 +40,7 @@ At one client these rates are just the inverse of the latency times. Planning ta
 
 Protocol + execute + lookup + accounts planning + TCP is 14.0 μs against 14.5 μs on localhost TCP simple. Close enough to account for the cell. The old mixed +2.0 μs (`SELECT 1` simple minus `;`) is plan + execute (0.9 + 1.1). The old mixed +4.0 μs (prepared SELECT minus prepared `;`) is execute + lookup (1.1 + 2.9). Multi-client TPS is the same latencies with more pipelines, not a different clock.
 
-Sockets `nothing` on siren 19rc1 set 107, 90s, scale 100. Peak is **4.05M** simple at 32 clients (tests 3254 / 3251 after the disk-full re-run). SELECT’s sockets-prepared peak on the same box is **2.06M** at 32; `;` is already past that at 16.
+Sockets `nothing` on siren 19rc1 set 107, 90s, scale 100. Peak is **4.05M** simple at 32 clients (tests 3254 / 3251 after the disk-full re-run). SELECT’s sockets-prepared peak on the same box is **2.06M** at 32; `;` is already past that at 16. Full TPS-vs-clients fan (four SELECT faces + `;` / `SELECT 1`): [PG19 components chart]({{ '/results-summary/pg19/pgbench-select/#select-components' | relative_url }}).
 
 | clients | sockets | sockets prepared |
 | ---: | ---: | ---: |

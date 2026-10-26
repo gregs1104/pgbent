@@ -28,7 +28,7 @@ Initial **19rc1** report. Package date **2026-10-15**, catalog **20261006**. The
 
 - [OSM Leaderboard]({{ '/results-summary/pg19/osm-leaderboard/' | relative_url }}) — 19rc1 load ranking vs PG18 on the same CPUs
 - [OSM Power]({{ '/results-summary/pg19/osm-power/' | relative_url }}) — throughput vs package watts and joules
-- [pgbench SELECT]({{ '/results-summary/pg19/pgbench-select/' | relative_url }}) — siren four-face connection sweep, txn/J, 18↔19
+- [pgbench SELECT]({{ '/results-summary/pg19/pgbench-select/' | relative_url }}) — siren four-face connection sweep, `;` / `SELECT 1` components, txn/J, 18↔19
 
 Disk traces behind the OSM bars: [OSM Leaders: Performance vs. Power]({{ '/leaderboards/osm-performance-power/' | relative_url }}). 1-client `;` / `SELECT 1` / lookup split: [pgbench SELECT]({{ '/workloads/select/' | relative_url }}).
 

@@ -461,22 +461,58 @@ comparison chart’s x86 peer for court’s relation `perf` is twilight:
 **i5-13600K** is reliable, almost matches 9950X score (1407 vs 1480), and
 **leads relations/s** (4590 vs 4529) at less package energy. Court’s Spark
 reports **~121Gi**; twilight’s extra **188GB** would gift the node-cache /
-OS-cache packing. Equalize with a Linux **`mem=128G`** kernel cap (GRUB) so
+OS-cache packing. Equalize with a Linux **`mem=`** kernel cap (GRUB) so
 `MemTotal`, dirty ratios, and `pgsysinfo` / `server.mem_gb` all look like
 the 128GB class — keep `osm-mem-128` as the Postgres tier. Then a **few
 durable 19rc1** planet loads with `OSMRELPROF=1` (same path as court:
 `pgbent_perf`, artifacts in the test dir). Not the big GUC matrix; TRIM
 still taxes each `newgis`.
 
-**Before `OSMRELPROF=1` on twilight (reinstall on court too):** use the
-`pgbent_perf` that waits up to **10 minutes** for a flush after SIGINT
-(`PGBENT_PERF_FLUSH_SEC`, default 600). Court 22/23/145 still got `data
-size field is 0` because stop SIGKILLed after 15–20s mid-flush on an ~8GB
-sample. Earlier 20/21 never died at all (SIGINT hit sudo only). Copy
-`util/pgbent_perf` to `/usr/local/bin/pgbent_perf` (NOPASSWD already),
-`git pull` so `osm-rel-prof` matches, then profile. Confirm no leftover
-`perf record` after the first relation phase. Do not reuse court’s hung
-captures.
+**2026-10-25 — twilight at 128GB class.** GRUB `mem=131G` → `MemTotal`
+~**125Gi**. Set **120** `PG19 rc1 OSM mem=128G fast` done (test **2710**,
+~5.01h / 599, `fsync` off / `wal_level=minimal`). Set **121** durable
+`OSMRELPROF` done (test **2711**, ~5.43h / 553, `fsync` on /
+`wal_level=replica`, 10m profile OK). **2026-10-26 — set 122** low-durable
+(`replica` + `fsync` off, FPW on): the missing fair corner vs other
+platforms’ fat-WAL/no-sync cell. Test **2712** running (`server_mem_gb=125`
+stamped); no `OSMRELPROF`. **RC1 wrap:** siren **PG15** SELECT running
+(hands-on; no agent SSH); twilight **122** is the last OSM cell. Greg
+downloads final sets once both finish.
+
+**Loose end — PG18 sockets-prepared peak (siren).** Published mean
+~**2.014M** (set 106, 32c) sits under the PG17 placeholder **2.074M**.
+After siren audit fixes + PG15 wrap: one newset on **PG18**, **only**
+the ranking cell — sockets prepared, **32 clients**, 90s, existing
+scale-100 (`SKIPINIT=1`). Fish with **`SETTIMES=5`** (or more); history
+chart keeps the **max** row, so one clean high is enough. No agent SSH.
+Hands-on:
+
+```bash
+# TESTPORT → PG18; scale-100 already present
+./newset 'PG18 sockets prepared 32c peak re-run'
+echo "SCRIPT=select" > params
+echo "SETTIMES=5" >> params
+echo "RUNTIME=90" >> params
+./pgsysinfo >> params
+cat >> params <<'EOF'
+SCALES=100
+SETCLIENTS="32"
+SOCKETS=1
+PREPARED=1
+SKIPINIT=1
+EOF
+./runset
+```
+
+**`server_mem_gb` under a mem= cap.** `benchwarmer` copies
+`server.server_mem_gb` onto each `tests.server_mem_gb` row. Leave the
+`server` row at the **physical** size (**188** on twilight) — that is the
+chassis. For every test run under the GRUB cap, **manually**
+`UPDATE tests SET server_mem_gb = 125 WHERE …` after the run (visible
+`MemTotal` ≈ 125 Gi). Too late to flip `server.server_mem_gb` to 125
+before the mem=128G series; set **120** test **2710** was corrected to
+**125** on 2026-10-25. Do the same for set **121** (and later capped
+cells) when each test row lands.
 
 **19rc1 OSM on court:** set 5 durable 20/21/22 plus fast 23 is enough to
 start the report. Set **9** test **145** finished (8.32h); relation

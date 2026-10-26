@@ -27,6 +27,15 @@ Mean across two `SETTIMES`. **tps_1** is the single-client cell; **tps_32** is t
 | sockets | 89,241 | 62.7 | 1,438 | 1,354,200 | 199.6 | 6,841 |
 | localhost TCP | 68,924 | 65.2 | 1,066 | 997,097 | 199.6 | 5,040 |
 
+## SELECT components
+{: #select-components}
+
+Same siren 19rc1 cell, with the fantasy scripts that strip the executor down. `;` (`SCRIPT=nothing`) is protocol + `BEGIN`/`COMMIT` only. `SELECT 1` (`SCRIPT=constant`) is a query with no table lookup. Accounts SELECT is the lookup on top. Sockets only for the fantasy pair (no localhost TCP pass on those yet).
+
+![pgbench SELECT components - Siren 9950X]({{ '/images/select-components.png' | relative_url }})
+
+At 32 clients, sockets prepared SELECT is **2.06M**; sockets `;` is **4.05M** — take the executor out and the rate almost doubles. `SELECT 1` prepared (**2.96M**) sits between them. The 1-client μs split that these curves come from: [1-client latency pieces]({{ '/workloads/select/#1-client-latency-pieces' | relative_url }}).
+
 ## Comparing versions
 
 Hold `conn_method` constant. Mixing sockets with localhost TCP can look like a 25% hole; that was a test-method error on an early mixed `latest_set`, not debug assertions and not a version regression.
@@ -42,8 +51,6 @@ Fair 32-client means, same box:
 
 19 took the ranking cell with a tiny delta over 18 on sockets, and a similarly small step over 19beta4 on localhost TCP.
 
-1-client `;` / `SELECT 1` / lookup split (protocol 3.6 μs, execute `SELECT 1` +1.1 μs, plan `SELECT 1` +0.9 μs, accounts lookup +2.9 μs): [1-client latency pieces]({{ '/workloads/select/#1-client-latency-pieces' | relative_url }}). Those fantasy scripts are not on this ranking.
-
 Court Spark four-face SELECT (set 7) is in the results DB as the ARM end of the same grid. Set 8 sockets `;` / `SELECT 1` is in: 1-client **100,843** / **94,911** nothing and **70,185** / **83,630** constant (simple / prepared). Not on this ranking table.
 
-Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/select-leaderboard.py --from-db`. Query: `reports/select-leaderboard.sql`. Older mixed-protocol dump: [pgbench SELECT (PG18 snapshot)]({{ '/results-summary/pg18/pgbench-select/' | relative_url }}).
+Regenerate ranking board: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/select-leaderboard.py --from-db` (`reports/select-leaderboard.sql`). Components chart: same prefix with `reports/select-components.py` (`reports/select-components.sql`). Older mixed-protocol dump: [pgbench SELECT (PG18 snapshot)]({{ '/results-summary/pg18/pgbench-select/' | relative_url }}).
