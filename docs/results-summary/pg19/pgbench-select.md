@@ -34,7 +34,7 @@ Same siren 19rc1 cell, with the fantasy scripts that strip the executor down. `;
 
 ![pgbench SELECT components - Siren 9950X]({{ '/images/select-components.png' | relative_url }})
 
-At 32 clients, sockets prepared SELECT is **2.06M**; sockets `;` is **4.05M** — take the executor out and the rate almost doubles. `SELECT 1` prepared (**2.96M**) sits between them. The 1-client μs split that these curves come from: [1-client latency pieces]({{ '/workloads/select/#1-client-latency-pieces' | relative_url }}).
+At 32 clients, sockets prepared SELECT is **2.06M**; sockets `;` is **4.05M** — take the executor out and the rate almost doubles. `SELECT 1` prepared (**2.96M**) sits between them. Simple (not prepared) query is the fastest way to do nothing (`;`). The prepared path is still doing protocol work with no plan to amortize it over. You’re paying for Bind/Execute steps instead of just spending those cycles on another empty nothing-results trip. The 1-client μs split that these curves come from: [1-client latency pieces]({{ '/workloads/select/#1-client-latency-pieces' | relative_url }}).
 
 ## Comparing versions
 

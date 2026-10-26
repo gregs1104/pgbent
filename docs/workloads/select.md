@@ -20,6 +20,8 @@ The four SELECT faces plus sockets `;` / `SELECT 1` on **siren** 19rc1 (set 107)
 
 ![pgbench SELECT components - Siren 9950X]({{ '/images/select-components.png' | relative_url }})
 
+Simple (not prepared) query is the fastest way to do nothing (`;`). The prepared path is still doing protocol work with no plan to amortize it over. You’re paying for Bind/Execute steps instead of just spending those cycles on another empty nothing-results trip.
+
 ## 1-client latency pieces
 
 At one client these rates are just the inverse of the latency times. Planning takes some amount, execution some, and TCP connection adds some. The empty `;` floor, both `SELECT 1` faces, and the four SELECT faces on **siren** 19rc1 (set 107) split that:
@@ -56,7 +58,7 @@ Sockets `nothing` on siren 19rc1 set 107, 90s, scale 100. Peak is **4.05M** simp
 | 32 | 4,046,425 | 3,808,019 |
 | 64 | 3,947,315 | 3,649,678 |
 
-At one client they are the same 3.6 μs floor: no query to plan, so `-M prepared` does not help. At many clients simple is a few percent ahead (Bind/Execute/Sync vs a simple `Query`). Both go flat past 32.
+At one client they are the same 3.6 μs floor. At many clients simple stays a few percent ahead. Both go flat past 32.
 
 Sockets `constant` (`SELECT 1`) on the same set. Simple peaks **2.48M** at 32 — between `;` (4.05M) and prepared SELECT (2.06M). Prepared is higher: **2.96M** at 32, **2.24M** at 64. At 64 simple falls to 1.79M (avg 34 μs, P90 46 μs, max 52 ms); prepared stays ahead (avg 27 μs, P90 38 μs, max 623 ms). Preparation helps `SELECT 1` at every client count; it does not help `;`.
 
