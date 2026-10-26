@@ -11,6 +11,29 @@ disable-model-invocation: true
 
 # Release study runs
 
+## Publish cycle (two snapshots)
+
+The public cadence is roughly **two years between “middle” study campaigns**,
+with two getbent.io snapshots per major:
+
+1. **Release snapshot** — fair, unified configs (same `shared_buffers`,
+   durability corners, SELECT faces) so CPUs and majors compare cleanly.
+   19rc1 is that snapshot for PG19.
+2. **Mid-cycle studies** — *after* that release snapshot, still inside the
+   publish cycle: GUC retunes, OS upgrades, hardware swaps, Planet refresh,
+   packing experiments. This is where `shared_buffers` 48→32 and Study 3
+   belong. A new Ubuntu/Debian release can eat most of a mid-cycle (years
+   that have one). PG18’s mid-cycle was largely the multi-process GIS /
+   osm2pgsql fallout, so little else moved.
+3. **Final snapshot** — before the next major’s release work; freeze what
+   the mid-cycle learned. These skills came online while Greg was finishing
+   the **PG18 final snapshot**; they document a cycle that was already in
+   motion.
+
+“Post release-snapshot” **is** mid-publish, not “publishing is over.” Do not
+retune the unified fair cells until the release snapshot is frozen; then open
+mid-cycle adjustments deliberately.
+
 A release cycle starts with **no studies**. When a topic comes up (a new
 GUC, a suspected regression, new hardware, an OS setting), a study is opened by
 flagging test sets with `newset` on each machine that will take part. Several
@@ -531,18 +554,19 @@ Fleet notes (update as needed):
 
 ## PG19 study sequence
 
-Ordered topics for this cycle. Finish (or park with enough data to publish)
-before opening the next; do not fan out a second matrix on PG18.
+Ordered mid-cycle topics after the **19rc1 release snapshot**. Finish (or
+park with enough data) before opening the next; do not fan out a second
+matrix on PG18. OS upgrades and Planet refresh sit in the same window.
 
 1. **Durability and WAL volume vs throughput** (open now — first PG19 study)
 2. **Checksum overhead** (`data_checksums` on vs off) — deferred from PG18
-3. **Node cache vs `shared_buffers`** (after durable baselines match across hosts)
+3. **Node cache vs `shared_buffers`** (48→32 on `osm-mem-128`; after durable baselines match)
 4. **`maintenance_work_mem` sweep** (after memory packing is settled)
 
-## After 19rc1 wrap: OS upgrades (siren, twilight)
+## After 19rc1 release snapshot: OS upgrades (siren, twilight)
 
-Do **not** start this until the 19rc1 results and experiments have wrapped
-(siren dump, twilight set 119 SELECT+OSM, abbey WAL/fsync 2×2, court set 8,
+Mid-cycle work — do **not** start until the release-snapshot cells have wrapped
+(siren dump, twilight set 119 SELECT+OSM + 128G corners, abbey WAL/fsync 2×2, court set 8,
 OSM Power Spark cell as needed). Then:
 
 1. Upgrade **siren** and **twilight** to the new OS releases (Greg names
@@ -637,6 +661,15 @@ four (siren, twilight, abbey, court) on PG19 when practical; do not block the
 memory study forever on court if the others already match.
 
 **Question.** The PG17 OSM config was a local maximum: high memory use that delivered peak throughput. Parallel GIN / index work in PG18 destabilized that peak (see the final PG18 retune commit). On 128GB hosts the node-cache phase packs `osm2pgsql` RSS (~60GB at scale 75000), `shared_buffers` (48GB in `osm-mem-128`), and shared memory into RAM and spills into the default ~15GB swap. When the loader enters the index phase it **drops the node cache**; Postgres pages that were pushed out are not pulled back automatically, then `maintenance_work_mem` × parallel maintenance workers allocates on top. Suspect the fix is to shrink **either** the osm2pgsql node cache (`scale` / `OSMNODECACHE` in `params`) **or** `shared_buffers` (`osm-mem-*`), not to keep chasing the PG17 packing.
+
+**2026-10-26 — PG19 mid-cycle (after 19rc1 release snapshot).** Keep
+**48GB** on the frozen fair comparison cells. In this mid-cycle window, cut
+`osm-mem-128` `shared_buffers` **48 → 32GB** (and revisit
+`effective_cache_size`) so 128GB-class packing has headroom — court OOMed
+osm2pgsql mid-Relations on ~122 Gi with only 16 G swap; twilight survives
+the same config with more swap / a few more GiB. Change the conf.d tier
+once, rebaseline, and carry the winner into the **final snapshot** before
+the next major.
 
 **How to run it.** Explore the matrix on **twilight** first (agent-driven once
 Greg points at it). `./newset` with a shared description prefix; change one

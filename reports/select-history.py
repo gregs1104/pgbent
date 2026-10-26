@@ -5,7 +5,8 @@ pgbench SELECT TPS history by CPU across PostgreSQL majors.
 Only the sockets-prepared face — matching the public leaderboard cell.
 Face comes from tests.conn_method when present, else from set/batch names
 (older archives had no conn column). CPU labels reuse the OSM history
-reconstruction rules.
+reconstruction rules. SQL reads tests/testset directly (after ./download);
+a submission rebuild is not required for this chart.
 
 Usage:
   MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" \\
@@ -70,34 +71,16 @@ CPU_COLORS: dict[str, str] = {
 
 MARKERS = ("o", "s", "D", "^", "v", "P", "X", "*", "h", "p")
 
-# Provisional sockets-prepared peaks until the matching set lands in results.
-# Dropped automatically once a real row exists for the same cpu × major.
-PLACEHOLDER_POINTS: list[dict] = [
-    {
-        "cpu_hist": "R9 9950X",
-        "major": 16,
-        "tps": 1_844_854,
-        "server": "siren",
-        "batch_id": None,
-        "batch": "placeholder PG16 sockets prepared",
-        "conn": "sockets prepared",
-    },
-    {
-        "cpu_hist": "R9 9950X",
-        "major": 17,
-        "tps": 2_074_343,
-        "server": "siren",
-        "batch_id": None,
-        "batch": "placeholder PG17 sockets prepared",
-        "conn": "sockets prepared",
-    },
-]
+# Optional provisional points if a cpu × major cell is still missing from
+# results. Empty once siren four-face SELECT covers 15–19 (2026-10-26).
+PLACEHOLDER_POINTS: list[dict] = []
 
 # Omit from the published higher-highs chart (archives kept; see Leaderboards note).
-# (cpu_hist, major) — known-bad logging tax; suspect old twilight pin.
+# (cpu_hist, major) — known-bad logging tax; suspect old twilight pin (siren
+# PG16 four-face is the modern 16 point now).
 SKIP_CPU_MAJOR: set[tuple[str, int]] = {
     ("R9 5950X", 15),  # log_min_duration_statement=0 false negative
-    ("i9-14900K", 16),  # suspect; replace with siren four-face when collected
+    ("i9-14900K", 16),  # suspect archive; siren 9950X PG16 replaces it on the chart
 }
 
 
