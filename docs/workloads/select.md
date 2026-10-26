@@ -16,6 +16,10 @@ The same SELECT is also run simple and over localhost TCP. Phoronix switched to 
 
 Fantasy scripts under that SELECT: `SCRIPT=nothing` (`tests/nothing.sql`) is only `;` — protocol and `BEGIN`/`COMMIT`, no query. `SCRIPT=constant` (`tests/constant.sql`) is `SELECT 1;` — a query with no table lookup. The accounts SELECT is the lookup on top of that. Same connection faces. On siren sockets `nothing` hits **280K TPS on a single client** prepared or simple. Sockets simple `constant` is **179,635**. That's web scale. `think` is the other end of that axis (it adds sleep). `wl/empty-grid` writes the nothing params; run against an existing scale-100 database with `SKIPINIT=1`.
 
+The four SELECT faces plus sockets `;` / `SELECT 1` on **siren** 19rc1 (set 107), scale 100, 90s. At 32 clients, sockets prepared SELECT is **2.06M**; sockets `;` is **4.05M** — take the executor out and the rate almost doubles. `SELECT 1` prepared (**2.96M**) sits between them. 19rc1 snapshot: [pgbench SELECT]({{ '/results-summary/pg19/pgbench-select/#select-components' | relative_url }}).
+
+![pgbench SELECT components - Siren 9950X]({{ '/images/select-components.png' | relative_url }})
+
 ## 1-client latency pieces
 
 At one client these rates are just the inverse of the latency times. Planning takes some amount, execution some, and TCP connection adds some. The empty `;` floor, both `SELECT 1` faces, and the four SELECT faces on **siren** 19rc1 (set 107) split that:
@@ -40,7 +44,7 @@ At one client these rates are just the inverse of the latency times. Planning ta
 
 Protocol + execute + lookup + accounts planning + TCP is 14.0 μs against 14.5 μs on localhost TCP simple. Close enough to account for the cell. The old mixed +2.0 μs (`SELECT 1` simple minus `;`) is plan + execute (0.9 + 1.1). The old mixed +4.0 μs (prepared SELECT minus prepared `;`) is execute + lookup (1.1 + 2.9). Multi-client TPS is the same latencies with more pipelines, not a different clock.
 
-Sockets `nothing` on siren 19rc1 set 107, 90s, scale 100. Peak is **4.05M** simple at 32 clients (tests 3254 / 3251 after the disk-full re-run). SELECT’s sockets-prepared peak on the same box is **2.06M** at 32; `;` is already past that at 16. Full TPS-vs-clients fan (four SELECT faces + `;` / `SELECT 1`): [PG19 components chart]({{ '/results-summary/pg19/pgbench-select/#select-components' | relative_url }}).
+Sockets `nothing` on siren 19rc1 set 107, 90s, scale 100. Peak is **4.05M** simple at 32 clients (tests 3254 / 3251 after the disk-full re-run). SELECT’s sockets-prepared peak on the same box is **2.06M** at 32; `;` is already past that at 16.
 
 | clients | sockets | sockets prepared |
 | ---: | ---: | ---: |
