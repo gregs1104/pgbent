@@ -10,7 +10,7 @@ nav_order: 2
 
 TPS and package-power detail behind the [SELECT section]({{ '/leaderboards/#history-1' | relative_url }}) of the leaderboards page. 
 
-Phoronix-comparable **SELECT** cells: **90s**, scale 100. The standard Postgres on Linux SELECT lab numbers published are at [OpenBenchmarking.org pts/pgbench](https://openbenchmarking.org/test/pts/pgbench); these are a comparable TPS collected by pgbent. This lab still runs **all four connection faces**  — sockets vs localhost TCP, simple vs prepared — so protocol overhead stays visible. Prepared is the Phoronix-shaped ranking cell. See [Comparing versions]({{ '/workloads/select/#comparing-versions' | relative_url }}).
+Phoronix-comparable **SELECT** cells: **90s**, scale 100. The standard Postgres on Linux SELECT lab numbers published are at [OpenBenchmarking.org pts/pgbench](https://openbenchmarking.org/test/pts/pgbench); these are a comparable TPS collected by pgbent. This lab still runs **all four connection faces**  — sockets vs localhost TCP, simple vs prepared — so protocol overhead stays visible. **Localhost TCP prepared** is the Phoronix-shaped ranking cell. See [Comparing versions]({{ '/workloads/select/#comparing-versions' | relative_url }}).
 
 <!-- select-leaderboard:begin -->
 
@@ -39,7 +39,7 @@ Mean across repeats (4 faces). **tps_1** is the old single-core cell; **tps_32**
 
 ### Sockets
 
-Unix-domain connections (`SOCKETS=1`). Clients run on the server. This is the power-ranking cell. **Prepared** is the Phoronix-shaped face.
+Unix-domain connections (`SOCKETS=1`). Clients run on the server. This is the power-ranking cell. **Localhost TCP prepared** is the Phoronix-shaped face.
 
 ### Networked
 

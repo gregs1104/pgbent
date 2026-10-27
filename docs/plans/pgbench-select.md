@@ -14,7 +14,7 @@ Near-term study so `/leaderboards/` can show Phoronix-comparable SELECT **plus p
 
 Match [OpenBenchmarking.org pts/pgbench](https://openbenchmarking.org/test/pts/pgbench) closely enough to **claim comparability** and **link them** for TPS outside this lab. What this farm adds is **package power** and **transactions per joule** on the same row — energy efficiency as the virtuous side of better performance. Postgres developers care whether a code change moves those up or down. This lab is the public instrumentation; hyperscalers who host PG surely have their own.
 
-Public ranking: [Leaderboards]({{ '/leaderboards/' | relative_url }}). The Phoronix-shaped cell is **prepared**. Keep running **all four faces** (sockets vs localhost TCP, simple vs prepared): that is the PG18 connection study, swept for code exercise so a method change cannot hide. Sockets-versus-TCP is not a third ranking forever, but it stays on the graph. Phoronix switched to `-M prepared` a few years ago (PTS pgbench 1.13) and kind of reset that public history; numbers went up, few noticed.
+Public ranking: [Leaderboards]({{ '/leaderboards/' | relative_url }}). The Phoronix-shaped cell is **localhost TCP prepared**. Keep running **all four faces** (sockets vs localhost TCP, simple vs prepared): that is the PG18 connection study, swept for code exercise so a method change cannot hide. Sockets-versus-TCP is not a third ranking forever, but it stays on the graph. Phoronix switched to `-M prepared` a few years ago (PTS pgbench 1.13) and kind of reset that public history; numbers went up, few noticed.
 
 ## Phoronix-shaped cell
 
