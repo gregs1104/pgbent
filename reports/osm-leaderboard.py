@@ -156,9 +156,10 @@ def _marker_x_gap(gap: float = 12) -> float:
 
 
 JOULES_LABEL_OVERRIDES = {
+    # ~128 Gi board: both x86 peaks sit high-right — label left of marker.
     "i5-13600K": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
-    "R9 9950X": LabelOffset(-_marker_x_gap(), -22, ha="right", va="top"),
-    "Apple M4 Max Studio": LabelOffset(_marker_x_gap(), 12, ha="left", va="bottom"),
+    "R9 9950X": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
+    "Apple M4 Max Studio": LabelOffset(0, 12, ha="center", va="bottom"),
     "NVIDIA P4242": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
 }
 
@@ -176,9 +177,17 @@ def cpu_color(cpu: str) -> str:
     return "#333333"
 
 
+def roughly_128gb_ram(df: pd.DataFrame) -> pd.DataFrame:
+    """Score-vs-energy board: keep ~128 Gi class, drop fat twilight 188 Gi cells."""
+    if "mem_gb" not in df.columns:
+        return df
+    mem = pd.to_numeric(df["mem_gb"], errors="coerce")
+    return df.loc[mem.isna() | (mem <= 140)].copy()
+
+
 def plot_score_vs_joules(df: pd.DataFrame, output: Path, show: bool = False) -> None:
     """Tiny speed-vs-energy scatter: one point per machine, score against kJ."""
-    pts = df.dropna(subset=["kj", "score_kips"]).copy()
+    pts = roughly_128gb_ram(df).dropna(subset=["kj", "score_kips"])
     if pts.empty:
         raise SystemExit("No package_joules on leaderboard rows")
     fig, ax = plt.subplots(figsize=(7.2, 4.6))
@@ -186,8 +195,9 @@ def plot_score_vs_joules(df: pd.DataFrame, output: Path, show: bool = False) -> 
     ax.scatter(pts["kj"], pts["score_kips"], s=SCATTER_MARKER_SIZE, c=colors, zorder=3)
     xmax = float(pts["kj"].max())
     ymax = float(pts["score_kips"].max())
-    ax.set_xlim(0, xmax * 1.14)
-    ax.set_ylim(0, ymax * 1.18)
+    # Slight left pad so a centered "Apple M4 Max Studio" clears the spine.
+    ax.set_xlim(-xmax * 0.04, xmax * 1.14)
+    ax.set_ylim(0, ymax * 1.22)
     ax.set_xlabel("Package energy (kJ)")
     ax.set_ylabel("OSM score")
     ax.set_title("OSM Score vs Total Power Use")
@@ -217,8 +227,8 @@ def plot_score_vs_joules(df: pd.DataFrame, output: Path, show: bool = False) -> 
 
 
 def joules_takeaway(df: pd.DataFrame) -> str:
-    """Fastest x86 vs cheapest ARM on the one-point-per-machine board."""
-    pts = df.dropna(subset=["kj", "score_kips"]).copy()
+    """Fastest x86 vs cheapest ARM on the ~128 Gi one-point-per-machine board."""
+    pts = roughly_128gb_ram(df).dropna(subset=["kj", "score_kips"])
     if pts.empty:
         return ""
     cpu = pts["cpu"].astype(str)
@@ -254,11 +264,11 @@ def joules_takeaway(df: pd.DataFrame) -> str:
 def joules_markdown(df: pd.DataFrame) -> str:
     takeaway = joules_takeaway(df)
     body = (
-        "Speed vs energy for the best run on each machine. **Score** is OSM kNodes/s; "
-        "**kJ** is total package energy (joules, shown as kilojoules) from the 1-second "
-        "power integral over the test window. NVIDIA DGX Spark package watts come from "
-        "the open [spark_hwmon](https://github.com/antheas/spark_hwmon) module, not an "
-        "NVIDIA-shipped sensor path."
+        "Speed vs energy for the best run on each machine at ~128GB RAM. **Score** is "
+        "OSM kNodes/s; **kJ** is total package energy (joules, shown as kilojoules) from "
+        "the 1-second power integral over the test window. NVIDIA DGX Spark package watts "
+        "come from the open [spark_hwmon](https://github.com/antheas/spark_hwmon) module, "
+        "not an NVIDIA-shipped sensor path."
     )
     if takeaway:
         body = f"{body}\n\n{takeaway}"
