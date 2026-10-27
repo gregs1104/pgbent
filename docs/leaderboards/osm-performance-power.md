@@ -3,7 +3,7 @@ layout: home
 title: "OSM Leaders: Performance vs. Power"
 permalink: /leaderboards/osm-performance-power/
 parent: Leaderboards
-nav_order: 1
+nav_order: 2
 ---
 
 # OSM Leaders: Performance vs. Power

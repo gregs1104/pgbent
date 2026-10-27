@@ -3,7 +3,7 @@ layout: home
 title: "pgbench SELECT Leaders: Performance vs. Power"
 permalink: /leaderboards/select-performance-power/
 parent: Leaderboards
-nav_order: 2
+nav_order: 1
 ---
 
 # pgbench SELECT Leaders: Performance vs. Power
