@@ -101,7 +101,7 @@ The switch of gears is already public on [Greg Smith’s Crunchy blog index](htt
 
 ## Publication
 
-- **Starter board:** siren PG19 rc1 `pgbench SELECT` set — TPS and txn/J graphs plus the 1/32 table of `conn_method` faces on `/leaderboards/` (`reports/select-leaderboard.py --from-db`). Later: more machines.
+- **Starter board:** siren PG19 rc1 `pgbench SELECT` set — TPS and txn/J graphs plus the 1/32 table of `conn_method` faces on `/leaderboards/select-performance-power/` (`reports/select-leaderboard.py --from-db`). Cross-major sockets-prepared trend stays on `/leaderboards/`. Later: more machines.
 - Study batch can be one `newset` (siren: `pgbench SELECT`); faces are `conn_method`, not separate batches.
 - Scatter like OSM power: TPS vs max package W on **sockets** cells, two markers per CPU (1 client / full).
 - `/leaderboards/` SELECT section + versioned snapshot tables. Streamlit stays a local grid, not the hosted site.

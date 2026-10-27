@@ -4,7 +4,8 @@ Starter pgbench SELECT leaderboard from siren PG19 rc1.
 
 Graphs TPS and transactions/joule vs clients for the four conn_method
 faces (sockets vs localhost TCP, prepared vs simple) and writes a compact
-1-client / 32-client table into docs/leaderboards.md.
+1-client / 32-client table into
+docs/leaderboards/select-performance-power.md.
 
 Usage:
     python3 reports/select-leaderboard.py --from-db
@@ -29,7 +30,7 @@ from release_paths import REPO_ROOT
 
 DEFAULT_CONN = "host=localhost dbname=results user=gsmith password=secret"
 SQL_PATH = REPO_ROOT / "reports" / "select-leaderboard.sql"
-LEADERBOARD_PAGE = REPO_ROOT / "docs" / "leaderboards.md"
+POWER_PAGE = REPO_ROOT / "docs" / "leaderboards" / "select-performance-power.md"
 PUBLIC_IMAGE = REPO_ROOT / "docs" / "images" / "select-leaderboard.png"
 JOULES_IMAGE = REPO_ROOT / "docs" / "images" / "select-leaderboard-joules.png"
 BLOCK_BEGIN = "<!-- select-leaderboard:begin -->"
@@ -52,9 +53,13 @@ CONN_LABEL = {
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Plot starter pgbench SELECT leaderboard")
-    parser.add_argument("--from-db", action="store_true", help="Query the results DB and update docs/leaderboards.md")
+    parser.add_argument(
+        "--from-db",
+        action="store_true",
+        help="Query the results DB and update docs/leaderboards/select-performance-power.md",
+    )
     parser.add_argument("--sql", type=Path, default=SQL_PATH)
-    parser.add_argument("--page", type=Path, default=LEADERBOARD_PAGE)
+    parser.add_argument("--page", type=Path, default=POWER_PAGE)
     parser.add_argument("--output", type=Path, default=PUBLIC_IMAGE)
     parser.add_argument("--conn", default=os.environ.get("RESULTS_CONN", DEFAULT_CONN))
     parser.add_argument("--show", action="store_true")
@@ -218,27 +223,34 @@ def replace_marked_block(text: str, begin: str, end: str, inner: str) -> str:
             count=1,
             flags=re.S,
         )
-    raise SystemExit(f"Missing {begin} / {end} markers in leaderboard page")
+    raise SystemExit(f"Missing {begin} / {end} markers in select performance-power page")
 
 
 def block_markdown(table_md: str, n_faces: int) -> str:
+    # Chart-first layout matches docs/leaderboards/select-performance-power.md
     return (
         f"{BLOCK_BEGIN}\n\n"
-        "Starter board from **siren** (R9 9950X), PostgreSQL **19rc1** "
-        "(rc1 2026-10-15, catalog 20261006), scale 100, "
-        "90s. Same box, four faces of the connection sweep (PG18 study, kept as a "
-        "code exercise): unix sockets vs localhost TCP, simple vs `-M prepared`. "
-        "Peak is **32 clients**, sockets prepared (**2.06M TPS**). Localhost TCP "
-        "prepared sits at **1.52M** (~26% below sockets). Package watts: 1-client "
-        "is ~**62 W**; from 16 clients up the 9950X sits on the **~200 W PPT** "
-        "rail (RAPL avg **199.6**, not a copied 200).\n\n"
         "![pgbench SELECT - Siren 9950X]({{ '/images/select-leaderboard.png' | relative_url }})\n\n"
-        "**Transactions per joule** uses the same 1-second `PkgWatt` integral as OSM "
-        "kJ. At 32 clients every face burns ~**17.8 kJ** in 90s — the PPT rail. "
-        "Sockets prepared does **10,406** txn/J; localhost TCP simple does **5,040**. "
-        "Same joules, twice the work. Energy efficiency is the other side of the "
-        "protocol fan: better performance spends the same watt-seconds on more "
-        "useful work.\n\n"
+        "Starter board from **siren** (R9 9950X), PostgreSQL **19rc1** "
+        "(rc1 2026-10-15, catalog 20261006), scale 100, 90s. Same box, four faces "
+        "of the connection sweep: unix sockets vs localhost TCP, simple vs "
+        "`-M prepared`. Peak is **32 clients**, sockets prepared (**2.06M TPS**). "
+        "Localhost TCP prepared sits at **1.52M** (~26% below sockets). Package "
+        "watts: 1-client is ~**62 W**; from 16 clients up the 9950X sits on the "
+        "**~200 W PPT** rail (RAPL avg **199.6**, not a copied 200).\n\n"
+        "Package power sits on the same row as TPS on the **sockets** face (one "
+        "machine, complete accounting). Combining client and server watts across "
+        "boxes is out of scope—that's the harder to observe data center shaped "
+        "problem. **Transactions per joule** is the energy-efficiency number for "
+        "each client count — the same 1-second `PkgWatt` integral as OSM kJ. "
+        "Better performance is also more work per watt-second; the PG community "
+        "cares about that as a virtuous side effect of code improvements, so this "
+        "lab publishes it.\n\n"
+        "At 32 clients every face burns ~**17.8 kJ** in 90s — the sum of the 200W "
+        "PPT rail. Sockets prepared does **10,406** txn/J; localhost TCP simple "
+        "does **5,040**. Same joules, twice the work. Energy efficiency is the "
+        "other side of the protocol fan. Better performance spends the same "
+        "watt-seconds on more useful work.\n\n"
         "![pgbench SELECT - transactions per joule]({{ '/images/select-leaderboard-joules.png' | relative_url }})\n\n"
         f"Mean across repeats ({n_faces} faces). **tps_1** is the old single-core cell; "
         "**tps_32** is the max on this chip. **pkg_*** is average package watts; "
