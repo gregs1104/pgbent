@@ -60,7 +60,7 @@ _BATCH_MAJOR = re.compile(r"(?i)\bPG\s*([0-9]+)")
 CPU_COLORS: dict[str, str] = {
     "R9 3950X": "#A0522D",
     "R9 5950X": "#D4A017",
-    "R9 7700X": "#C44E52",
+    "R9 7700X": "#00FFFF",  # matplotlib cyan — keep in sync with osm-history
     "R9 9700X": "#8B0000",
     "R9 9950X": "#ED1C24",
     "R5 9600X": "#FF7F50",

@@ -114,11 +114,9 @@ Best **sockets prepared** SELECT TPS per **x86** CPU across PostgreSQL majors �
 
 ![pgbench SELECT sockets-prepared history by x86 CPU]({{ '/images/select-history.png' | relative_url }})
 
-Long-term analysis here looks just for higher highs over time. That is why the analysis structure is a leaderboard. The test parameters have tightened over time; the results for PG14–16 were very much still works in progress.
+Long-term analysis here looks just for higher highs over time. That is why the analysis structure is a leaderboard.
 
-PG15’s strong sockets-prepared peak on the 9950X is the fantasy face again: an older, simpler executor wins a pure SELECT microbenchmark. In production the features added since then pay for themselves — this chart is not an argument that newer majors are bloat. The PG16 dip was lab config, not bloat either.
-
-The steep PG15 drop on the 5950X (not plotted) was a **false negative**, not a Postgres regression. The server had `log_min_duration_statement=0`, which drowned the workload in logging; it was [reported to hackers](https://www.postgresql.org/message-id/CAHLJuCUFGcDb1OkBcLtuWoXv5aPbWMj9uSm3q-AR3CA9CcYp_Q%40mail.gmail.com) and then rescinded once profile dumps made the mistake obvious. The archive row stays; that incident is when this lab got serious about recording settings with every run.
+PG15’s strong sockets-prepared peak on the 9950X is the fantasy face again: an older, simpler executor wins a pure SELECT microbenchmark. In production the features added since then pay for themselves — this chart is not an argument that newer majors are bloat.
 
 Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/select-history.py` (runs `reports/select-history.sql`).
 

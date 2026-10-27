@@ -59,7 +59,7 @@ _CROSS_HOST = re.compile(
 # Distinct shades within vendor families for multi-chip lines.
 CPU_COLORS: dict[str, str] = {
     "R9 5950X": "#D4A017",
-    "R9 7700X": "#C44E52",
+    "R9 7700X": "#00FFFF",  # matplotlib cyan — distinct from 9700X dark red
     "R9 9700X": "#8B0000",
     "R9 9950X": "#ED1C24",
     "R5 9600X": "#FF7F50",
