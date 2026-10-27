@@ -8,25 +8,59 @@ has_children: true
 
 # Leaderboards
 
-Public OSM planet-load and pgbench SELECT rankings from the pgbent server farm personally run by Greg Smith. This page is updated when there are interesting new cells; it is not a live dashboard.
+Public pgbench SELECT and OSM planet-load rankings from the pgbent server farm personally run by Greg Smith. This page is updated when there are interesting new cells.  It is not a live dashboard.  It is not an open submission program--at least not yet anyway.
 
-Initial [PostgreSQL 19rc1 report]({{ '/results-summary/pg19/' | relative_url }}): 19 took the top leaderboard spots with a tiny delta over 18 (rc1 2026-10-15, catalog 20261006).
+Initial [PostgreSQL 19rc1 report]({{ '/results-summary/pg19/' | relative_url }}) shows PG19 (rc1 2026-10-15, catalog 20261006) took the top leaderboard spots with a tiny delta over 18.
+
+## pgbench SELECT
+
+Best **sockets prepared** SELECT TPS per **x86** CPU across PostgreSQL majors — the same face as the [starter board]({{ '/leaderboards/select-performance-power/' | relative_url }}).
+
+![pgbench SELECT sockets-prepared history by x86 CPU]({{ '/images/select-history.png' | relative_url }})
+
+Long-term analysis here looks just for higher highs over time, not tracking medians. That is why the analysis structure is a leaderboard.  PG15’s strong sockets-prepared peak on the 9950X is correct, but this is a fantasy workload.  An older, simpler executor can win a pure SELECT microbenchmark. In production the features added since then pay for themselves.  This chart is not an argument that newer majors have bloat.
+
+The standard Postgres on Linux SELECT lab numbers published are the Phoronix / [OpenBenchmarking.org pts/pgbench](https://openbenchmarking.org/test/pts/pgbench).  Some of the pgbent results are a comparable TPS.  The OpenB-comparable **SELECT** cells run for **90s** at pgbench scale 100 over **Localhost TCP prepared**.
+
+OpenB switched to `-M prepared` a few years ago (PTS pgbench 1.13) and that reset their public face. Numbers went up, query planning in Postgres takes time. This lab still runs **all four faces** to SELECT performance — sockets vs localhost TCP, simple vs prepared.  OpenBenchmarking’s multi-million TPS numbers involve multi-socket systems on DC network hardware, not localhost and not unix sockets sharing the server with pgbench.
+
+Hold `conn_method` constant when comparing versions — mixing sockets with localhost TCP can look like a 25% hole. See [Comparing versions]({{ '/workloads/select/#comparing-versions' | relative_url }}). Four-face TPS, package watts, and transactions per joule are on [pgbench SELECT Leaders: Performance vs. Power]({{ '/leaderboards/select-performance-power/' | relative_url }}).
+
+Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/select-history.py` (runs `reports/select-history.sql`). Power and four-face detail: [pgbench SELECT Leaders: Performance vs. Power]({{ '/leaderboards/select-performance-power/' | relative_url }}).
 
 ## OSM
 
-The OSM Score is a composite ranking based on loading the OpenStreetMap Planet GIS workload. The score includes just the hardest CPU phase, Relation building, and the two longest index builds. It ignores aspects of the loading that stress cache effects more so than CPU or disk.
+The OSM Score is a composite ranking based on loading the OpenStreetMap Planet GIS workload. The score includes just the hardest CPU phase, Relation building, and the two longest index builds. It ignores aspects of the loading that stress cache effects more so than CPU or disk.  **You can potentially improve the OSM score by 3X running on the fastest x86 instead of ARM, but it costs 4–5× as much energy to juice up the processors to do it.** 
 
 At current sizes near 10 billion nodes, a **Total** of **750** kNodes/s is a 4-hour run. The bars are the score categories used here: OSM score, full-load Total score, and Index score. Total and Index also show hours to the right of the bar—the wall-clock figure people normally quote.
 
 ![OSM load leaderboard — best run per server configuration]({{ '/images/osm-leaderboard.png' | relative_url }})
 
-**R9 9950X** leads at **1480** OSM score (**719** Total, **4.17h**). **i5-13600K** follows on the same Planet. Disk traces, package watts, and energy are on [OSM Leaders: Performance vs. Power]({{ '/leaderboards/osm-performance-power/' | relative_url }}).
+Disk traces, package watts, and energy are on [OSM Leaders: Performance vs. Power]({{ '/leaderboards/osm-performance-power/' | relative_url }}).
 
-The OSM table is the current Planet extract (**10.79 billion** nodes), mixed PostgreSQL 16–19, ranked by OSM score. The [PostgreSQL 18]({{ '/results-summary/pg18/' | relative_url }}) snapshot remains the last frozen release cycle. Watts, durability (`fsync` / `wal_level`), and checkpoint columns travel with the OSM rows.
+### OSM History
+
+Best OSM score per **x86** CPU across PostgreSQL majors.  Six years of history stay readable even as the Planet extract grew from ~8B to **10.79B** nodes—a growing dataset as counterweight to hardware and software speedups.  
+
+![OSM score history by CPU across PostgreSQL majors]({{ '/images/osm-history.png' | relative_url }})
+
+Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/osm-history.py` (runs `reports/osm-history.sql`).
+
+Apple and NVIDIA lab hardware omitted, those systems are relatively new here.  This workload does not benefit very much from larger core or socket counts. Relation building does not fill a second CCD or a second socket; extra cores mostly add package watts. The past 9600X→9950X swap at PG17 barely moved the OSM score.
+
+### OSM Disk
+
+Best peak disk **R/W** on those same loads — `max(max_write_mbps, max_read_mbps)` per run, then the best per CPU × major. Storage and software keep pushing the ceiling up even as the Planet extract grows.
+
+![OSM peak disk R/W history by x86 CPU across PostgreSQL majors]({{ '/images/osm-disk-history.png' | relative_url }})
+
+Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/osm-disk-history.py` (runs `reports/osm-disk-history.sql`).
+
+### OSM Detail Table
+
+The OSM table has one Planet extract (**10.79 billion** nodes), mixed PostgreSQL 16–19, ranked by OSM score. The [PostgreSQL 18]({{ '/results-summary/pg18/' | relative_url }}) snapshot remains the last frozen release cycle. Watts, durability (`fsync` / `wal_level`), and checkpoint columns travel with the OSM rows.
 
 Best OpenStreetMap planet load per **machine × version × durability** cell (host-local client). Only extracts with **at least 10 billion nodes** are eligible. Each row is the **score_kips** winner for that CPU/memory/disk, PostgreSQL major, `fsync`, `wal_level`, and `max_wal_gb`. Ranked by OSM score (`score_kips`): node count divided by relation + polygon + line time, in kNodes/s. **overall_kips** is the full load; **index_kips** is index build. Fast cells (`fsync=off` / `wal_level=minimal`) stay on the board and are labeled, not hidden.
-
-You can potentially triple the OSM score running on the fastest x86 instead of ARM, but it costs 4–5× as much energy to juice up the processors to do it. This workload does not benefit very much from larger core or socket counts. Relation building does not fill a second CCD or a second socket; extra cores mostly add package watts. The past 9600X→9950X swap barely moved OSM score.
 
 <!-- osm-leaderboard-table:begin -->
 
@@ -58,41 +92,3 @@ _Query returned 20 rows._
 <!-- osm-leaderboard-table:end -->
 
 Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/osm-leaderboard.py --from-db` (runs `reports/osm-leaderboard.sql`). Disk and power studies: [OSM Leaders: Performance vs. Power]({{ '/leaderboards/osm-performance-power/' | relative_url }}). 19rc1 cells vs PG18 on the same CPUs: [OSM Leaderboard (PG19)]({{ '/results-summary/pg19/osm-leaderboard/' | relative_url }}). Previous cycle used a smaller Planet (~9.3B nodes): [OSM Leaderboard (PG18 snapshot)]({{ '/results-summary/pg18/osm-leaderboard/' | relative_url }}). Workload notes: [OSM]({{ '/workloads/osm' | relative_url }}).
-
-### History
-
-Best OSM score per **x86** CPU across PostgreSQL majors (Apple and NVIDIA omitted). The score grades how releases run on popular chips; six years of history stay readable even as the Planet extract grew from ~8B to **10.79B** nodes—a growing dataset as counterweight to hardware and software speedups. CPU labels are reconstructed from set names (and carried forward on reused chassis) so siren’s 7700X→9700X→9950X swaps show as separate series.
-
-![OSM score history by CPU across PostgreSQL majors]({{ '/images/osm-history.png' | relative_url }})
-
-Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/osm-history.py` (runs `reports/osm-history.sql`).
-
-Best peak disk **R/W** on those same loads — `max(max_write_mbps, max_read_mbps)` per run, then the best per CPU × major. Same x86 series and set-name CPU reconstruction. Storage and software keep pushing the ceiling up even as the Planet extract grows.
-
-![OSM peak disk R/W history by x86 CPU across PostgreSQL majors]({{ '/images/osm-disk-history.png' | relative_url }})
-
-Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/osm-disk-history.py` (runs `reports/osm-disk-history.sql`).
-
-## pgbench SELECT
-
-Phoronix-comparable **SELECT** cells: **90s**, scale 100. The standard Postgres on Linux SELECT lab numbers published are at [OpenBenchmarking.org pts/pgbench](https://openbenchmarking.org/test/pts/pgbench); these are a comparable TPS collected by pgbent.
-
-Phoronix switched to `-M prepared` a few years ago (PTS pgbench 1.13) and that reset the public face for a lot of viewers. Numbers went up, query planning in Postgres takes time. This lab still runs **all four faces** to SELECT performance — sockets vs localhost TCP, simple vs prepared. The [PG18 connection study]({{ '/results-summary/pg18/pgbench-select/' | relative_url }}) made the method public. **Localhost TCP prepared** is the Phoronix-shaped ranking cell. OpenBenchmarking’s multi-million TPS numbers involve multi-socket systems on DC network hardware, not localhost and not unix sockets sharing the server with pgbench.
-
-The single socket leader board is **siren** (R9 9950X) on PostgreSQL **19rc1**. Hold `conn_method` constant when comparing versions — mixing sockets with localhost TCP can look like a 25% hole. See [Comparing versions]({{ '/workloads/select/#comparing-versions' | relative_url }}). Four-face TPS, package watts, and transactions per joule are on [pgbench SELECT Leaders: Performance vs. Power]({{ '/leaderboards/select-performance-power/' | relative_url }}).
-
-### History
-
-Best **sockets prepared** SELECT TPS per **x86** CPU across PostgreSQL majors — the same face as the [starter board]({{ '/leaderboards/select-performance-power/' | relative_url }}). Older archives rarely stored `conn_method`; those points come from set names that said `Sockets Prepared`. The series is thin (rising 5950X, twilight i9, siren 9950X) but enough to anchor a trend. The chart omits the known-bad **5950X PG15**, suspect **14900K PG16**, and orphan **13600K** single-face archive peaks. An early set-112 PG16 cell at **1.84M** was a false valley (`shared_buffers=1GB`); fair 48GB re-runs on the same set peaked at **2.06M**. Modern **9950X** cells on **siren**: PG15 **2.12M**, PG16 **2.06M**, PG17 **2.07M**, PG18 **2.02M**, PG19rc1 **2.06M** (32 clients).
-
-![pgbench SELECT sockets-prepared history by x86 CPU]({{ '/images/select-history.png' | relative_url }})
-
-Long-term analysis here looks just for higher highs over time. That is why the analysis structure is a leaderboard.
-
-PG15’s strong sockets-prepared peak on the 9950X is the fantasy face again: an older, simpler executor wins a pure SELECT microbenchmark. In production the features added since then pay for themselves — this chart is not an argument that newer majors are bloat.
-
-Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/select-history.py` (runs `reports/select-history.sql`). Power and four-face detail: [pgbench SELECT Leaders: Performance vs. Power]({{ '/leaderboards/select-performance-power/' | relative_url }}).
-
-## Contact
-
-Greg is on Discord or e-mail. This page is the lab ranking, not an open submission program--at least not yet anyway.
