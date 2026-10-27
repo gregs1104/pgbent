@@ -20,7 +20,7 @@ SELECT
   t.scale,
   t.tps
 FROM tests t
-JOIN testset s ON s.server = t.server AND s.set = t.set
+LEFT JOIN testset s ON s.server = t.server AND s.set = t.set
 LEFT JOIN server srv ON srv.server = t.server
 WHERE
   t.script = 'select'

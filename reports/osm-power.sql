@@ -1,5 +1,6 @@
 -- OSM load throughput vs package power on the current Planet (nodes >= 10e9).
--- One host-local winner per CPU (best score_kips), requiring package watts.
+-- One host-local winner per CPU × mem_gb (best score_kips), requiring package
+-- watts. Keep twilight 125 Gi (mem=128G class) distinct from 188 Gi physical.
 -- Ranked by score_kips; charts use max_pkg (peak) and avg_pkg (relation efficiency).
 
 WITH
@@ -12,7 +13,7 @@ best AS
     avg_package_watts, max_package_watts, package_joules,
     ROW_NUMBER()
     OVER(
-        PARTITION BY cpu,conn,client
+        PARTITION BY cpu, mem_gb, conn, client
         ORDER BY score_kips DESC,overall_kips DESC,index_kips DESC
     )  AS r
     FROM submission

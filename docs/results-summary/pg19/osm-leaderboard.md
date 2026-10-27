@@ -29,4 +29,4 @@ Sets: siren **71** (beta4 best-of) and **108** (19rc1 durable 4.49h + alternate 
 | i5-13600K | 18 | off | minimal | 4.8 | 1310 | 625 | 319 | 4364 | 50 | 151 | 859 |
 | R9 9950X | 18 | on | replica | 4.45 | 1149 | 673 | 269 | 4425 | 70 | 181 | 1130 |
 
-Apple Studio and NVIDIA Spark on this Planet are PG17/16/18 rows on the [live board]({{ '/leaderboards/' | relative_url }}); they are not 19rc1. Court Spark PG19 OSM set 5 is enough to start and is not on this ranking table.
+**NVIDIA Spark (court)** 19rc1 OSM is wrapped: set **12** test **148** (fast, `max_wal_size=256GB`) is the hardware best — **570** OSM score, **392** kNodes/s total, **7.65h** — after the full fair-tuning pass against the Intel/AMD matrix. Twilight reports **both** RAM sizes (**188** Gi physical and **125** Gi / mem=128G class) as separate `mem_gb` rows on the [live board]({{ '/leaderboards/' | relative_url }}). Apple Studio on this Planet remains a PG17/18 row there.

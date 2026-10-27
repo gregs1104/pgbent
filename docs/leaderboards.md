@@ -30,20 +30,29 @@ You can potentially triple the OSM score running on the fastest x86 instead of A
 
 <!-- osm-leaderboard-table:begin -->
 
-_Query returned 11 rows._
+_Query returned 20 rows._
 
 | cpu | mem_gb | disk | ver | fsync | wal_level | max_wal_gb | conn | hours | score_kips | overall_kips | index_kips | rel_ps | avg_write | max_write | avg_read | max_read | pwr_est | avg_pkg | max_pkg | kj | score_per_watt | overall_per_watt | index_per_watt | wal |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | R9 9950X | 124 | SK51 2TB | 19 | off | minimal | 100 | host | 4.17 | 1480 | 719 | 364 | 4529 | 79 | 7772 | 68 | 9748 |  | 70 | 180 | 1046 | 8.2 | 4 | 2 | 20.4 |
 | i5-13600K | 188 | Fury G5 4TB | 19 | off | minimal | 100 | host | 4.78 | 1407 | 628 | 410 | 4590 | 51 | 9692 | 42 | 9342 |  | 48 | 146 | 824 | 9.6 | 4.3 | 2.8 | 17.8 |
+| R9 9950X | 124 | SK51 2TB | 18 | off | minimal | 100 | host | 4.07 | 1393 | 736 | 338 | 4560 | 84 | 7221 | 72 | 9477 |  | 71 | 199 | 1044 | 7 | 3.7 | 1.7 | 20.8 |
 | i5-13600K | 188 | Fury G5 4TB | 18 | off | minimal | 256 | host | 4.8 | 1310 | 625 | 319 | 4364 | 52 | 9742 | 43 | 7627 |  | 50 | 151 | 859 | 8.7 | 4.1 | 2.1 | 17.6 |
+| i5-13600K | 125 | Fury G5 4TB | 19 | off | minimal | 100 | host | 5.01 | 1213 | 599 | 383 | 4146 | 58 | 7331 | 41 | 8970 |  | 46 | 150 | 833 | 8.1 | 4 | 2.6 | 52.8 |
 | R9 9950X | 124 | SK51 2TB | 19 | on | replica | 100 | host | 4.34 | 1203 | 690 | 282 | 4516 | 106 | 6099 | 67 | 9666 |  | 70 | 183 | 1100 | 6.6 | 3.8 | 1.5 | 97.1 |
-| R9 9950X | 124 | SK51 2TB | 18 | on | replica | 100 | host | 4.45 | 1149 | 673 | 269 | 4425 | 108 | 5108 | 66 | 9429 |  | 70 | 181 | 1130 | 6.4 | 3.7 | 1.5 | 102 |
+| R9 9950X | 124 | SK51 2TB | 18 | on | replica | 100 | host | 4.45 | 1149 | 673 | 269 | 4425 | 108 | 5108 | 66 | 9429 |  |  |  |  |  |  |  | 102 |
+| i5-13600K | 125 | Fury G5 4TB | 19 | off | replica | 100 | host | 4.93 | 1118 | 608 | 337 | 4132 | 67 | 6299 | 43 | 8878 |  | 48 | 149 | 855 | 7.5 | 4.1 | 2.3 | 85.5 |
 | i5-13600K | 188 | Fury G5 4TB | 19 | on | replica | 100 | host | 5.03 | 1099 | 596 | 313 | 4468 | 67 | 9151 | 40 | 9110 |  | 48 | 150 | 866 | 7.3 | 4 | 2.1 | 83.4 |
-| R9 9950X | 124 | SK51 2TB | 18 | on | replica | 256 | host | 4.54 | 1088 | 661 | 300 | 4398 | 103 | 6283 | 67 | 9457 |  | 70 | 174 | 1142 | 6.2 | 3.8 | 1.7 | 93.2 |
+| R9 9950X | 124 | SK51 2TB | 18 | on | replica | 256 | host | 4.54 | 1088 | 661 | 300 | 4398 | 103 | 6283 | 67 | 9457 |  |  |  |  |  |  |  | 93.2 |
+| i5-13600K | 125 | Fury G5 4TB | 19 | on | replica | 100 | host | 5.43 | 1040 | 553 | 296 | 3849 | 62 | 6576 | 39 | 8792 |  | 46 | 149 | 896 | 7 | 3.7 | 2 | 77.3 |
 | Apple M4 Max Studio | 128 | Apple AP2048 | 17 | off | minimal | 256 | host | 7.75 | 578 | 387 | 250 | 1358 | 331 | 4159 | 331 | 4159 |  | 8 | 37 | 224 | 15.5 | 10.4 | 6.7 | 10.7 |
+| NVIDIA P4242 | 119 | Samsung MZAL | 19 | off | minimal | 256 | host | 7.65 | 570 | 392 | 210 | 1242 | 156 | 9303 | 119 | 9196 |  | 28 | 91 | 778 | 6.3 | 4.3 | 2.3 | 34.6 |
+| NVIDIA P4242 | 119 | Samsung MZAL | 18 | off | minimal | 100 | host | 7.81 | 567 | 384 | 236 | 1184 | 133 | 7135 | 117 | 9438 |  | 24 | 87 | 677 | 6.5 | 4.4 | 2.7 | 10.8 |
 | Apple M4 Max Studio | 128 | Apple AP2048 | 18 | off | minimal | 100 | host | 7.49 | 561 | 400 | 171 | 1674 | 325 | 6125 | 325 | 6125 |  | 9 | 35 | 276 | 16.1 | 11.5 | 4.9 | 11.3 |
-| NVIDIA P4242 | 119 | Samsung MZAL | 16 | off | minimal | 256 | host | 7.75 | 504 | 387 | 197 | 1156 | 130 | 6115 | 111 | 6216 |  | 24 | 63 | 671 | 8 | 6.1 | 3.1 | 10.7 |
+| NVIDIA P4242 | 119 | Samsung MZAL | 16 | off | minimal | 256 | host | 7.62 | 522 | 394 | 202 | 1182 | 131 | 7301 | 110 | 6594 |  | 24 | 71 | 663 | 7.3 | 5.5 | 2.8 | 10.9 |
+| NVIDIA P4242 | 119 | Samsung MZAL | 19 | off | minimal | 100 | host | 8.3 | 521 | 361 | 263 | 1095 | 124 | 6351 | 110 | 9627 |  | 23 | 89 | 701 | 5.9 | 4.1 | 3 | 10.3 |
+| NVIDIA P4242 | 119 | Samsung MZAL | 19 | on | replica | 100 | host | 8.32 | 476 | 360 | 178 | 1150 | 169 | 7935 | 108 | 10599 |  | 25 | 86 | 756 | 5.5 | 4.2 | 2.1 | 50.7 |
+| NVIDIA P4242 | 119 | Samsung MZAL | 18 | on | replica | 100 | host | 8.68 | 454 | 346 | 195 | 1124 | 172 | 5262 | 105 | 9921 |  | 23 | 92 | 729 | 4.9 | 3.8 | 2.1 | 53 |
 | Apple M4 Max Studio | 128 | Apple AP2048 | 18 | on | replica | 100 | host | 11.1 | 265 | 270 | 69 | 1396 | 285 | 4578 | 285 | 4578 |  | 7 | 25 | 270 | 10.8 | 11 | 2.8 | 41.6 |
 
 <!-- osm-leaderboard-table:end -->
@@ -101,13 +110,13 @@ Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bi
 
 ### History
 
-Best **sockets prepared** SELECT TPS per **x86** CPU across PostgreSQL majors — the same face as the starter board above. Older archives rarely stored `conn_method`; those points come from set names that said `Sockets Prepared`. The series is thin (rising 5950X, twilight i9, siren 9950X) but enough to anchor a trend. The chart omits the known-bad **5950X PG15** and suspect **14900K PG16** archive peaks so the higher-highs line stays readable. Modern **9950X** four-face cells on **siren** fill **15–19**: PG15 **2.12M**, PG16 **1.84M**, PG17 **2.07M**, PG18 **2.02M**, PG19rc1 **2.06M** (peak of two `SETTIMES` at 32 clients).
+Best **sockets prepared** SELECT TPS per **x86** CPU across PostgreSQL majors — the same face as the starter board above. Older archives rarely stored `conn_method`; those points come from set names that said `Sockets Prepared`. The series is thin (rising 5950X, twilight i9, siren 9950X) but enough to anchor a trend. The chart omits the known-bad **5950X PG15**, suspect **14900K PG16**, and orphan **13600K** single-face archive peaks. An early set-112 PG16 cell at **1.84M** was a false valley (`shared_buffers=1GB`); fair 48GB re-runs on the same set peaked at **2.06M**. Modern **9950X** cells on **siren**: PG15 **2.12M**, PG16 **2.06M**, PG17 **2.07M**, PG18 **2.02M**, PG19rc1 **2.06M** (32 clients).
 
 ![pgbench SELECT sockets-prepared history by x86 CPU]({{ '/images/select-history.png' | relative_url }})
 
 Long-term analysis here looks just for higher highs over time. That is why the analysis structure is a leaderboard. The test parameters have tightened over time; the results for PG14–16 were very much still works in progress.
 
-PG15’s strong sockets-prepared peak on the 9950X is the fantasy face again: an older, simpler executor wins a pure SELECT microbenchmark. In production the features added since then pay for themselves — this chart is not an argument that newer majors are bloat.
+PG15’s strong sockets-prepared peak on the 9950X is the fantasy face again: an older, simpler executor wins a pure SELECT microbenchmark. In production the features added since then pay for themselves — this chart is not an argument that newer majors are bloat. The PG16 dip was lab config, not bloat either.
 
 The steep PG15 drop on the 5950X (not plotted) was a **false negative**, not a Postgres regression. The server had `log_min_duration_statement=0`, which drowned the workload in logging; it was [reported to hackers](https://www.postgresql.org/message-id/CAHLJuCUFGcDb1OkBcLtuWoXv5aPbWMj9uSm3q-AR3CA9CcYp_Q%40mail.gmail.com) and then rescinded once profile dumps made the mistake obvious. The archive row stays; that incident is when this lab got serious about recording settings with every run.
 

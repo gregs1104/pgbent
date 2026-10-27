@@ -72,15 +72,15 @@ CPU_COLORS: dict[str, str] = {
 MARKERS = ("o", "s", "D", "^", "v", "P", "X", "*", "h", "p")
 
 # Optional provisional points if a cpu × major cell is still missing from
-# results. Empty once siren four-face SELECT covers 15–19 (2026-10-26).
+# results (or was dropped via SKIP). Empty once fair DB rows cover the series.
 PLACEHOLDER_POINTS: list[dict] = []
 
 # Omit from the published higher-highs chart (archives kept; see Leaderboards note).
-# (cpu_hist, major) — known-bad logging tax; suspect old twilight pin (siren
-# PG16 four-face is the modern 16 point now).
 SKIP_CPU_MAJOR: set[tuple[str, int]] = {
     ("R9 5950X", 15),  # log_min_duration_statement=0 false negative
-    ("i9-14900K", 16),  # suspect archive; siren 9950X PG16 replaces it on the chart
+    ("i9-14900K", 16),  # suspect archive
+    ("i5-13600K", 15),  # orphan twilight; not a priority to four-face map
+    ("i5-13600K", 19),  # single rc1 face peak; wait for a 9950X-style series
 }
 
 
@@ -244,24 +244,29 @@ def drop_skipped(best: pd.DataFrame) -> pd.DataFrame:
 
 
 def apply_placeholders(best: pd.DataFrame) -> pd.DataFrame:
-    """Fill missing cpu × major cells from PLACEHOLDER_POINTS; never override DB."""
+    """Fill missing cpu × major cells from PLACEHOLDER_POINTS; replace DB only when higher."""
     if not PLACEHOLDER_POINTS:
         return best.sort_values(["cpu_hist", "major"]).reset_index(drop=True)
-    rows = []
-    have = {(r.cpu_hist, int(r.major)) for r in best.itertuples(index=False)}
+    out = best.copy()
     for ph in PLACEHOLDER_POINTS:
-        key = (ph["cpu_hist"], int(ph["major"]))
-        if key in have:
-            continue
-        rows.append(ph)
-        print(
-            f"placeholder: {ph['cpu_hist']} PG{ph['major']} "
-            f"{float(ph['tps']):,.0f} TPS ({ph.get('batch', 'provisional')})"
-        )
-    if not rows:
-        return best.sort_values(["cpu_hist", "major"]).reset_index(drop=True)
-    filled = pd.concat([best, pd.DataFrame(rows)], ignore_index=True, sort=False)
-    return filled.sort_values(["cpu_hist", "major"]).reset_index(drop=True)
+        key_m = (out["cpu_hist"] == ph["cpu_hist"]) & (out["major"].astype(int) == int(ph["major"]))
+        if key_m.any():
+            cur = float(out.loc[key_m, "tps"].iloc[0])
+            if float(ph["tps"]) <= cur:
+                continue
+            out = out.loc[~key_m].reset_index(drop=True)
+            print(
+                f"placeholder: {ph['cpu_hist']} PG{ph['major']} "
+                f"{float(ph['tps']):,.0f} TPS replaces {cur:,.0f} "
+                f"({ph.get('batch', 'provisional')})"
+            )
+        else:
+            print(
+                f"placeholder: {ph['cpu_hist']} PG{ph['major']} "
+                f"{float(ph['tps']):,.0f} TPS ({ph.get('batch', 'provisional')})"
+            )
+        out = pd.concat([out, pd.DataFrame([ph])], ignore_index=True, sort=False)
+    return out.sort_values(["cpu_hist", "major"]).reset_index(drop=True)
 
 
 def cpu_color(cpu: str) -> str:

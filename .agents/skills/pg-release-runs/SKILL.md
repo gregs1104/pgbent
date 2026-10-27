@@ -50,8 +50,12 @@ tracking medians. Everything tested — three Linux platforms plus a Mac.
 Siren OSM import finished; that closes the SELECT-then-OSM pair on the 9950X. **PG17** and **PG18** each
 dragged for months because a real defect showed up (Ubuntu packaging bug in
 17, GIS bug in 18). Community **19rc1 testing deadline is 2026-11-12**; this
-lab is **weeks ahead**. SELECT leaderboard and the siren pgbench-SELECT
-variation graph are follow-up, not more validation.
+lab is **weeks ahead**. **2026-10-27 — 19rc1 lab data wrap:** all rc1
+archives local, `submission` rebuilt (**13 588** rows / 7 servers). Court
+OSM hardware-best **148**, twilight **188** Gi + **125** Gi cells, siren
+SELECT **15–19** (fair PG16 **2.06M**), charts regenerated. Mid-cycle
+studies (shared_buffers 48→32, OS upgrades) stay open; release-snapshot
+cells are frozen.
 
 ## Siren 9950X retirement (full data)
 
@@ -62,9 +66,9 @@ Twilight already **leads relations/s** (4590 vs 4529); this OSM is the
 (4.49h / 668 overall / score 1176) and alternate **3266** (4.14h / 725 /
 1454; `fsync` off / `wal_level=minimal` / FPW off) — in the beta4 fast
 band. Next hands-on: **power down and swap to 9600X**. No agent SSH.
-Court set 8 is done; **set 9 test 145** is the durable 19rc1 OSM +
-`OSMRELPROF` retry (1h cap). Do not start a second Spark planet load
-while 145 runs.
+**Court 19rc1 testing wrapped** (2026-10-27). Set **12** test **148**
+(fast, `max_wal_size=256GB`) is the new **hardware-best** OSM score on
+the Spark — see court host note.
 
 Hands-on on siren (no agent SSH):
 
@@ -391,10 +395,7 @@ Other machines:
   with: durable **20/21/22** (8.73h/343, 8.78h/342, 8.50h/353) and fast **23**
   (8.30h/361, `fsync` off). **2026-10-19 — halted:** `stop-set cleanup` wiped
   unfinished **24**; `shutdown -h now`. SSH closed. Came back **2026-10-20**.
-  OSM stayed parked through set 8 SELECT. **OSM Power** stays public with the
-  PG16 Spark row; the other boxes already have concurrent GIS on 19, so
-  that mix is not a fair board. Do not share that study as finished until
-  a **PG19** cell on kernel **7.0** is in the table (after set 8). **2026-10-21 — set 6 aborted because
+  OSM stayed parked through set 8 SELECT. **2026-10-21 — set 6 aborted because
   the box rebooted**, not because a sort failed. Tests 26–32 were one
   sockets-prepared pass; 64-client `COPY` of 55M `timing` rows was still
   wrapping (`timing.csv` 2.5G at 23:54) when watchdog ping to
@@ -423,15 +424,22 @@ Other machines:
   × prepared/simple × 14, 0 blank). 1-client means: `;` **100,843**
   simple / **94,911** prepared; `SELECT 1` **70,185** simple /
   **83,630** prepared. Wiped aborted set-6 **32** (5.9G `pgbench -l`
-  leftovers) and init **25**. **2026-10-22 20:58 UTC — OSM unparked:**
-  set **9** `PG19 rc1 OSM durable OSMRELPROF`, test **145**, durable
-  (`fsync` on / `wal_level=replica` / FPW on), `OSMRELPROF=1` with
-  **1h cap** (`OSMRELPROF_MAX_SEC=3600`). `complete` armed so this is
-  one cell. PG18 stopped (`start.conf` **manual**); 16/19 stay up.
-  Prior profiles failed: 20/21 leftover `perf` (deleted 121G+56G);
-  22/23 hit the 8GB cap and are unreadable. Do not start a second
-  court OSM while 145 runs. Unreliable about booting; force-restart
-  procedure not written down yet.
+  leftovers) and init **25**. **2026-10-27 — 19rc1 OSM wrapped on court.** Set **12** test
+  **148** (`PG19 rc1 OSM fast max_wal_size=256GB`): `fsync=off` /
+  `wal_level=minimal` / `max_wal_size=256GB` / `maintenance_work_mem=8GB`
+  / `shared_buffers=48GB`, **7.65h**, overall **392** kNodes/s, OSM
+  score **~570** (`score_kips` from artifacts). That is the new
+  **hardware best** on the current Planet for this box (beats PG18
+  set-4 **566** / **387** overall; prior 19rc1 fast **23** was **521** /
+  **361** at `max_wal=100GB`). Older PG16 **591**/425 cells used a
+  smaller Planet and **20GB** `maintenance_work_mem` — platform history,
+  not the fair Intel/AMD compare. Greg gave Spark every fair tuning
+  tweak that fits the desktop matrix; **no more 19rc1 OSM on court**
+  unless a mid-cycle study opens. Drop the `osm-max-wal-256` conf.d
+  drop-in when idle. Durable set **9** **145**/**146** and earlier set
+  **5** stay as the durable/profile archive (145/146 relation `perf`
+  mostly unusable). Unreliable about booting; force-restart procedure
+  not written down yet.
 - **rising** — **5950X** now (was **3950X** in the 2022 `SELECT 1` /
   `;` notes). Large pgbench + OSM archive on the box. **2026-10-22 —
   will not start.** SSD may have lost state after a long power-down,
@@ -446,11 +454,8 @@ Other machines:
 
 1. **Basic PG19 verification** finished — enough clean durable (and planned
    alternate) OSM loads to trust the major, not the full GUC matrix yet.
-2. **Court Spark: at least one PG19 OSM run** — basic functional integration
-   on a platform few people can touch. One clean load is enough to say it
-   was tested there before the lab goes down; full profile/matrix later.
-   Fit it after the in-flight PG18 durable cell if the clock allows (~8h
-   class on court); do not starve item 3 for a second repeat.
+2. **Court Spark PG19 OSM** — **done** (set **12** test **148** hardware
+   best; 19rc1 OSM on court wrapped 2026-10-27).
 3. **PG18 CPU vs power study at publication quality** — refresh/complete
    `osm-power` (and relation-power as needed) with current fleet points
    (including court Spark / abbey M-series / twilight·siren AMD·Intel as data
@@ -491,16 +496,64 @@ durable 19rc1** planet loads with `OSMRELPROF=1` (same path as court:
 `pgbent_perf`, artifacts in the test dir). Not the big GUC matrix; TRIM
 still taxes each `newgis`.
 
-**2026-10-25 — twilight at 128GB class.** GRUB `mem=131G` → `MemTotal`
-~**125Gi**. Set **120** `PG19 rc1 OSM mem=128G fast` done (test **2710**,
-~5.01h / 599, `fsync` off / `wal_level=minimal`). Set **121** durable
-`OSMRELPROF` done (test **2711**, ~5.43h / 553, `fsync` on /
-`wal_level=replica`, 10m profile OK). **2026-10-26 — set 122** low-durable
-(`replica` + `fsync` off, FPW on): the missing fair corner vs other
-platforms’ fat-WAL/no-sync cell. Test **2712** running (`server_mem_gb=125`
-stamped); no `OSMRELPROF`. **RC1 wrap:** siren **PG15** SELECT running
-(hands-on; no agent SSH); twilight **122** is the last OSM cell. Greg
-downloads final sets once both finish.
+**Twilight report both RAM sizes** — do not collapse 128G-class into
+188GB. `tests.server_mem_gb` is **188** (physical) vs **125** (GRUB
+`mem=131G` → ~125 Gi `MemTotal`); set names say `mem=128G`. Leaderboard
+already partitions on `mem_gb`. Keep both rows public.
+
+| set | cell | mem_gb | hours | overall | score | notes |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| **119** | durable (best of 2706–2708) | **188** | ~5.09 | **589** | **~1061** | full RAM |
+| **120** | fast **2710** | **125** | 5.01 | **599** | **~1213** | `fsync` off / minimal |
+| **121** | durable **2711** | **125** | 5.43 | **553** | **~1040** | `OSMRELPROF` 10m **OK** |
+| **122** | low-durable **2712** | **125** | 4.93 | **608** | **~1118** | replica + `fsync` off; **prof OK** |
+
+**Profiles:** local `results/twilight/2711/` and `2712/` each have
+`osm-rel-perf.data` (~780–820 MB), `osm-rel-perf-report.txt` (~12 MB,
+65k samples, 0 lost), and `osm-rel-prof.log` (600s cap, done). **2710**
+had no `OSMRELPROF`. Extra RAM did not buy hours (125 Gi fast/low-durable
+match or beat 188 Gi durable wall-clock).
+
+**False valley — PG16 SELECT on siren (set 112).** Sockets prepared 32c
+**1,844,854** / **1,830,907** looked like a deep major dip vs PG15
+**2.12M** / PG17 **2.07M**. **Not a Postgres regression:** `test_settings`
+shows **`shared_buffers=1GB`** (`131072` 8kB pages) on every set-112 row;
+peer SELECT peaks on 15/17/18/19 are **48GB** (`6291456`). Fresh PG16
+cluster — config was copied from a PG17 instance that had already been
+shrunk to 1GB (results-style / `osm-mem-16` class), not remembering that
+cut. PG15 was fine because that major had been used before with the good
+48GB study config. Set 112 stays in the archive; history keeps **max** TPS
+so fair 48GB rows displace it — no longer in `SKIP_CPU_MAJOR`.
+
+**Re-run (hands-on; no agent SSH).** Fix conf to **48GB** `shared_buffers`
+(match 15/17/18/19 SELECT cells), restart, confirm, then fish **only** the
+ranking cell:
+
+```bash
+# TESTPORT → PG16; SHOW shared_buffers must be 48GB before runset
+psql -p "$TESTPORT" -c 'SHOW shared_buffers;'   # expect 48GB
+./newset 'PG16 sockets prepared 32c peak re-run'
+echo "SCRIPT=select" > params
+echo "SETTIMES=5" >> params
+echo "RUNTIME=90" >> params
+./pgsysinfo >> params
+cat >> params <<'EOF'
+SCALES=100
+SETCLIENTS="32"
+SOCKETS=1
+PREPARED=1
+SKIPINIT=1
+EOF
+./runset
+```
+
+History keeps the **max** row. Do **not** cite the early 1GB-`shared_buffers`
+1.84M rows as the PG16 face.
+
+**2026-10-27 — fair PG16 SELECT closed.** After fixing `shared_buffers` to
+**48GB**, set **112** sockets-prepared 32c peaked at **2,061,991** TPS
+(also **2,053,302** / **2,046,260** / **2,005,389**). Placeholder cleared;
+SELECT history regenerated with real **15–19** 9950X points.
 
 **Loose end — PG18 sockets-prepared peak (siren).** Published mean
 ~**2.014M** (set 106, 32c) sits under the PG17 placeholder **2.074M**.
@@ -537,12 +590,12 @@ before the mem=128G series; set **120** test **2710** was corrected to
 **125** on 2026-10-25. Do the same for set **121** (and later capped
 cells) when each test row lands.
 
-**19rc1 OSM on court:** set 5 durable 20/21/22 plus fast 23 is enough to
-start the report. Set **9** test **145** finished (8.32h); relation
-`perf` hit the 1h cap but the report is unreadable (`data size 0`).
-**2026-10-23 — set 10** test **146** is the durable + `OSMRELPROF` retry
-with the flush-wait `pgbent_perf` installed (`complete` armed). Community
-rc1 testing deadline is **2026-11-12**; this lab should be weeks ahead.
+**19rc1 OSM on court — wrapped 2026-10-27.** Fast hardware best is set
+**12** test **148** (`max_wal_size=256GB`, **7.65h** / overall **392** /
+score **~570**). Durable archive: set 5 **20/21/22** + set 9 **145/146**
+(relation `perf` mostly unusable). Download court when convenient so the
+public OSM board can replace the PG16 Spark row. Community rc1 testing
+deadline is **2026-11-12**; this lab should be weeks ahead.
 
 Fleet notes (update as needed):
 
@@ -1098,6 +1151,14 @@ to the first `-`. It runs `./wipe_server <server>`, unpacks into `results/`, and
   Upload once per batch of work, or confirm the newest archive was loaded.
 - `./submit` is separate. It exports a server's `submission` view as CSV for outside
   sharing and is not part of assembly.
+- **No `submission` structure on a test server at upload time.** Greg sometimes
+  builds `submission` / `submission_author` / `write_internals` on a node to
+  try reports. That is local testing only — drop those objects **before** the
+  next `./upload` (`submission`, `submission_author`, and any
+  `write_internals` view). Upload/download are not designed to ship submission
+  rows from the node; if they are present the dump/import fails. Do **not**
+  add a script guard: the failure is the signal to clean the server (it was
+  about to export bad data).
 - Every successful `./upload` leaves a durable copy: locally under `results/<server>/`
   (including `<server>-results.sql`) and as a timestamped tar.gz on `$ARCHIVE`.
   `./download` also keeps those tar.gz files under `archive/` on the assembly machine.

@@ -12,7 +12,7 @@ OSM load throughput vs package power draw on the current Planet (**10.79 billion
 
 ![OSM total throughput vs maximum package power]({{ '/images/pg19-osm-power-total.png' | relative_url }})
 
-Each CPU is positioned by **maximum package watts** during the load. **R9 9950X** leads on raw total throughput at **719** kNodes/s and **180 W** peak (PostgreSQL 19, `fsync=off`). **i5-13600K** is next at **628** kNodes/s and **146 W**. **Apple M4 Max Studio** reaches **400** kNodes/s at **35 W**. **NVIDIA P4242** is **361** kNodes/s at **89 W** peak on 19rc1.
+Each CPU is positioned by **maximum package watts** during the load. **R9 9950X** leads on raw total throughput at **719** kNodes/s and **180 W** peak (PostgreSQL 19, `fsync=off`). **i5-13600K** is next at **628** kNodes/s and **146 W** (188 Gi); the **125 Gi** / mem=128G-class twilight cells sit lower on the same board. **Apple M4 Max Studio** reaches **400** kNodes/s at **35 W**. **NVIDIA P4242** hardware-best 19rc1 is **392** kNodes/s total (**570** OSM score, **7.65h**, `max_wal_size=256GB`) after the fair-tuning pass.
 
 ![OSM index throughput vs maximum package power]({{ '/images/pg19-osm-power-index.png' | relative_url }})
 
