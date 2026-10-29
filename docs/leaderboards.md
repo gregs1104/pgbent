@@ -26,7 +26,7 @@ Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bi
 
 ## OSM
 
-The OSM Score is a composite ranking based on loading the OpenStreetMap Planet GIS workload. The score includes just the hardest CPU phase, Relation building, and the two longest index builds. It ignores aspects of the loading that stress cache effects more so than CPU or disk.  **You can potentially improve the OSM score by 3X running on the fastest x86 instead of ARM, but it costs 4–5× as much energy to juice up the processors to do it.** 
+The OSM Score is a composite ranking based on loading the OpenStreetMap Planet GIS workload. The score includes just the hardest CPU phase—Relation building—and the two longest index builds. It ignores aspects of the loading that stress cache effects more so than CPU or disk.  **You can potentially improve the OSM score by 3X running on the fastest x86 instead of ARM, but it costs 4–5× as much energy to juice up the processors to do it.** 
 
 At current sizes near 10 billion nodes, a **Total** of **750** kNodes/s is a 4-hour run. The bars are the score categories used here: OSM score, full-load Total score, and Index score. Total and Index also show hours to the right of the bar—the wall-clock figure people normally quote.
 
