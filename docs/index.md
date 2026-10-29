@@ -18,7 +18,7 @@ pgbent’s workloads respond predictably to classic OLTP tuning knobs and show *
 
 ![OSM checkpoint write rate vs interval]({{ '/images/pg18-osm-checkpoint-write.png' | relative_url }})
 
-Stretch checkpoints and average write volume collapses—here roughly **34** GB/h down to **3.5** GB/h on the same AMD box—while load throughput rises. That GB/h figure is easy to watch in Grafana or Datadog; this chart is why it is worth the panel. Details: [checkpoint_timeout]({{ '/model/checkpoint_timeout' | relative_url }}), [max_wal_size]({{ '/model/max_wal_size' | relative_url }}), [OSM Checkpoint]({{ '/results-summary/pg18/osm-checkpoint/' | relative_url }}).
+Stretch checkpoints and average write volume collapses—a **90%** IOPS reduction, here roughly **34** GB/h down to **3.5** GB/h on the same AMD box—while load throughput rises. That GB/h figure is easy to watch in Grafana or Datadog; this chart is why it is worth the panel. Details: [checkpoint_timeout]({{ '/model/checkpoint_timeout' | relative_url }}), [max_wal_size]({{ '/model/max_wal_size' | relative_url }}), [OSM Checkpoint]({{ '/results-summary/pg18/osm-checkpoint/' | relative_url }}).
 
 These results validate and extend the standard PostgreSQL [tuning guide](https://wiki.postgresql.org/wiki/Tuning_Your_PostgreSQL_Server). The [Tuning Model]({{ '/model/' | relative_url }}) section documents studies of parameters that respond predictably to pgbent workloads:
 
