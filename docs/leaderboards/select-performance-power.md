@@ -45,6 +45,6 @@ Unix-domain connections (`SOCKETS=1`). Clients run on the server. This is the po
 
 ### Networked
 
-Localhost TCP (`host`) on this starter chart is protocol overhead on the same box, not a dedicated client. Unthrottled remote TCP is the face that can exceed on-box rates once the link is faster than ~10Gb/s.
+Localhost TCP (`host`) on this starter chart is protocol overhead on the same box, not a dedicated client. Unthrottled remote TCP is the face that can exceed on-box rates once the link is faster than ~10Gb/s. See [OSM Network Study]({{ '/results-summary/pg18/osm-network/' | relative_url }}) for link rate comparisons.
 
 Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/select-leaderboard.py --from-db` (runs `reports/select-leaderboard.sql`). Cross-major sockets-prepared trend: [Leaderboards § History]({{ '/leaderboards/#history-1' | relative_url }}). 19rc1 snapshot: [pgbench SELECT (PG19)]({{ '/results-summary/pg19/pgbench-select/' | relative_url }}). Older mixed-protocol grid: [pgbench SELECT (PG18 snapshot)]({{ '/results-summary/pg18/pgbench-select/' | relative_url }}). Workload notes: [pgbench SELECT]({{ '/workloads/select/' | relative_url }}).
