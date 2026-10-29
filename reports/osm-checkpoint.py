@@ -225,7 +225,7 @@ def plot_throughput(df: pd.DataFrame, output: Path, pg: str, show: bool = False)
         df,
         y_col="overall_kips",
         ylabel="Throughput (kNodes/s)",
-        title=f"PG{pg} OSM load vs checkpoint interval",
+        title=f"PG{pg} OSM Checkpoint Interval vs Throughput",
         output=output,
         y_min=500,
         label_dy={
@@ -243,7 +243,7 @@ def plot_write_rate(df: pd.DataFrame, output: Path, pg: str, show: bool = False)
         df,
         y_col="chkp_gbph",
         ylabel="Checkpoint write rate (GB/h)",
-        title=f"PG{pg} OSM checkpoint write rate vs interval",
+        title=f"PG{pg} OSM Checkpoint Interval vs Write Rate",
         output=output,
         y_min=0,
         label_dy={
