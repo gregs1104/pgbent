@@ -14,19 +14,15 @@ Initial [PostgreSQL 19rc1 report]({{ '/results-summary/pg19/' | relative_url }})
 
 ## pgbench SELECT
 
-Best **sockets prepared** SELECT TPS per **x86** CPU across PostgreSQL majors — the same face as the [starter board]({{ '/leaderboards/select-performance-power/' | relative_url }}).
+Best **sockets prepared** SELECT TPS per **x86** CPU across PostgreSQL majors.
 
 ![pgbench SELECT sockets-prepared history by x86 CPU]({{ '/images/select-history.png' | relative_url }})
 
 Long-term analysis here looks just for higher highs over time, not tracking medians. That is why the analysis structure is a leaderboard.  PG15’s strong sockets-prepared peak on the 9950X is correct, but this is a fantasy workload.  An older, simpler executor can win a pure SELECT microbenchmark. In production the features added since then pay for themselves.  This chart is not an argument that newer majors have bloat.
 
-The standard Postgres on Linux SELECT lab numbers published are the Phoronix / [OpenBenchmarking.org pts/pgbench](https://openbenchmarking.org/test/pts/pgbench).  Some of the pgbent results are a comparable TPS.  The OpenB-comparable **SELECT** cells run for **90s** at pgbench scale 100 over **Localhost TCP prepared**.
+The standard Postgres on Linux SELECT lab numbers published are the Phoronix / [OpenBenchmarking.org pts/pgbench](https://openbenchmarking.org/test/pts/pgbench); for comparison details see [pgbench SELECT Leaders: Performance vs. Power]({{ '/leaderboards/select-performance-power/' | relative_url }}).
 
-OpenB switched to `-M prepared` a few years ago (PTS pgbench 1.13) and that reset their public face. Numbers went up, query planning in Postgres takes time. This lab still runs **all four faces** to SELECT performance — sockets vs localhost TCP, simple vs prepared.  OpenBenchmarking’s multi-million TPS numbers involve multi-socket systems on DC network hardware, not localhost and not unix sockets sharing the server with pgbench.
-
-Hold `conn_method` constant when comparing versions — mixing sockets with localhost TCP can look like a 25% hole. See [Comparing versions]({{ '/workloads/select/#comparing-versions' | relative_url }}). Four-face TPS, package watts, and transactions per joule are on [pgbench SELECT Leaders: Performance vs. Power]({{ '/leaderboards/select-performance-power/' | relative_url }}).
-
-Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/select-history.py` (runs `reports/select-history.sql`). Power and four-face detail: [pgbench SELECT Leaders: Performance vs. Power]({{ '/leaderboards/select-performance-power/' | relative_url }}).
+Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/select-history.py` (runs `reports/select-history.sql`).
 
 ## OSM
 

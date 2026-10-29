@@ -8,11 +8,11 @@ nav_order: 2
 
 # OSM Power
 
-OSM load throughput vs package power draw on the current Planet (**10.79 billion** nodes). **R9 9950X**, **i5-13600K**, and **NVIDIA Spark** are PostgreSQL 19; **Apple M4 Max Studio** is PG18 (no 19 on Abbey during RC). 18 and 19 are within a small tolerance on this workload. Package watts for the 9950X are turbostat `PkgWatt` from the corrected siren import. Ranking cells for this pin: [OSM Leaderboard]({{ '/results-summary/pg19/osm-leaderboard/' | relative_url }}).
+OSM load throughput vs package power draw on the current Planet (**10.79 billion** nodes). **R9 9950X**, **i5-13600K**, and **NVIDIA Spark** are PostgreSQL 19; **Apple M4 Max Studio** is PG18 (no 19 on Abbey during RC). 18 and 19 are within a small tolerance on this workload. Ranking cells for this pin: [OSM Leaderboard]({{ '/results-summary/pg19/osm-leaderboard/' | relative_url }}).
 
 ![OSM total throughput vs maximum package power]({{ '/images/pg19-osm-power-total.png' | relative_url }})
 
-Each CPU is positioned by **maximum package watts** during the load. Points are the **~128 GB RAM** class so twilight’s physical **188 Gi** cell does not inflate the i5. **R9 9950X** leads on raw total throughput at **719** kNodes/s and **180 W** peak (PostgreSQL 19, `fsync=off`). **i5-13600K** is next at **599** kNodes/s and **150 W** (125 Gi / mem=128G). **Apple M4 Max Studio** reaches **400** kNodes/s at **35 W**. **NVIDIA P4242** hardware-best 19rc1 is **392** kNodes/s total (**570** OSM score, **7.65h**, `max_wal_size=256GB`) after the fair-tuning pass.
+Each CPU is positioned by **maximum package watts** during the load. Servers are the **~128 GB RAM** class. **R9 9950X** leads on raw total throughput at **719** kNodes/s and **180 W** peak (PostgreSQL 19, `fsync=off`). **i5-13600K** is next at **599** kNodes/s and **150 W**. **Apple M4 Max Studio** reaches **400** kNodes/s at **35 W**. **NVIDIA P4242** hardware-best 19rc1 is **392** kNodes/s total (**570** OSM score, **7.65h**).
 
 ![OSM index throughput vs maximum package power]({{ '/images/pg19-osm-power-index.png' | relative_url }})
 
@@ -22,7 +22,7 @@ Index build only—**i5-13600K** leads raw index throughput at **383** kNodes/s.
 
 Throughput per peak watt favors Apple Silicon. **Apple M4 Max Studio** leads on both total and index load. Spark’s 19rc1 peak (**89 W**) puts it with the desktop Intel/AMD parts on kNodes/s per watt; the **9950X** still moves the most nodes overall at the highest envelope.
 
-You can potentially triple the OSM score running on the fastest x86 instead of ARM, but it costs 4–5× as much energy to juice up the processors to do it. This workload does not benefit very much from larger core or socket counts. Relation building does not fill a second CCD or a second socket; extra cores mostly add package watts. The 9600X→9950X swap barely moved OSM score.
+You can potentially triple the OSM score running on the fastest x86 instead of ARM, but it costs 4–5× as much energy to juice up the processors to do it. This workload does not benefit very much from larger core or socket counts. Relation building does not fill a second CCD or a second socket; extra cores mostly add package watts. On the [PG18 OSM leaderboard]({{ '/results-summary/pg18/osm-leaderboard/' | relative_url }}), the 9600X→9950X swap moved CPU-bound total only from **733** to **758** kNodes/s, while the heavy-concurrency index score got a nice uplift (**295** → **366**).
 
 Regenerate throughput charts: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/osm-power.py --pg 19` (reads the first table below). Query: `reports/osm-power.sql` (mem_gb ≤ 140). The table pins PostgreSQL 19 per CPU; Abbey is the PG18 stand-in. The live query still picks the best score on any major within the ~128 GB class.
 

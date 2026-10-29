@@ -8,9 +8,11 @@ nav_order: 1
 
 # pgbench SELECT Leaders: Performance vs. Power
 
-TPS and package-power detail behind the [SELECT section]({{ '/leaderboards/#history-1' | relative_url }}) of the leaderboards page. 
+TPS and package-power detail behind the [SELECT section]({{ '/leaderboards/#pgbench-select' | relative_url }}) of the leaderboards page.
 
-Phoronix-comparable **SELECT** cells: **90s**, scale 100. The standard Postgres on Linux SELECT lab numbers published are at [OpenBenchmarking.org pts/pgbench](https://openbenchmarking.org/test/pts/pgbench); these are a comparable TPS collected by pgbent. This lab still runs **all four connection faces**  — sockets vs localhost TCP, simple vs prepared — so protocol overhead stays visible. **Localhost TCP prepared** is the Phoronix-shaped ranking cell. See [Comparing versions]({{ '/workloads/select/#comparing-versions' | relative_url }}).
+The standard Postgres on Linux SELECT lab numbers published are the Phoronix / [OpenBenchmarking.org pts/pgbench](https://openbenchmarking.org/test/pts/pgbench). Some of the pgbent results are a comparable TPS. The OpenB-comparable **SELECT** cells run for **90s** at pgbench scale 100 over **Localhost TCP prepared**. OpenB switched to `-M prepared` a few years ago (PTS pgbench 1.13) and that reset their public face. Numbers went up; query planning in Postgres takes time. OpenBenchmarking’s multi-million TPS numbers involve multi-socket systems on DC network hardware, not localhost and not unix sockets sharing the server with pgbench.
+
+This lab still runs **all four connection faces** — sockets vs localhost TCP, simple vs prepared — so protocol overhead stays visible. **Localhost TCP prepared** is the Phoronix-shaped ranking cell. Hold `conn_method` constant when comparing versions — mixing sockets with localhost TCP can look like a 25% hole. See [Comparing versions]({{ '/workloads/select/#comparing-versions' | relative_url }}).
 
 <!-- select-leaderboard:begin -->
 
