@@ -2,9 +2,9 @@
 """
 Graph the twilight set-98 shared_buffers OSM sweep (PG16.3).
 
-Durable (fsync=on / wal_level=replica) points are the fair A/B; fast
-(minimal / fsync=off) cells are shown faintly for context. Conclusions still
-apply on later majors — the lab standardized on 48GB after this study.
+Durable (fsync=on / wal_level=replica) points are the fair A/B, with a
+median line per shared_buffers size. Conclusions still apply on later
+majors — the lab standardized on 48GB after this study.
 
 Usage:
   MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" \\
@@ -25,7 +25,7 @@ import pandas as pd
 from matplotlib.ticker import ScalarFormatter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from pg18_style import LEADERBOARD_LEGEND_FONTSIZE, use_pg18_style
+from pg18_style import use_pg18_style
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONN = "host=localhost dbname=results user=gsmith password=secret"
@@ -33,7 +33,6 @@ SQL_PATH = REPO_ROOT / "reports" / "shared-buffers.sql"
 PUBLIC_IMAGE = REPO_ROOT / "docs" / "images" / "shared-buffers-osm.png"
 
 DURABLE_COLOR = "#4c78a8"
-FAST_COLOR = "#e4572e"
 MEDIAN_COLOR = "#333333"
 
 
@@ -83,46 +82,31 @@ def prepare_df(df: pd.DataFrame) -> pd.DataFrame:
     for col in ("shared_gb", "hours", "overall_kips"):
         out[col] = pd.to_numeric(out[col], errors="coerce")
     out = out.dropna(subset=["shared_gb", "overall_kips"])
-    out = out[out["face"].isin(["durable", "fast"])].copy()
-    return out.sort_values(["shared_gb", "face", "overall_kips"]).reset_index(drop=True)
+    out = out[out["face"] == "durable"].copy()
+    return out.sort_values(["shared_gb", "overall_kips"]).reset_index(drop=True)
 
 
 def plot_shared_buffers(df: pd.DataFrame, output: Path, show: bool = False) -> None:
     use_pg18_style()
     fig, ax = plt.subplots(figsize=(8.5, 5.2))
 
-    durable = df[df["face"] == "durable"]
-    fast = df[df["face"] == "fast"]
-
     # Slight x jitter so overlapping runs at the same SB stay visible.
-    durable_x = durable["shared_gb"].to_numpy(dtype=float).copy()
-    for gb in durable["shared_gb"].unique():
-        idx = durable["shared_gb"].to_numpy() == gb
+    durable_x = df["shared_gb"].to_numpy(dtype=float).copy()
+    for gb in df["shared_gb"].unique():
+        idx = df["shared_gb"].to_numpy() == gb
         n = int(idx.sum())
         if n > 1:
             durable_x[idx] += (pd.Series(range(n)) - (n - 1) / 2.0).to_numpy() * 0.55
     ax.scatter(
         durable_x,
-        durable["overall_kips"],
+        df["overall_kips"],
         s=90,
         c=DURABLE_COLOR,
         zorder=3,
-        label="Durable (replica / fsync=on)",
     )
-    if not fast.empty:
-        ax.scatter(
-            fast["shared_gb"],
-            fast["overall_kips"],
-            s=70,
-            c=FAST_COLOR,
-            marker="^",
-            alpha=0.55,
-            zorder=2,
-            label="Fast (minimal / fsync=off)",
-        )
 
     med = (
-        durable.groupby("shared_gb", as_index=False)["overall_kips"]
+        df.groupby("shared_gb", as_index=False)["overall_kips"]
         .median()
         .sort_values("shared_gb")
     )
@@ -134,7 +118,6 @@ def plot_shared_buffers(df: pd.DataFrame, output: Path, show: bool = False) -> N
         marker="D",
         markersize=7,
         zorder=4,
-        label="Durable median",
     )
 
     ax.set_xticks([1, 32, 48])
@@ -149,12 +132,11 @@ def plot_shared_buffers(df: pd.DataFrame, output: Path, show: bool = False) -> N
     formatter = ScalarFormatter(useOffset=False)
     formatter.set_scientific(False)
     ax.yaxis.set_major_formatter(formatter)
-    ax.legend(loc="lower right", fontsize=LEADERBOARD_LEGEND_FONTSIZE, framealpha=0.92)
     fig.tight_layout()
 
     output.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output, dpi=160, bbox_inches="tight")
-    print(f"Wrote {output} ({len(df)} runs, twilight set 98)")
+    print(f"Wrote {output} ({len(df)} durable runs, twilight set 98)")
     if show:
         plt.show()
     plt.close(fig)

@@ -22,7 +22,7 @@ There are two main scalability limits to large amount of `shared_buffers`.  The 
 
 ![OSM load vs shared_buffers]({{ '/images/shared-buffers-osm.png' | relative_url }})
 
-Twilight set **98** (PostgreSQL **16.3**, i5-13600K, ~128 GB RAM): durable OSM loads at `shared_buffers` **1 / 32 / 48 GB**. Median durable throughput steps up from the 1 GB false valley through the ¼-RAM **32 GB** cell; **48 GB** (~38% of RAM) is still faster. Fast (`wal_level=minimal` / `fsync=off`) cells sit above the durable band. The lab standardized on 48 GB after this study; later majors did not re-sweep the knob. Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/shared-buffers.py`.
+Twilight set **98** (PostgreSQL **16.3**, i5-13600K, ~128 GB RAM): durable OSM loads at `shared_buffers` **1 / 32 / 48 GB**. Median throughput steps up from the 1 GB false valley through the ¼-RAM **32 GB** cell; **48 GB** (~38% of RAM) is still faster. The lab standardized on 48 GB after this study; later majors did not re-sweep the knob. Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/shared-buffers.py`.
 
 Increase it to 38%/48GB and it gets faster.  But the CPU overhead of running the buffer cache makes that and higher values less efficient.   Eviction from the cache with the simple Clock Sweep method requires multiple passes over the entire pool before something gets removed.  Obtaining locks on the buffer cache structures, with full database sementics, that adds overhead too.
 
