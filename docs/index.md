@@ -4,7 +4,32 @@ layout: home
 
 # pgbent
 
-**pgbent** runs a Performance Farm on bare metal hardware for the PostgreSQL Community.  Code is hosted at **[github.com/gregs1104/pgbent](https://github.com/gregs1104/pgbent)**. Release summary snapshots and a general hardware leaderboard are published to the [getbent.io](https://getbent.io) documentation site. The best performing runs have been used to validate a [Tuning Model]({{ '/model/' | relative_url }}) for Postgres OLTP systems.
+**pgbent** provides PostgreSQL specific benchmarking tools to compare tuning settings, releases, CPUs, or disks.
+
+* Code: **[github.com/gregs1104/pgbent](https://github.com/gregs1104/pgbent)**.
+* Postgres OLTP [Tuning Model]({{ '/model/' | relative_url }}) guidance.
+* [Leaderboards]({{ '/leaderboards/' | relative_url }}) and [release summary snapshots]({{ '/results-summary/' | relative_url }}).
+
+pgbent's development runs a bare metal hardware Performance Farm lab for regression testing of new releases, as parallel work to the PostgreSQL Community [BuildFarm](https://buildfarm.postgresql.org/).
+
+## Tuning research
+
+pgbent’s workloads respond predictably to classic OLTP tuning knobs and show *why* a setting matters.
+
+![OSM checkpoint write rate vs interval]({{ '/images/pg18-osm-checkpoint-write.png' | relative_url }})
+
+Stretch checkpoints and average write volume collapses—here roughly **34** GB/h down to **3.5** GB/h on the same AMD box—while load throughput rises. That GB/h figure is easy to watch in Grafana or Datadog; this chart is why it is worth the panel. Details: [checkpoint_timeout]({{ '/model/checkpoint_timeout' | relative_url }}), [max_wal_size]({{ '/model/max_wal_size' | relative_url }}), [OSM Checkpoint]({{ '/results-summary/pg18/osm-checkpoint/' | relative_url }}).
+
+These results validate and extend the standard PostgreSQL [tuning guide](https://wiki.postgresql.org/wiki/Tuning_Your_PostgreSQL_Server). The [Tuning Model]({{ '/model/' | relative_url }}) section documents studies of parameters that respond predictably to pgbent workloads:
+
+- [shared_buffers]({{ '/model/shared_buffers' | relative_url }}) — buffer cache sizing and the ¼-RAM recommendation
+- [max_wal_size]({{ '/model/max_wal_size' | relative_url }}) — WAL volume and checkpoint write smoothing
+- [checkpoint_timeout]({{ '/model/checkpoint_timeout' | relative_url }}) — checkpoint frequency trade-offs
+- [Linux dirty memory]({{ '/model/Linux_dirty_memory' | relative_url }}) and [pdflush / writeback]({{ '/model/Linux_pdflush' | relative_url }}) — OS-level writeback behavior during heavy loads
+
+Reference tuning configurations for OSM workloads live in the [`conf/`](https://github.com/gregs1104/pgbent/tree/main/conf) directory.
+
+## Hardware and release comparisons
 
 **[Leaderboards]({{ '/leaderboards/' | relative_url }})** — OSM planet load and pgbench SELECT rankings. Initial [PostgreSQL 19rc1 report]({{ '/results-summary/pg19/' | relative_url }}): 19 took the top spots with a tiny delta over 18 (rc1 2026-10-15, catalog 20261006).
 
@@ -25,17 +50,6 @@ pgbent includes a mix of fixed-size and automatically scaling workloads. Traces 
 | [Complete Block Check (CBC)]({{ '/workloads/cbc' | relative_url }}) | Short synthetic storage stress test (CTAS, VACUUM, CLUSTER, index scans) |
 
 The OSM loader workload has produced the most interesting recent results, published as [blog posts](https://www.crunchydata.com/blog/loading-the-world-openstreetmap-import-in-under-4-hours), [talks](https://www.youtube.com/watch?v=BCMnu7xay2Y), and [social media threads](https://x.com/postgresperf/status/1858905975446556876). CBC runs anywhere—from a `psql` session to a browser based Postgres.
-
-## Tuning research
-
-Sample results validate and extend the standard PostgreSQL [tuning guide](https://wiki.postgresql.org/wiki/Tuning_Your_PostgreSQL_Server). The [Tuning Model]({{ '/model/' | relative_url }}) section documents studies of parameters that respond predictably to pgbent workloads:
-
-- [shared_buffers]({{ '/model/shared_buffers' | relative_url }}) — buffer cache sizing and the ¼-RAM recommendation
-- [max_wal_size]({{ '/model/max_wal_size' | relative_url }}) — WAL volume and checkpoint write smoothing
-- [checkpoint_timeout]({{ '/model/checkpoint_timeout' | relative_url }}) — checkpoint frequency trade-offs
-- [Linux dirty memory]({{ '/model/Linux_dirty_memory' | relative_url }}) and [pdflush / writeback]({{ '/model/Linux_pdflush' | relative_url }}) — OS-level writeback behavior during heavy loads
-
-Reference tuning configurations for OSM workloads live in the [`conf/`](https://github.com/gregs1104/pgbent/tree/main/conf) directory.
 
 ## Technical Highlights
 
