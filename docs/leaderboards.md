@@ -12,6 +12,8 @@ Public pgbench SELECT and OSM planet-load rankings from the pgbent server farm p
 
 Initial [PostgreSQL 19rc1 report]({{ '/results-summary/pg19/' | relative_url }}) shows PG19 (rc1 2026-10-15, catalog 20261006) took the top leaderboard spots with a tiny delta over 18.
 
+[pgbench SELECT](#pgbench-select) — [OSM](#osm) — [OSM History](#osm-history) — [OSM Disk](#osm-disk) — [OSM Detail Table](#osm-detail-table)
+
 ## pgbench SELECT
 
 Best **sockets prepared** SELECT TPS per **x86** CPU across PostgreSQL majors.
