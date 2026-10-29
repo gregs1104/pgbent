@@ -55,17 +55,34 @@ PG19_RELATION_SCATTER_LABEL_OVERRIDES: dict[str, LabelOffset] = {
     "R9 9950X": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
 }
 
-# Same four points as the leaderboard score-vs-kJ chart; i5 and 9950X share the top.
+# Same four points as the leaderboard score-vs-kJ chart; 9950X sits on the right edge.
 RELATION_JOULES_LABEL_OVERRIDES: dict[str, LabelOffset] = {
     "i5-13600K": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
-    "R9 9950X": LabelOffset(-_marker_x_gap(), -22, ha="right", va="top"),
+    "R9 9950X": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
     "Apple M4 Max Studio": LabelOffset(_marker_x_gap(), 12, ha="left", va="bottom"),
     "NVIDIA P4242": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
 }
 
 
+def cpu_color(cpu: str) -> str:
+    name = str(cpu)
+    if name.startswith("NVIDIA"):
+        return "#76B900"
+    if name[:1] == "A":
+        return "#000000"
+    if name[:1] == "i":
+        return "#0071C5"
+    if name[:1] == "R":
+        return "#ED1C24"
+    return DEFAULT_POINT_COLOR
+
+
 def row_color(row: pd.Series) -> str:
-    return str(row.get("cpu_c", "")).strip() or DEFAULT_POINT_COLOR
+    # Prefer table cpu_c when present (PG18 snapshots); else name-based.
+    from_table = str(row.get("cpu_c", "")).strip()
+    if from_table:
+        return from_table
+    return cpu_color(str(row.get("cpu", "")))
 
 
 def parse_args() -> argparse.Namespace:
@@ -287,7 +304,8 @@ def plot_relation_vs_joules(
     ax.scatter(pts["kj"], pts["rel"], s=SCATTER_MARKER_SIZE, c=colors, zorder=3)
     xmax = float(pts["kj"].max())
     ymax = float(pts["rel"].max())
-    ax.set_xlim(0, xmax * 1.14)
+    # Extra right pad so the rightmost CPU label (9950X) can sit right of its marker.
+    ax.set_xlim(0, xmax * 1.32)
     ax.set_ylim(0, ymax * 1.18)
     ax.set_xlabel("Package energy (kJ)")
     ax.set_ylabel("Relations/second")

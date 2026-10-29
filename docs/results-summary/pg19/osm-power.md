@@ -30,12 +30,12 @@ Sets: siren 71 (`PG19 beta4`); twilight **120** (`PG19 rc1 OSM mem=128G fast`); 
 
 _Query returned 4 rows._
 
-| cpu | mem_gb | ver | score_kips | overall_kips | index_kips | polygon_kips | line_kips | point_kips | node_kps | rel_ps | pwr_est | max_pkg | avg_pkg | kj | fsync | wal_level | wal | avg_write | max_write | avg_read | max_read | cpu_c |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| R9 9950X | 124 | 19 | 1480 | 719 | 364 | 3925 | 8225 | 3731 | 20555 | 4529 |  | 180 | 70 | 1046 | off | minimal | 20.4 | 79 | 7772 | 68 | 9748 | #ED1C24 |
-| i5-13600K | 125 | 19 | 1213 | 599 | 383 | 3067 | 5827 | 7142 | 14602 | 4146 |  | 150 | 46 | 833 | off | minimal | 52.8 | 58 | 7331 | 41 | 8970 | #0071C5 |
-| Apple M4 Max Studio | 128 | 18 | 561 | 400 | 171 | 1662 | 2699 | 2743 | 12519 | 1674 |  | 35 | 9 | 276 | off | minimal | 11.3 | 325 | 6125 | 325 | 6125 | #000000 |
-| NVIDIA P4242 | 119 | 19 | 521 | 361 | 263 | 2434 | 3694 | 5674 | 16227 | 1095 |  | 89 | 23 | 701 | off | minimal | 10.3 | 124 | 6351 | 110 | 9627 | #76B900 |
+| cpu | mem_gb | ver | score_kips | overall_kips | index_kips | polygon_kips | line_kips | point_kips | node_kps | rel_ps | max_pkg | avg_pkg | kj | fsync | wal_level | wal | avg_write | max_write | avg_read | max_read |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| R9 9950X | 124 | 19 | 1480 | 719 | 364 | 3925 | 8225 | 3731 | 20555 | 4529 | 180 | 70 | 1046 | off | minimal | 20.4 | 79 | 7772 | 68 | 9748 |
+| i5-13600K | 125 | 19 | 1213 | 599 | 383 | 3067 | 5827 | 7142 | 14602 | 4146 | 150 | 46 | 833 | off | minimal | 52.8 | 58 | 7331 | 41 | 8970 |
+| Apple M4 Max Studio | 128 | 18 | 561 | 400 | 171 | 1662 | 2699 | 2743 | 12519 | 1674 | 35 | 9 | 276 | off | minimal | 11.3 | 325 | 6125 | 325 | 6125 |
+| NVIDIA P4242 | 119 | 19 | 521 | 361 | 263 | 2434 | 3694 | 5674 | 16227 | 1095 | 89 | 23 | 701 | off | minimal | 10.3 | 124 | 6351 | 110 | 9627 |
 
 ## Relation power efficiency
 
@@ -55,9 +55,9 @@ Same **full-run package energy** as the leaderboard score-vs-kJ chart, against *
 
 Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/osm-relation-power.py --pg 19` (reads the relation table below).
 
-| cpu | ver | rel | avg_watts | max_watts | rel_per_watt | kj | cpu_c |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Apple M4 Max Studio | 18 | 1674 | 9 | 35 | 186 | 276 | #000000 |
-| i5-13600K | 19 | 4146 | 46 | 150 | 90 | 833 | #0071C5 |
-| R9 9950X | 19 | 4529 | 70 | 180 | 65 | 1046 | #ED1C24 |
-| NVIDIA P4242 | 19 | 1095 | 23 | 89 | 48 | 701 | #76B900 |
+| cpu | ver | rel | avg_watts | max_watts | rel_per_watt | kj |
+| --- | --- | --- | --- | --- | --- | --- |
+| Apple M4 Max Studio | 18 | 1674 | 9 | 35 | 186 | 276 |
+| i5-13600K | 19 | 4146 | 46 | 150 | 90 | 833 |
+| R9 9950X | 19 | 4529 | 70 | 180 | 65 | 1046 |
+| NVIDIA P4242 | 19 | 1095 | 23 | 89 | 48 | 701 |

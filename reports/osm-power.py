@@ -77,8 +77,25 @@ PG19_CHART_LABEL_OVERRIDES: dict[str, dict[str, LabelOffset]] = {
 }
 
 
+def cpu_color(cpu: str) -> str:
+    name = str(cpu)
+    if name.startswith("NVIDIA"):
+        return "#76B900"
+    if name[:1] == "A":
+        return "#000000"
+    if name[:1] == "i":
+        return "#0071C5"
+    if name[:1] == "R":
+        return "#ED1C24"
+    return DEFAULT_POINT_COLOR
+
+
 def row_color(row: pd.Series) -> str:
-    return str(row.get("cpu_c", "")).strip() or DEFAULT_POINT_COLOR
+    # Prefer table cpu_c when present (PG18 snapshots); else name-based.
+    from_table = str(row.get("cpu_c", "")).strip()
+    if from_table:
+        return from_table
+    return cpu_color(str(row.get("cpu", "")))
 
 
 def parse_args() -> argparse.Namespace:
