@@ -12,12 +12,11 @@ Checkpoint tuning during OSM load.
 
 ![OSM load throughput vs checkpoint interval]({{ '/images/pg18-osm-checkpoint.png' | relative_url }})
 
-Each point is a host-local OSM load. Faint lines connect runs on the same CPU. Total throughput rises as checkpoints stretch out—compare **R5 9600X** at **2.9** minutes between checkpoints (**669** kNodes/s) vs **70.8** minutes (**733** kNodes/s). Durability face and `max_wal_size` for each point are in the table below.
+![OSM checkpoint write rate vs interval]({{ '/images/pg18-osm-checkpoint-write.png' | relative_url }})
+
+Each point is a host-local OSM load. Faint lines connect runs on the same CPU. Total throughput rises as checkpoints stretch out—compare **R5 9600X** at **2.9** minutes between checkpoints (**669** kNodes/s) vs **70.8** minutes (**733** kNodes/s)—while average checkpoint write volume collapses (**34** → **3.5** GB/h on that same sweep). Durability face and `max_wal_size` for each point are in the table below.
 
 Regenerate: `python3 reports/osm-checkpoint.py` (reads `docs/results-summary/pg18/osm-checkpoint.md`).
-
-_Snapshot of the [Streamlit explorer — down between releases](https://pgbent.streamlit.app/) (OSM Checkpoint) on 2026-08-09._
-_Captured by `explorer/snapshot-streamlit.py` from the live site._
 
 
 _Query returned 14 rows._

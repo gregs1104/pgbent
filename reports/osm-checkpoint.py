@@ -2,13 +2,15 @@
 """
 Graph OSM checkpoint study results from a release's static snapshot (default PG18).
 
-Plots total load throughput vs achieved minutes between checkpoints. One series
-for all durability faces; wal_level / max_wal_size detail stays in the published
-table. Lines connect runs on the same CPU.
+Two charts share the same points and CPU filter:
+  - total load throughput vs achieved checkpoint minutes
+  - average checkpoint write rate (GB/h from chkp_mbph) vs the same x
+
+One series for all durability faces; wal_level / max_wal_size detail stays in
+the published table. Lines connect runs on the same CPU.
 
 Usage:
   python3 reports/osm-checkpoint.py
-  python3 reports/osm-checkpoint.py --output docs/images/pg18-osm-checkpoint.png
   python3 reports/osm-checkpoint.py --pg 19
 """
 
@@ -46,11 +48,17 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Plot OSM checkpoint study")
     add_pg_argument(parser)
     parser.add_argument("--snapshot", type=Path)
-    parser.add_argument("--output", type=Path)
+    parser.add_argument("--output", type=Path, help="Throughput chart path")
+    parser.add_argument(
+        "--write-output",
+        type=Path,
+        help="Checkpoint write-rate chart path",
+    )
     parser.add_argument("--show", action="store_true", help="Display interactively")
     args = parser.parse_args()
     args.snapshot = args.snapshot or snapshot_path(args.pg, "osm-checkpoint")
     args.output = args.output or image_path(args.pg, "osm-checkpoint")
+    args.write_output = args.write_output or image_path(args.pg, "osm-checkpoint-write")
     return args
 
 
@@ -71,7 +79,9 @@ def prepare_checkpoint_df(rows: list[dict[str, str]]) -> pd.DataFrame:
     ):
         if col in df.columns:
             df[col] = numeric(df[col])
-    return df.sort_values(["cpu", "chkp_mins"]).reset_index(drop=True)
+    df = df.sort_values(["cpu", "chkp_mins"]).reset_index(drop=True)
+    df["chkp_gbph"] = df["chkp_mbph"] / 1024.0
+    return df
 
 
 def cpu_color(cpu: str) -> str:
@@ -98,7 +108,20 @@ def tuned_end_labels(df: pd.DataFrame) -> pd.DataFrame:
     return df.loc[sorted(keep)]
 
 
-def plot_checkpoint(df: pd.DataFrame, output: Path, pg: str, show: bool = False) -> None:
+def plot_checkpoint_xy(
+    df: pd.DataFrame,
+    *,
+    y_col: str,
+    ylabel: str,
+    title: str,
+    output: Path,
+    y_min: float | None,
+    label_dy: dict[str, float],
+    label_mode: dict[str, str] | None = None,
+    label_dx: dict[str, float] | None = None,
+    label_xy: dict[str, tuple[float, float]] | None = None,
+    show: bool = False,
+) -> None:
     df = df[~df["cpu"].isin(DROP_CPUS)].copy()
     fig, ax = plt.subplots(figsize=(10, 6))
 
@@ -108,7 +131,7 @@ def plot_checkpoint(df: pd.DataFrame, output: Path, pg: str, show: bool = False)
         if len(group) >= 2:
             ax.plot(
                 group["chkp_mins"],
-                group["overall_kips"],
+                group[y_col],
                 color=color,
                 alpha=0.3,
                 linewidth=1.5,
@@ -116,7 +139,7 @@ def plot_checkpoint(df: pd.DataFrame, output: Path, pg: str, show: bool = False)
             )
         ax.scatter(
             group["chkp_mins"],
-            group["overall_kips"],
+            group[y_col],
             marker="o",
             s=70,
             color=color,
@@ -129,33 +152,57 @@ def plot_checkpoint(df: pd.DataFrame, output: Path, pg: str, show: bool = False)
     ax.xaxis.set_minor_locator(NullLocator())
     ax.set_xticklabels([str(t) for t in x_ticks])
     ax.set_xlabel("Minutes between checkpoints (achieved)")
-    ax.set_ylabel("Throughput (kNodes/s)")
-    ax.set_title(f"PG{pg} OSM load vs checkpoint interval")
-    y_top = float(df["overall_kips"].max())
-    ax.set_ylim(500, y_top * 1.12)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+    y_top = float(df[y_col].max())
+    bottom = 0.0 if y_min is None else y_min
+    ax.set_ylim(bottom, y_top * 1.12)
     ax.grid(True, which="major", linestyle="--", alpha=0.4)
     plain_axis(ax, x=True)
 
     fig.tight_layout()
 
-    # Both CPU labels flush to the right spine; i5 one font below its point,
-    # R5 half that amount.
-    label_df = tuned_end_labels(df)
-    right_label_dy = {
-        "i5-13600K": -(12 + SMALL_ANNOTATION_FONTSIZE),
-        "R5 9600X": -(12 + SMALL_ANNOTATION_FONTSIZE / 2),
-    }
-    for _, row in label_df.iterrows():
+    modes = label_mode or {}
+    dxs = label_dx or {}
+    xys = label_xy or {}
+    for _, row in tuned_end_labels(df).iterrows():
         cpu = str(row["cpu"])
-        dy = right_label_dy.get(cpu)
+        dy = label_dy.get(cpu)
         if dy is None:
+            continue
+        mode = modes.get(cpu, "right_spine")
+        if mode == "data":
+            x, y = xys[cpu]
+            ax.text(
+                x,
+                y,
+                cpu,
+                ha="center",
+                va="center",
+                fontsize=SMALL_ANNOTATION_FONTSIZE,
+                color=cpu_color(cpu),
+                clip_on=True,
+            )
+            continue
+        if mode == "left_of_point":
+            ax.annotate(
+                cpu,
+                xy=(float(row["chkp_mins"]), float(row[y_col])),
+                xytext=(dxs.get(cpu, -10), dy),
+                textcoords="offset points",
+                ha="right",
+                va="bottom",
+                fontsize=SMALL_ANNOTATION_FONTSIZE,
+                color=cpu_color(cpu),
+                clip_on=True,
+            )
             continue
         trans = offset_copy(
             ax.get_yaxis_transform(), fig=fig, x=-4, y=dy, units="points"
         )
         ax.text(
             1.0,
-            float(row["overall_kips"]),
+            float(row[y_col]),
             cpu,
             transform=trans,
             ha="right",
@@ -173,6 +220,49 @@ def plot_checkpoint(df: pd.DataFrame, output: Path, pg: str, show: bool = False)
     plt.close(fig)
 
 
+def plot_throughput(df: pd.DataFrame, output: Path, pg: str, show: bool = False) -> None:
+    plot_checkpoint_xy(
+        df,
+        y_col="overall_kips",
+        ylabel="Throughput (kNodes/s)",
+        title=f"PG{pg} OSM load vs checkpoint interval",
+        output=output,
+        y_min=500,
+        label_dy={
+            "i5-13600K": -(12 + SMALL_ANNOTATION_FONTSIZE),
+            "R5 9600X": -(12 + SMALL_ANNOTATION_FONTSIZE / 2),
+        },
+        show=show,
+    )
+
+
+def plot_write_rate(df: pd.DataFrame, output: Path, pg: str, show: bool = False) -> None:
+    # Custom label anchors: i5 into the empty band left of its cliff bottom;
+    # R5 right-flush and above its end point.
+    plot_checkpoint_xy(
+        df,
+        y_col="chkp_gbph",
+        ylabel="Checkpoint write rate (GB/h)",
+        title=f"PG{pg} OSM checkpoint write rate vs interval",
+        output=output,
+        y_min=0,
+        label_dy={
+            # Just left + above the tuned-end marker so it stays near the series.
+            "i5-13600K": 28 - SMALL_ANNOTATION_FONTSIZE,
+            "R5 9600X": 100 - 4 * SMALL_ANNOTATION_FONTSIZE,
+        },
+        label_mode={
+            "i5-13600K": "left_of_point",
+            "R5 9600X": "right_spine",
+        },
+        label_dx={
+            # ~8 character widths left of the tuned-end marker.
+            "i5-13600K": -18 - int(8 * SMALL_ANNOTATION_FONTSIZE * 0.6),
+        },
+        show=show,
+    )
+
+
 def main() -> int:
     use_pg18_style()
     args = parse_args()
@@ -180,7 +270,8 @@ def main() -> int:
     if not rows:
         raise SystemExit(f"No table found in {args.snapshot}")
     df = prepare_checkpoint_df(rows)
-    plot_checkpoint(df, args.output, args.pg, show=args.show)
+    plot_throughput(df, args.output, args.pg, show=args.show)
+    plot_write_rate(df, args.write_output, args.pg, show=args.show)
     return 0
 
 

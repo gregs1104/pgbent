@@ -12,6 +12,8 @@ Checkpoints are the background heartbeat of every PostgreSQL database.  When a c
 
 ![OSM load throughput vs checkpoint interval]({{ '/images/pg18-osm-checkpoint.png' | relative_url }})
 
+![OSM checkpoint write rate vs interval]({{ '/images/pg18-osm-checkpoint-write.png' | relative_url }})
+
 The standard tuning practice for `checkpoint_timeout` follows this workflow:
 
 * Increase `checkpoint_timeout` from 5 minutes to 10 minutes.
