@@ -12,7 +12,7 @@ Checkpoint tuning during OSM load.
 
 ![OSM load throughput vs checkpoint interval]({{ '/images/pg18-osm-checkpoint.png' | relative_url }})
 
-Each point is a host-local OSM load at a different **max_wal_size** / **wal_level** combination. Faint lines connect multiple runs on the same CPU. Throughput rises as checkpoints stretch out—compare **R5 9600X** at **2.9** minutes between checkpoints (**669** kNodes/s total) vs **70.8** minutes (**733** kNodes/s). **Replica** WAL (fsync on) needs more frequent checkpoints at the same WAL cap; **minimal** WAL tolerates longer intervals and higher total load rates.
+Each point is a host-local OSM load. Faint lines connect runs on the same CPU. Total throughput rises as checkpoints stretch out—compare **R5 9600X** at **2.9** minutes between checkpoints (**669** kNodes/s) vs **70.8** minutes (**733** kNodes/s). Durability face and `max_wal_size` for each point are in the table below.
 
 Regenerate: `python3 reports/osm-checkpoint.py` (reads `docs/results-summary/pg18/osm-checkpoint.md`).
 

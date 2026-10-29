@@ -31,7 +31,7 @@ That's for benchmarking though.  In the real world, recover time after a system 
 
 # OSM Results
 
-The Open Street Map loading workload is a good fixed size test of checkpoint write volume.  A study of different values is in the [OSM Checkpoint results]({{ '/results-summary/pg18/osm-checkpoint/' | relative_url }}) ([Streamlit explorer — down between releases](https://pgbent.streamlit.app/)).
+The Open Street Map loading workload is a good fixed size test of checkpoint write volume.  A study of different values is in the [OSM Checkpoint results]({{ '/results-summary/pg18/osm-checkpoint/' | relative_url }}). The chart above is that snapshot; later majors kept the same tuning shape (the PG17 metric-view change delayed a fresh parameter restudy, not a change in the conclusion).
 
 Like the TPC-C, loading always gets faster with more space between checkpoints.  Accordingly the checkpoint_timeout has been set to the old maximum of 60 minutes on the test servers.
 

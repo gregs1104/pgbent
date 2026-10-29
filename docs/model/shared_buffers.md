@@ -20,6 +20,10 @@ PG servers work best when their working set all fits in RAM.  That means servers
 
 There are two main scalability limits to large amount of `shared_buffers`.  The database doesn't get faster and faster just because it's given more memory to work with.  PG advice has long recommended the idea of using 1/4 of RAM for `shared_buffers`, with 40% as the usual recommended ceiling.  On my 128GB OSM test server results, 25%/32GB gives good caching with low overhead.
 
+![OSM load vs shared_buffers]({{ '/images/shared-buffers-osm.png' | relative_url }})
+
+Twilight set **98** (PostgreSQL **16.3**, i5-13600K, ~128 GB RAM): durable OSM loads at `shared_buffers` **1 / 32 / 48 GB**. Median durable throughput steps up from the 1 GB false valley through the ¼-RAM **32 GB** cell; **48 GB** (~38% of RAM) is still faster. Fast (`wal_level=minimal` / `fsync=off`) cells sit above the durable band. The lab standardized on 48 GB after this study; later majors did not re-sweep the knob. Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/shared-buffers.py`.
+
 Increase it to 38%/48GB and it gets faster.  But the CPU overhead of running the buffer cache makes that and higher values less efficient.   Eviction from the cache with the simple Clock Sweep method requires multiple passes over the entire pool before something gets removed.  Obtaining locks on the buffer cache structures, with full database sementics, that adds overhead too.
 
 Larger values ultimately take too much from the OS read cache as well.  There is some worst case pathological behavior possible with both PG and Linux's cache designs.  The diversity to page evication logic of combining both PG's reference counting and the OS's LRU approach triages some of those.

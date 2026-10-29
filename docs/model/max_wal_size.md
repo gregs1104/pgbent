@@ -28,7 +28,7 @@ Note that in older guides, the parameter used to be named Checkpoint Segments, b
 
 # OSM Results
 
-The Open Street Map loading workload is a good fixed size test of checkpoint write volume.  A study of different values is in the [OSM Checkpoint results]({{ '/results-summary/pg18/osm-checkpoint/' | relative_url }}) ([Streamlit explorer — down between releases](https://pgbent.streamlit.app/)).
+The Open Street Map loading workload is a good fixed size test of checkpoint write volume.  A study of different values is in the [OSM Checkpoint results]({{ '/results-summary/pg18/osm-checkpoint/' | relative_url }}). The chart above is that snapshot; later majors kept the same tuning shape (the PG17 metric-view change delayed a fresh parameter restudy, not a change in the conclusion).
 
 Every example there tries to delay checkpoints to an hourly timeframe.  If you compare the chkp_mins column there, that shows how fast checkpoints actually execute.  There are two main configurations being compared:
 
