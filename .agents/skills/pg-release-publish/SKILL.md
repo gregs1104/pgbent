@@ -242,7 +242,8 @@ into a scratch directory (`--output <dir>`) and merge the tables by hand.
 - [ ] Tuning-model pages (docs/model/*.md) embed pg<N> charts where a topic was rerun
 - [ ] docs/plans/results-snapshot.md: add a "Workflow (PG <N>)" checklist
 - [ ] Do not resume Streamlit Cloud unless Greg asks; explorer code can remain unused
+- [ ] Polish charts + public docs (`pg-release-polish`): slim representative series, labels, thin landing/leaderboard, clear WIP
 - [ ] Commit "Mark PG<N> results finished."; seed conf/<N+1> from final conf/<N> (pg-release-config)
 ```
 
-Preview the site locally with `docs/serve` before pushing.
+Preview the site locally with `docs/serve` before pushing. After the file layout is in place, run **`pg-release-polish`** before calling the cycle finished.
