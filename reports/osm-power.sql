@@ -1,6 +1,7 @@
 -- OSM load throughput vs package power on the current Planet (nodes >= 10e9).
 -- One host-local winner per CPU × mem_gb (best score_kips), requiring package
--- watts. Keep twilight 125 Gi (mem=128G class) distinct from 188 Gi physical.
+-- watts. Fair board: ~128 GB class only (mem_gb <= 140) so twilight’s physical
+-- 188 Gi cell does not outrank the mem=128G runs on the same i5.
 -- Ranked by score_kips; charts use max_pkg (peak) and avg_pkg (relation efficiency).
 
 WITH
@@ -23,7 +24,8 @@ best AS
       script like 'osm2pgsql%' AND
       conn = 'host' AND
       client IS NULL AND
-      nodes >= 10000000000
+      nodes >= 10000000000 AND
+      mem_gb <= 140
   )
 SELECT
     cpu,
