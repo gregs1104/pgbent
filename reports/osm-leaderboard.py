@@ -60,6 +60,8 @@ DISK_IMAGE = REPO_ROOT / "docs" / "images" / "osm-leaderboard-disk.png"
 POWER_IMAGE = REPO_ROOT / "docs" / "images" / "osm-leaderboard-power.png"
 EFF_DISK_IMAGE = REPO_ROOT / "docs" / "images" / "osm-leaderboard-efficiency-disk.png"
 EFF_POWER_IMAGE = REPO_ROOT / "docs" / "images" / "osm-leaderboard-efficiency-power.png"
+NVIDIA_DISK_IMAGE = REPO_ROOT / "docs" / "images" / "osm-leaderboard-nvidia-disk.png"
+NVIDIA_POWER_IMAGE = REPO_ROOT / "docs" / "images" / "osm-leaderboard-nvidia-power.png"
 JOULES_IMAGE = REPO_ROOT / "docs" / "images" / "osm-leaderboard-joules.png"
 COMPARE_IMAGE = REPO_ROOT / "docs" / "images" / "osm-leaderboard-compare.png"
 TABLE_BEGIN = "<!-- osm-leaderboard-table:begin -->"
@@ -607,6 +609,9 @@ def traces_markdown(
     eff_row: pd.Series | None = None,
     eff_disk: str = "",
     eff_mode: str = "",
+    nvidia_row: pd.Series | None = None,
+    nvidia_disk: str = "",
+    nvidia_mode: str = "",
 ) -> str:
     def intro(row: pd.Series, role: str) -> str:
         cpu = str(row["cpu"]).strip()
@@ -617,6 +622,14 @@ def traces_markdown(
             return (
                 f"The board leader is **{cpu}** (PostgreSQL {ver}, `fsync={fsync}`, "
                 f"OSM score **{score}**)."
+            )
+        if role == "nvidia":
+            hours = format_markdown_cell(row["hours"])
+            overall = format_markdown_cell(row["overall_kips"])
+            return (
+                f"**NVIDIA Spark** (court, **{cpu}**) is the mid-board Grace cell "
+                f"(PostgreSQL {ver}, `fsync={fsync}`, OSM score **{score}**, "
+                f"**{overall}** kNodes/s total, **{hours}h**)."
             )
         watts = format_markdown_cell(row["score_per_watt"])
         return (
@@ -636,6 +649,16 @@ def traces_markdown(
         "![OSM leader package power average vs 1-second maximum]"
         "({{ '/images/osm-leaderboard-power.png' | relative_url }})",
     ]
+    if nvidia_row is not None:
+        blocks.extend(
+            [
+                intro(nvidia_row, "nvidia") + disk_caption(nvidia_disk, nvidia_mode),
+                "![OSM NVIDIA Spark disk average vs 1-second maximum]"
+                "({{ '/images/osm-leaderboard-nvidia-disk.png' | relative_url }})",
+                "![OSM NVIDIA Spark package power average vs 1-second maximum]"
+                "({{ '/images/osm-leaderboard-nvidia-power.png' | relative_url }})",
+            ]
+        )
     if eff_row is not None:
         blocks.extend(
             [
@@ -708,6 +731,26 @@ def efficiency_row(table: pd.DataFrame, score_row: pd.Series) -> pd.Series | Non
     return best
 
 
+def nvidia_row(
+    table: pd.DataFrame, score_row: pd.Series, eff_row: pd.Series | None
+) -> pd.Series | None:
+    """Best-score NVIDIA / Grace Spark cell for the mid-board court traces."""
+    nvidia = table[table["cpu"].astype(str).str.startswith("NVIDIA")].copy()
+    if nvidia.empty:
+        return None
+    nvidia["score_kips"] = pd.to_numeric(nvidia["score_kips"], errors="coerce")
+    nvidia = nvidia.dropna(subset=["score_kips"]).sort_values(
+        "score_kips", ascending=False
+    )
+    for _, row in nvidia.iterrows():
+        if same_run(row, score_row):
+            continue
+        if eff_row is not None and same_run(row, eff_row):
+            continue
+        return row
+    return None
+
+
 def disk_title(cpu: str, disk: str, mode: str) -> str:
     if not disk:
         return f"{cpu} disk"
@@ -777,7 +820,27 @@ def main() -> int:
                     EFF_POWER_IMAGE,
                     show=args.show,
                 )
-            traces_md = traces_markdown(top, disk, mode, eff, eff_disk, eff_mode)
+            nvidia = nvidia_row(table, top, eff)
+            nvidia_disk, nvidia_mode = "", ""
+            if nvidia is not None:
+                nvidia_disk, nvidia_mode = plot_leader_traces(
+                    nvidia,
+                    args.conn,
+                    NVIDIA_DISK_IMAGE,
+                    NVIDIA_POWER_IMAGE,
+                    show=args.show,
+                )
+            traces_md = traces_markdown(
+                top,
+                disk,
+                mode,
+                eff,
+                eff_disk,
+                eff_mode,
+                nvidia,
+                nvidia_disk,
+                nvidia_mode,
+            )
         rows = records_from_frame(table)
     else:
         rows = load_snapshot_table(args.snapshot)

@@ -36,6 +36,12 @@ The board leader is **R9 9950X** (PostgreSQL 19, `fsync=off`, OSM score **1480**
 
 ![OSM leader package power average vs 1-second maximum]({{ '/images/osm-leaderboard-power.png' | relative_url }})
 
+**NVIDIA Spark** (court, **NVIDIA P4242**) is the mid-board Grace cell (PostgreSQL 19, `fsync=off`, OSM score **570**, **392** kNodes/s total, **7.65h**). Disk is combined read+write on data volume `nvme0n1`.
+
+![OSM NVIDIA Spark disk average vs 1-second maximum]({{ '/images/osm-leaderboard-nvidia-disk.png' | relative_url }})
+
+![OSM NVIDIA Spark package power average vs 1-second maximum]({{ '/images/osm-leaderboard-nvidia-power.png' | relative_url }})
+
 The power-efficiency leader is **Apple M4 Max Studio** (PostgreSQL 18, `fsync=off`, **16.1** score/W, OSM score **561**). Disk is Darwin combined throughput (`disk0_MB/s`); there is no read/write split.
 
 ![OSM efficiency-leader disk average vs 1-second maximum]({{ '/images/osm-leaderboard-efficiency-disk.png' | relative_url }})
