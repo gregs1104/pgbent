@@ -627,7 +627,7 @@ def traces_markdown(
             hours = format_markdown_cell(row["hours"])
             overall = format_markdown_cell(row["overall_kips"])
             return (
-                f"**NVIDIA Spark** (court, **{cpu}**) is the mid-board Grace cell "
+                f"**NVIDIA Spark** (court, **{cpu}**) rounds out the set "
                 f"(PostgreSQL {ver}, `fsync={fsync}`, OSM score **{score}**, "
                 f"**{overall}** kNodes/s total, **{hours}h**)."
             )
@@ -649,16 +649,6 @@ def traces_markdown(
         "![OSM leader package power average vs 1-second maximum]"
         "({{ '/images/osm-leaderboard-power.png' | relative_url }})",
     ]
-    if nvidia_row is not None:
-        blocks.extend(
-            [
-                intro(nvidia_row, "nvidia") + disk_caption(nvidia_disk, nvidia_mode),
-                "![OSM NVIDIA Spark disk average vs 1-second maximum]"
-                "({{ '/images/osm-leaderboard-nvidia-disk.png' | relative_url }})",
-                "![OSM NVIDIA Spark package power average vs 1-second maximum]"
-                "({{ '/images/osm-leaderboard-nvidia-power.png' | relative_url }})",
-            ]
-        )
     if eff_row is not None:
         blocks.extend(
             [
@@ -667,6 +657,16 @@ def traces_markdown(
                 "({{ '/images/osm-leaderboard-efficiency-disk.png' | relative_url }})",
                 "![OSM efficiency-leader package power average vs 1-second maximum]"
                 "({{ '/images/osm-leaderboard-efficiency-power.png' | relative_url }})",
+            ]
+        )
+    if nvidia_row is not None:
+        blocks.extend(
+            [
+                intro(nvidia_row, "nvidia") + disk_caption(nvidia_disk, nvidia_mode),
+                "![OSM NVIDIA Spark disk average vs 1-second maximum]"
+                "({{ '/images/osm-leaderboard-nvidia-disk.png' | relative_url }})",
+                "![OSM NVIDIA Spark package power average vs 1-second maximum]"
+                "({{ '/images/osm-leaderboard-nvidia-power.png' | relative_url }})",
             ]
         )
     return f"{TRACE_BEGIN}\n\n" + "\n\n".join(blocks) + f"\n\n{TRACE_END}"
