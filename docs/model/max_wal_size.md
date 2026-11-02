@@ -28,6 +28,22 @@ When the server hits the max_wal_size limit for the number of WAL files it's all
 
 Note that in older guides, the parameter used to be named Checkpoint Segments, because of what the implementation does.  It made more sense to express the setting as a disk space limit.
 
+Tuning `max_wal_size` and `checkpoint_timeout` is the same loop—raise WAL space when requested/WAL checkpoints dominate, raise the timeout when timed ones do, or nudge both when they mix. Details and measurement queries: [checkpoint_timeout]({{ '/model/checkpoint_timeout' | relative_url }}).
+
+```mermaid
+flowchart TD
+  R[Reset Counters] --> Q1{Checkpoint near schedule?}
+  Q1 -->|Yes| R
+  Q1 -->|No| Q2{Mostly WAL checkpoints?}
+  Q2 -->|Yes| A1[Major increase max_wal_size]
+  A1 --> R
+  Q2 -->|No| Q3{Mostly Timed checkpoints?}
+  Q3 -->|Yes| A2[Major increase checkpoint_timeout]
+  A2 --> R
+  Q3 -->|No| A3[Minor increase both]
+  A3 --> R
+```
+
 # OSM Results
 
 The Open Street Map loading workload is a good fixed size test of checkpoint write volume.  A study of different values is in the [OSM Checkpoint results]({{ '/results-summary/pg18/osm-checkpoint/' | relative_url }}). The chart above is that snapshot; later majors kept the same tuning shape (the PG17 metric-view change delayed a fresh parameter restudy, not a change in the conclusion).

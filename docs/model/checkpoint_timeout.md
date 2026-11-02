@@ -14,12 +14,23 @@ Checkpoints are the background heartbeat of every PostgreSQL database.  When a c
 
 ![OSM checkpoint write rate vs interval]({{ '/images/pg18-osm-checkpoint-write.png' | relative_url }})
 
-The standard tuning practice for `checkpoint_timeout` follows this workflow:
+The standard tuning practice for `checkpoint_timeout` follows this iterative loop—reset the counters, watch whether checkpoints land near the schedule, then raise `max_wal_size`, `checkpoint_timeout`, or both:
 
-* Increase `checkpoint_timeout` from 5 minutes to 10 minutes.
-* If the time between checkpoints doesn't actually change much, you probably need to increase `max_wal_size` as well or instead of the timeout.
-* As volume increases continue stepping the timeout up to 15 and then 30 minutes.
-* Consider even higher settings during bulk-loading stages.  You can tune the value easily without restarting the server.  You just need to write a new setting and reload the configuration.
+```mermaid
+flowchart TD
+  R[Reset Counters] --> Q1{Checkpoint near schedule?}
+  Q1 -->|Yes| R
+  Q1 -->|No| Q2{Mostly WAL checkpoints?}
+  Q2 -->|Yes| A1[Major increase max_wal_size]
+  A1 --> R
+  Q2 -->|No| Q3{Mostly Timed checkpoints?}
+  Q3 -->|Yes| A2[Major increase checkpoint_timeout]
+  A2 --> R
+  Q3 -->|No| A3[Minor increase both]
+  A3 --> R
+```
+
+Typical ramp: start at 5 minutes, step to 10, then 15 and 30 as volume grows. If the time between checkpoints barely moves, increase `max_wal_size` as well or instead. Consider even higher settings during bulk-loading; you can change the timeout without a restart—write a new setting and reload. The same loop is on [max_wal_size]({{ '/model/max_wal_size' | relative_url }}).
 
 Older PG versions limited the timeout to 60 minutes.  Current ones let you postpone checkpoints up to once per day.
 

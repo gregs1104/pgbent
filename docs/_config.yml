@@ -32,6 +32,11 @@ github_username:  gregs1104
 #theme: just-the-docs
 remote_theme: just-the-docs/just-the-docs
 
+# Opt-in Mermaid diagrams (```mermaid fences in Markdown).
+# https://just-the-docs.github.io/just-the-docs/docs/ui-components/code/#mermaid-diagram-code-blocks
+mermaid:
+  version: "9.4.3"
+
 plugins:
   - jekyll-feed
 
