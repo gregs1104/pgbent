@@ -35,7 +35,8 @@ remote_theme: just-the-docs/just-the-docs
 # Opt-in Mermaid diagrams (```mermaid fences in Markdown).
 # https://just-the-docs.github.io/just-the-docs/docs/ui-components/code/#mermaid-diagram-code-blocks
 mermaid:
-  version: "9.4.3"
+  # 11.10+ for stable `block` diagrams (grid layout). Keep 9.x if only flowcharts.
+  version: "11.10.1"
 
 plugins:
   - jekyll-feed

@@ -16,6 +16,26 @@ Checkpoints are the background heartbeat of every PostgreSQL database.  When a c
 
 The standard tuning practice for `checkpoint_timeout` follows this iterative loop—watch whether checkpoints have landed near the schedule since the last reset, then raise `max_wal_size`, `checkpoint_timeout`, or both, and reset the counters after each change:
 
+Mermaid block-diagram draft (3 columns; ASCII kept until approved):
+
+```mermaid
+block
+  columns 3
+  space r["Reset Counters"]:2
+  d0<[" "]>(down) space:2
+  q1{"Checkpoint near schedule?"} y1<["Yes"]>(up) space
+  n1<["No"]>(down) space:2
+  q2{"Mostly WAL checkpoints?"} y2<["Yes"]>(right) a1["Major increase max WAL"]
+  n2<["No"]>(down) space u1<[" "]>(up)
+  q3{"Mostly Timed checkpoints?"} y3<["Yes"]>(right) a2["Major increase timeout"]
+  n3<["No"]>(down) space u2<[" "]>(up)
+  q4["Mix of both types"] mid<[" "]>(right) a3["Minor increase both"]
+  space:2 u3<[" "]>(up)
+  a1 --> r
+  a2 --> r
+  a3 --> r
+```
+
 ```text
             +------------------<------< Reset Counters <--+
             |                  |                          |
