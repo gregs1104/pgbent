@@ -30,18 +30,23 @@ Note that in older guides, the parameter used to be named Checkpoint Segments, b
 
 Tuning `max_wal_size` and `checkpoint_timeout` is the same loop—raise WAL space when requested/WAL checkpoints dominate, raise the timeout when timed ones do, or nudge both when they mix. Details and measurement queries: [checkpoint_timeout]({{ '/model/checkpoint_timeout' | relative_url }}).
 
-```mermaid
-flowchart TD
-  R[Reset Counters] --> Q1{Checkpoint near schedule?}
-  Q1 -->|Yes| R
-  Q1 -->|No| Q2{Mostly WAL checkpoints?}
-  Q2 -->|Yes| A1[Major increase max_wal_size]
-  A1 --> R
-  Q2 -->|No| Q3{Mostly Timed checkpoints?}
-  Q3 -->|Yes| A2[Major increase checkpoint_timeout]
-  A2 --> R
-  Q3 -->|No| A3[Minor increase both]
-  A3 --> R
+```text
+            +------------------<------< Reset Counters <--+
+            |                  |                          |
+            V                  |                          |
+Checkpoint near schedule? Yes -^                          |
+            |                                             |
+            | No                                          |
+            V                                             |
+Mostly WAL checkpoints?   Yes --> Major increase max WAL -^
+            |                                             |
+            | No                                          |
+            V                                             |
+Mostly Timed checkpoints? Yes --> Major increase timeout -^
+            |                                             |
+            | No                                          |
+            V                                             |
+Mix of both types  ---------> Minor increase both >-------^
 ```
 
 # OSM Results
