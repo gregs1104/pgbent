@@ -14,7 +14,7 @@ Checkpoints are the background heartbeat of every PostgreSQL database.  When a c
 
 ![OSM checkpoint write rate vs interval]({{ '/images/pg18-osm-checkpoint-write.png' | relative_url }})
 
-The standard tuning practice for `checkpoint_timeout` follows this iterative loop—reset the counters, watch whether checkpoints land near the schedule, then raise `max_wal_size`, `checkpoint_timeout`, or both:
+The standard tuning practice for `checkpoint_timeout` follows this iterative loop—watch whether checkpoints have landed near the schedule since the last reset, then raise `max_wal_size`, `checkpoint_timeout`, or both, and reset the counters after each change:
 
 ```text
             +------------------<------< Reset Counters <--+
