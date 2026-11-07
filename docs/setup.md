@@ -67,7 +67,7 @@ Homebrew PostgreSQL majors lag PGDG. Test each new major on brew **after** the r
 
 ## Finish notifications (optional Slack)
 
-Workloads such as `wl/select-faces` and `util/repeat-gis` can post when they finish via `util/notify-done`. Configure a webhook URL; leave it blank to skip.
+`./runset`, `wl/select-faces`, and `util/repeat-gis` can post when they finish via `util/notify-done`. Nested drivers set `SKIP_NOTIFY=1` so only their sweep summary posts (not every inner `runset`). Configure a webhook URL; leave it blank to skip.
 
 **Slack (preferred dogfood path)**
 

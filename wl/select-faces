@@ -45,7 +45,8 @@ run_face() {
   pin PREPARED "$prepared"
   pin SKIPINIT "$skip"
   echo "$(ts) face SOCKETS=$sockets PREPARED=$prepared SKIPINIT=$skip"
-  ./runset
+  # One Slack summary at sweep end; suppress per-face runset notifies.
+  SKIP_NOTIFY=1 ./runset
   local rc=$?
   echo "$(ts) face done rc=$rc SOCKETS=$sockets PREPARED=$prepared"
   if [ "$rc" -ne 0 ]; then

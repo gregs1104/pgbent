@@ -41,7 +41,8 @@ while [ ! -f ${STATEDIR}/complete ] ; do
 
   # Recheck in case complete appeared during sleep
   if [ ! -f ${STATEDIR}/complete ] ; then
-    ./runset &
+    # One Slack summary when the loop exits; suppress per-load runset notifies.
+    SKIP_NOTIFY=1 ./runset &
     P=$!
     echo $PID $P > ${STATEDIR}/pgbent.pid
     echo Set running pid ${P}

@@ -92,3 +92,11 @@ echo Generating web report
 
 echo runset complete
 date
+
+# Higher-level drivers (wl/select-faces, util/repeat-gis) set SKIP_NOTIFY=1
+# and post their own summary. Standalone ./runset posts here.
+if [ "${SKIP_NOTIFY:-0}" != "1" ]; then
+  DETAIL="runset complete"
+  [ -n "$SCRIPT" ] && DETAIL="$DETAIL ($SCRIPT)"
+  util/notify-done done "$DETAIL"
+fi
