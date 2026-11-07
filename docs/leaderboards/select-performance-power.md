@@ -41,8 +41,6 @@ Mean across repeats (4 faces). **tps_1** is the old single-core cell; **tps_32**
 
 One chart for the best **sockets prepared** run on each machine at **1** and **32** clients. Bar length is relative to the lead system on that metric (**100%** = that system's value). Labels are the raw values. A longer **kJ** bar means more energy used, not more efficiency. **txn/J** is transactions per joule on the same 32-client run — total transactions over total package joules.
 
-**Apple M4 Max Studio** (abbey) is waiting on its PG18 SELECT pin — the chart grows when that cell lands.
-
 ![pgbench SELECT - Platform energy comparison]({{ '/images/select-leaderboard-compare.png' | relative_url }})
 
 | cpu | tps_1 | txn_j_1 | tps_32 | txn_j_32 | kJ_32 |
@@ -50,6 +48,7 @@ One chart for the best **sockets prepared** run on each machine at **1** and **3
 | R9 9950X | 133,410 | 2,219 | 2,059,359 | 10,410 | 17.8 |
 | i5-13600K | 94,465 | 3,015 | 776,201 | 5,477 | 12.8 |
 | NVIDIA P4242 | 74,020 | 3,732 | 532,505 | 7,491 | 6.4 |
+| Apple M4 Max Studio | 73,744 | 15,917 | 400,225 | 20,927 | 1.7 |
 
 <!-- select-platform-compare:end -->
 
