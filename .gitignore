@@ -7,3 +7,5 @@
 /archive/
 docs/.bundle/
 __pycache__/
+# Local secrets (Slack webhook, etc.) — sourced after ./config when present
+/config.local

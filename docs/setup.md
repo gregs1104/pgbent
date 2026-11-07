@@ -65,3 +65,26 @@ Smoke test: `./pgsysinfo` prints version / `SETCLIENTS` / `SCALES`. Agent SSH on
 
 Homebrew PostgreSQL majors lag PGDG. Test each new major on brew **after** the release bottles exist (PostGIS linked). During RC, the four-face SELECT / `nothing` / `constant` pack on abbey runs on **PG18**.
 
+## Finish notifications (optional Slack)
+
+Workloads such as `wl/select-faces` and `util/repeat-gis` can post when they finish via `util/notify-done`. Configure a webhook URL; leave it blank to skip.
+
+**Slack (preferred dogfood path)**
+
+1. Create an [Incoming Webhook](https://api.slack.com/messaging/webhooks) for your channel.
+2. Export the secret (recommended) or put it in gitignored `config.local`:
+
+```bash
+export SLACK_WEBHOOK_URL='https://hooks.slack.com/services/…'
+# or in config.local (sourced after ./config):
+# SLACK_WEBHOOK_URL='https://hooks.slack.com/services/…'
+```
+
+`NOTIFY_WEBHOOK_URL` defaults to `SLACK_WEBHOOK_URL`. Override it for Discord/ntfy-style endpoints that accept `{"text":"…"}`. Smoke test:
+
+```bash
+util/notify-done done "smoke test"
+```
+
+Do not commit webhook URLs into `config`.
+

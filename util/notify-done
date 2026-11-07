@@ -1,0 +1,65 @@
+#!/bin/bash
+# Post a workload-finished notice to NOTIFY_WEBHOOK_URL (Slack Incoming
+# Webhook by default). No-ops when the URL is empty so unconfigured boxes
+# stay quiet.
+#
+# Usage (from pgbent root):
+#   util/notify-done                          # status=done, auto set/info
+#   util/notify-done done "four faces done"   # custom text
+#   util/notify-done failed "runset rc=1"     # failure
+#   STATUS=failed DETAIL="…" util/notify-done
+#
+# Env / config: SLACK_WEBHOOK_URL or NOTIFY_WEBHOOK_URL (see ./config).
+
+cd "$(dirname "$0")/.."
+# shellcheck source=/dev/null
+. ./config
+
+STATUS="${1:-${STATUS:-done}}"
+DETAIL="${2:-${DETAIL:-}}"
+
+if [ -z "$NOTIFY_WEBHOOK_URL" ]; then
+  echo "notify-done: NOTIFY_WEBHOOK_URL unset — skip"
+  exit 0
+fi
+
+RESULTPSQL="psql -X -h $RESULTHOST -U $RESULTUSER -p $RESULTPORT -d $RESULTDB"
+SET_INFO=""
+SET_ID=""
+if SET_ROW=$($RESULTPSQL -Atqc "
+  SELECT set::text || E'\t' || coalesce(info, '')
+  FROM testset
+  WHERE server = '${SERVERNAME}'
+  ORDER BY set DESC
+  LIMIT 1
+" 2>/dev/null); then
+  SET_ID=${SET_ROW%%$'\t'*}
+  SET_INFO=${SET_ROW#*$'\t'}
+fi
+
+HOST_LABEL=${SERVERNAME:-$(hostname -s 2>/dev/null || hostname)}
+TS=$(date '+%Y-%m-%dT%H:%M:%S%z')
+TEXT="pgbent ${HOST_LABEL}"
+[ -n "$SET_ID" ] && TEXT="${TEXT} set ${SET_ID}"
+[ -n "$SET_INFO" ] && TEXT="${TEXT} (${SET_INFO})"
+TEXT="${TEXT}: ${STATUS}"
+[ -n "$DETAIL" ] && TEXT="${TEXT} — ${DETAIL}"
+TEXT="${TEXT} @ ${TS}"
+
+# Minimal JSON string escape without requiring jq.
+json_escape() {
+  printf '%s' "$1" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()), end="")'
+}
+
+PAYLOAD=$(printf '{"text":%s}' "$(json_escape "$TEXT")")
+
+if curl -sS -f -X POST \
+  -H 'Content-type: application/json' \
+  --data "$PAYLOAD" \
+  "$NOTIFY_WEBHOOK_URL" >/dev/null; then
+  echo "notify-done: posted to webhook"
+  exit 0
+fi
+
+echo "notify-done: webhook POST failed" >&2
+exit 1

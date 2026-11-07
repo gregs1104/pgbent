@@ -57,6 +57,23 @@ ARCHIVE="gsmith@pony"
 BRIDGE_CLUSTER_ID=""
 BRIDGE_BEARER=""
 
+# Finish notifications (optional). Slack Incoming Webhook is the preferred
+# dogfood path; the same URL slot works for Discord/ntfy-style webhooks that
+# accept a JSON {"text":"..."} body. Leave blank to skip. Prefer exporting the
+# secret (or putting it in gitignored config.local) so it never lands in git:
+#   export SLACK_WEBHOOK_URL='https://hooks.slack.com/services/…'
+SLACK_WEBHOOK_URL="${SLACK_WEBHOOK_URL:-}"
+# Generic alias — defaults to Slack when set. Override for non-Slack sinks.
+NOTIFY_WEBHOOK_URL="${NOTIFY_WEBHOOK_URL:-$SLACK_WEBHOOK_URL}"
+
+# Optional machine-local overrides (secrets, ARCHIVE host, …). Not in git.
+if [ -f "$BASEDIR/config.local" ]; then
+  # shellcheck source=/dev/null
+  . "$BASEDIR/config.local"
+  # Re-apply alias after local overrides.
+  NOTIFY_WEBHOOK_URL="${NOTIFY_WEBHOOK_URL:-$SLACK_WEBHOOK_URL}"
+fi
+
 #
 # Main test run customization.  Test scripts add a .sql extension for you.
 #

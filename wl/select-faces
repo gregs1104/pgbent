@@ -14,6 +14,9 @@
 
 cd "$(dirname "$0")/.."
 
+# Portable ISO-ish stamp (BSD date lacks -Is).
+ts() { date '+%Y-%m-%dT%H:%M:%S%z'; }
+
 SCRIPT=select
 SETTIMES=2
 RUNTIME=90
@@ -35,17 +38,19 @@ pin() {
   mv params.tmp params
 }
 
+FACES_FAILED=0
 run_face() {
   local sockets=$1 prepared=$2 skip=$3
   pin SOCKETS "$sockets"
   pin PREPARED "$prepared"
   pin SKIPINIT "$skip"
-  echo "$(date -Is) face SOCKETS=$sockets PREPARED=$prepared SKIPINIT=$skip"
+  echo "$(ts) face SOCKETS=$sockets PREPARED=$prepared SKIPINIT=$skip"
   ./runset
   local rc=$?
-  echo "$(date -Is) face done rc=$rc SOCKETS=$sockets PREPARED=$prepared"
+  echo "$(ts) face done rc=$rc SOCKETS=$sockets PREPARED=$prepared"
   if [ "$rc" -ne 0 ]; then
     echo "WARNING: runset exited $rc — continuing remaining faces"
+    FACES_FAILED=1
   fi
 }
 
@@ -57,4 +62,9 @@ run_face 1 1 "$SKIP_FIRST"
 run_face 1 0 1
 run_face 0 1 1
 run_face 0 0 1
-echo "$(date -Is) four faces done"
+echo "$(ts) four faces done"
+if [ "$FACES_FAILED" -eq 0 ]; then
+  util/notify-done done "four faces done"
+else
+  util/notify-done failed "four faces finished with runset errors"
+fi

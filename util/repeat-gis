@@ -59,4 +59,9 @@ while [ ! -f ${STATEDIR}/complete ] ; do
   fi
 done
 rm -f ${STATEDIR}/complete ${STATEDIR}/pgbent.pid
+if [ "$FAILED" -eq 0 ]; then
+  util/notify-done done "repeat-gis complete"
+else
+  util/notify-done failed "repeat-gis stopped"
+fi
 exit $FAILED
