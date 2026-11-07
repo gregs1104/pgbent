@@ -37,6 +37,22 @@ Mean across repeats (4 faces). **tps_1** is the old single-core cell; **tps_32**
 
 <!-- select-leaderboard:end -->
 
+<!-- select-platform-compare:begin -->
+
+One chart for the best **sockets prepared** run on each machine at **1** and **32** clients. Bar length is relative to the lead system on that metric (**100%** = that system's value). Labels are the raw values. A longer **kJ** bar means more energy used, not more efficiency. **txn/J** is transactions per joule on the same 32-client run — total transactions over total package joules.
+
+**Apple M4 Max Studio** (abbey) is waiting on its PG18 SELECT pin — the chart grows when that cell lands.
+
+![pgbench SELECT - Platform energy comparison]({{ '/images/select-leaderboard-compare.png' | relative_url }})
+
+| cpu | tps_1 | txn_j_1 | tps_32 | txn_j_32 | kJ_32 |
+| --- | --- | --- | --- | --- | --- |
+| R9 9950X | 133,410 | 2,219 | 2,059,359 | 10,410 | 17.8 |
+| i5-13600K | 94,465 | 3,015 | 776,201 | 5,477 | 12.8 |
+| NVIDIA P4242 | 74,020 | 3,732 | 532,505 | 7,491 | 6.4 |
+
+<!-- select-platform-compare:end -->
+
 `;` (`SCRIPT=nothing`) hits **280K TPS on a single client** (simple **281,019**, prepared **280,201**) and peaks at **4.05M** simple / **3.81M** prepared at 32 clients — the protocol ceiling. That's web scale. No query to plan, so preparation does not help; at many clients simple is a few percent ahead. Sockets `constant` (`SELECT 1`) at one client is **212,745** prepared (4.7 μs) / **179,635** simple (5.6 μs), and peaks at **2.96M** prepared / **2.48M** simple at 32. Execute of that query is +1.1 μs, planning it +0.9 μs, accounts lookup +2.9 μs on top. Unlike `;`, preparation helps `SELECT 1`. At one client the rates are just the inverse of the latency times. Breakdown: [1-client latency pieces]({{ '/workloads/select/#1-client-latency-pieces' | relative_url }}). Not on this ranking.
 
 ### Sockets
@@ -47,4 +63,4 @@ Unix-domain connections (`SOCKETS=1`). Clients run on the server. This is the po
 
 Localhost TCP (`host`) on this starter chart is protocol overhead on the same box, not a dedicated client. Unthrottled remote TCP is the face that can exceed on-box rates once the link is faster than ~10Gb/s. See [OSM Network Study]({{ '/results-summary/pg18/osm-network/' | relative_url }}) for link rate comparisons.
 
-Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/select-leaderboard.py --from-db` (runs `reports/select-leaderboard.sql`). Cross-major sockets-prepared trend: [Leaderboards § History]({{ '/leaderboards/#history-1' | relative_url }}). 19rc1 snapshot: [pgbench SELECT (PG19)]({{ '/results-summary/pg19/pgbench-select/' | relative_url }}). Older mixed-protocol grid: [pgbench SELECT (PG18 snapshot)]({{ '/results-summary/pg18/pgbench-select/' | relative_url }}). Workload notes: [pgbench SELECT]({{ '/workloads/select/' | relative_url }}).
+Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/select-leaderboard.py --from-db` (runs `reports/select-leaderboard.sql` and `reports/select-platform.sql`). Cross-major sockets-prepared trend: [Leaderboards § History]({{ '/leaderboards/#history-1' | relative_url }}). 19rc1 snapshot: [pgbench SELECT (PG19)]({{ '/results-summary/pg19/pgbench-select/' | relative_url }}). Older mixed-protocol grid: [pgbench SELECT (PG18 snapshot)]({{ '/results-summary/pg18/pgbench-select/' | relative_url }}). Workload notes: [pgbench SELECT]({{ '/workloads/select/' | relative_url }}).
