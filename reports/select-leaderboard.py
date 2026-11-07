@@ -4,8 +4,8 @@ Starter pgbench SELECT leaderboard from siren PG19 rc1.
 
 Graphs TPS and transactions/joule vs clients for the four conn_method
 faces (sockets vs localhost TCP, prepared vs simple), a cross-platform
-energy comparison for the four reference systems, and writes both into
-docs/leaderboards/select-performance-power.md.
+energy comparison and TPS-vs-kJ scatter for the four reference systems,
+and writes them into docs/leaderboards/select-performance-power.md.
 
 Usage:
     python3 reports/select-leaderboard.py --from-db
@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import io
+import math
 import os
 import re
 import subprocess
@@ -26,10 +27,12 @@ import pandas as pd
 from matplotlib.ticker import AutoMinorLocator, ScalarFormatter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from label_layout import LabelOffset, place_point_labels
 from pg18_style import (
     BAR_LABEL_FONTSIZE,
     LEADERBOARD_LEGEND_FONTSIZE,
     LEADERBOARD_Y_LABEL_FONTSIZE,
+    POINT_LABEL_FONTSIZE,
     use_pg18_style,
 )
 from release_paths import REPO_ROOT
@@ -41,10 +44,14 @@ POWER_PAGE = REPO_ROOT / "docs" / "leaderboards" / "select-performance-power.md"
 PUBLIC_IMAGE = REPO_ROOT / "docs" / "images" / "select-leaderboard.png"
 JOULES_IMAGE = REPO_ROOT / "docs" / "images" / "select-leaderboard-joules.png"
 COMPARE_IMAGE = REPO_ROOT / "docs" / "images" / "select-leaderboard-compare.png"
+SCATTER_IMAGE = REPO_ROOT / "docs" / "images" / "select-leaderboard-scatter.png"
 BLOCK_BEGIN = "<!-- select-leaderboard:begin -->"
 BLOCK_END = "<!-- select-leaderboard:end -->"
 COMPARE_BEGIN = "<!-- select-platform-compare:begin -->"
 COMPARE_END = "<!-- select-platform-compare:end -->"
+SCATTER_BEGIN = "<!-- select-platform-scatter:begin -->"
+SCATTER_END = "<!-- select-platform-scatter:end -->"
+SCATTER_MARKER_SIZE = 90
 
 TPS_COLOR = "#e4572e"
 TPS1_COLOR = "#f4a261"
@@ -404,6 +411,116 @@ def plot_platform_compare(df: pd.DataFrame, output: Path, show: bool = False) ->
     plt.close(fig)
 
 
+def _marker_x_gap(gap: float = 12) -> float:
+    return math.sqrt(SCATTER_MARKER_SIZE / math.pi) + gap
+
+
+SCATTER_LABEL_OVERRIDES = {
+    # Low-left cluster: Apple above its dot, NVIDIA to the right.
+    # Mid/high x86: i5 right, R9 left so they do not share a lane.
+    "Apple M4 Max Studio": LabelOffset(0, 14, ha="center", va="bottom"),
+    "NVIDIA P4242": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
+    "i5-13600K": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
+    "R9 9950X": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
+}
+
+
+def cpu_color(cpu: str) -> str:
+    name = str(cpu)
+    if name.startswith("NVIDIA"):
+        return "#76B900"
+    if name[:1] == "A":
+        return "#000000"
+    if name[:1] == "i":
+        return "#0071C5"
+    if name[:1] == "R":
+        return "#ED1C24"
+    return "#333333"
+
+
+def plot_tps_vs_joules(df: pd.DataFrame, output: Path, show: bool = False) -> None:
+    """One point per machine: 32-client sockets-prepared TPS against kJ."""
+    pts = df.dropna(subset=["kj_32", "tps_32"]).copy()
+    if pts.empty:
+        raise SystemExit("No package_joules on SELECT platform rows")
+    pts["tps_m"] = pts["tps_32"] / 1_000_000.0
+    use_pg18_style()
+    fig, ax = plt.subplots(figsize=(7.2, 4.6))
+    colors = [cpu_color(c) for c in pts["cpu"]]
+    ax.scatter(pts["kj_32"], pts["tps_m"], s=SCATTER_MARKER_SIZE, c=colors, zorder=3)
+    xmax = float(pts["kj_32"].max())
+    ymax = float(pts["tps_m"].max())
+    ax.set_xlim(-xmax * 0.04, xmax * 1.14)
+    ax.set_ylim(0, ymax * 1.22)
+    ax.set_xlabel("Package energy (kJ)")
+    ax.set_ylabel("Millions of TPS @ 32")
+    ax.set_title("SELECT TPS vs Total Power Use")
+    ax.xaxis.set_minor_locator(AutoMinorLocator())
+    ax.yaxis.set_minor_locator(AutoMinorLocator())
+    ax.tick_params(which="major", length=6)
+    ax.tick_params(which="minor", length=3)
+    ax.grid(True, which="major", linestyle="--", alpha=0.4)
+    ax.grid(True, which="minor", linestyle=":", alpha=0.25)
+    plain_axis(ax, y=True)
+    fig.tight_layout()
+    place_point_labels(
+        ax,
+        pts["cpu"].astype(str),
+        pts["kj_32"],
+        pts["tps_m"],
+        colors,
+        POINT_LABEL_FONTSIZE,
+        overrides=SCATTER_LABEL_OVERRIDES,
+    )
+    output.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output, dpi=160, bbox_inches="tight")
+    print(f"Wrote {output} ({len(pts)} systems)")
+    if show:
+        plt.show()
+    plt.close(fig)
+
+
+def format_kj(val) -> str:
+    if val is None or (isinstance(val, float) and pd.isna(val)):
+        return ""
+    text = f"{float(val):.1f}".rstrip("0").rstrip(".")
+    return text
+
+
+def scatter_takeaway(df: pd.DataFrame) -> str:
+    """Fastest x86 vs cheapest ARM on the 32-client sockets-prepared board."""
+    pts = df.dropna(subset=["kj_32", "tps_32"]).copy()
+    if pts.empty:
+        return ""
+    cpu = pts["cpu"].astype(str)
+    x86 = pts[cpu.str.match(r"^[Ri]")]
+    apple = pts[cpu.str.contains("Apple", case=False, regex=False)]
+    nvidia = pts[cpu.str.contains("NVIDIA", case=False, regex=False)]
+    if x86.empty or apple.empty:
+        return ""
+    fast = x86.sort_values("tps_32", ascending=False).iloc[0]
+    arm = apple.sort_values("kj_32", ascending=True).iloc[0]
+    tps_x = float(fast["tps_32"]) / float(arm["tps_32"])
+    joule_x = float(fast["kj_32"]) / float(arm["kj_32"])
+    bits = [
+        "You can potentially get 5× the TPS running on the fastest x86 instead of ARM, "
+        "but it costs ~10× as much energy to juice up the processors to do it. "
+        f"**{fast['cpu']}** does **{format_tps(fast['tps_32'])}** TPS at "
+        f"**{format_kj(fast['kj_32'])} kJ**; **{arm['cpu']}** does "
+        f"**{format_tps(arm['tps_32'])}** at "
+        f"**{format_kj(arm['kj_32'])} kJ** "
+        f"(**{tps_x:.1f}×** TPS, **{joule_x:.1f}×** joules)."
+    ]
+    if not nvidia.empty:
+        nv = nvidia.sort_values("tps_32", ascending=False).iloc[0]
+        nv_x = float(fast["tps_32"]) / float(nv["tps_32"])
+        bits.append(
+            f"Versus NVIDIA Grace the TPS ratio is **{nv_x:.1f}×** "
+            f"({format_tps(fast['tps_32'])} vs {format_tps(nv['tps_32'])})."
+        )
+    return " ".join(bits)
+
+
 def compare_markdown(table_md: str, n_systems: int) -> str:
     abbey_note = ""
     if n_systems < 4:
@@ -425,6 +542,25 @@ def compare_markdown(table_md: str, n_systems: int) -> str:
         "({{ '/images/select-leaderboard-compare.png' | relative_url }})\n\n"
         f"{table_md}\n\n"
         f"{COMPARE_END}"
+    )
+
+
+def scatter_markdown(df: pd.DataFrame) -> str:
+    takeaway = scatter_takeaway(df)
+    body = (
+        "Speed vs energy for the best **sockets prepared** run on each machine at "
+        "**32** clients. **TPS** is the SELECT rate; **kJ** is total package energy "
+        "from the 1-second power integral over the 90s window. Same pin cells as the "
+        "comparison bars above."
+    )
+    if takeaway:
+        body = f"{body}\n\n{takeaway}"
+    return (
+        f"{SCATTER_BEGIN}\n\n"
+        "![SELECT TPS vs package energy]"
+        "({{ '/images/select-leaderboard-scatter.png' | relative_url }})\n\n"
+        f"{body}\n\n"
+        f"{SCATTER_END}"
     )
 
 
@@ -480,12 +616,18 @@ def main() -> None:
         if col in platform.columns:
             platform[col] = pd.to_numeric(platform[col])
     plot_platform_compare(platform, COMPARE_IMAGE, show=args.show)
+    plot_tps_vs_joules(platform, SCATTER_IMAGE, show=args.show)
     platform_md = platform_dataframe_to_markdown(platform_table(platform))
     compare_inner = compare_markdown(platform_md, n_systems=len(platform))
+    scatter_inner = scatter_markdown(platform)
 
     text = args.page.read_text(encoding="utf-8")
     text = replace_marked_block(text, BLOCK_BEGIN, BLOCK_END, block_markdown(table_md, n_faces=len(ranking)))
     text = replace_marked_block(text, COMPARE_BEGIN, COMPARE_END, compare_inner)
+    if SCATTER_BEGIN in text and SCATTER_END in text:
+        text = replace_marked_block(text, SCATTER_BEGIN, SCATTER_END, scatter_inner)
+    else:
+        text = text.replace(COMPARE_END, f"{COMPARE_END}\n\n{scatter_inner}", 1)
     args.page.write_text(text, encoding="utf-8")
     print(f"Wrote {len(ranking)} faces + {len(platform)} platforms into {args.page}")
 
