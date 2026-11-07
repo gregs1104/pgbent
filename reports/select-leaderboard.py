@@ -273,17 +273,22 @@ def _text_width_data(ax, text: str, fontsize: float, renderer) -> float:
 
 
 def _label_barh_values(ax, items: list[tuple], fontsize: float = BAR_LABEL_FONTSIZE) -> None:
-    ax.figure.canvas.draw()
-    renderer = ax.figure.canvas.get_renderer()
+    """Prefer inside-bar labels; never stretch xlim past the lead bar (100%)."""
     xmax = max(item[1] for item in items)
     pad = max(xmax * 0.02, 2)
     inner_pad = max(xmax * 0.015, 1.5)
-    max_x = xmax
+    # Lock the axis first so text-width math and labels stay on the same scale.
+    ax.set_xlim(0, xmax + pad)
+    ax.figure.canvas.draw()
+    renderer = ax.figure.canvas.get_renderer()
     for yi, width, color, label in items:
         text_width = _text_width_data(ax, label, fontsize, renderer)
-        if text_width + inner_pad * 2 <= width:
+        fits_inside = text_width + inner_pad * 2 <= width
+        # Outside only when the label stays within the fixed axis.
+        fits_outside = width + pad + text_width <= xmax + pad
+        if fits_inside or not fits_outside:
             ax.text(
-                width - inner_pad,
+                max(width - inner_pad, inner_pad),
                 yi,
                 label,
                 va="center",
@@ -292,12 +297,9 @@ def _label_barh_values(ax, items: list[tuple], fontsize: float = BAR_LABEL_FONTS
                 color=_contrast_text_color(color),
                 clip_on=True,
             )
-            max_x = max(max_x, width)
         else:
-            x = width + pad
-            outside_width = _text_width_data(ax, label, fontsize, renderer)
             ax.text(
-                x,
+                width + pad,
                 yi,
                 label,
                 va="center",
@@ -306,8 +308,6 @@ def _label_barh_values(ax, items: list[tuple], fontsize: float = BAR_LABEL_FONTS
                 color=BAR_LABEL_OUTSIDE_COLOR,
                 clip_on=True,
             )
-            max_x = max(max_x, x + outside_width)
-    ax.set_xlim(0, max_x + pad)
 
 
 def _pct_of_leader(series: pd.Series, leader_value: float) -> pd.Series:
@@ -355,10 +355,12 @@ def plot_platform_compare(df: pd.DataFrame, output: Path, show: bool = False) ->
         raise SystemExit("No platform rows for the SELECT comparison chart")
 
     leader = plot_df.loc[plot_df["tps_32"].idxmax()]
-    tps32_pct = _pct_of_leader(plot_df["tps_32"], float(leader["tps_32"]))
-    tps1_pct = _pct_of_leader(plot_df["tps_1"], float(leader["tps_1"]))
-    txn_pct = _pct_of_leader(plot_df["txn_j_32"], float(leader["txn_j_32"]))
-    kj_pct = _pct_of_leader(plot_df["kj_32"], float(leader["kj_32"]))
+    # Cap at 100% so an efficiency outlier (e.g. Apple txn/J) does not
+    # stretch the axis; labels and the Markdown table keep the true values.
+    tps32_pct = _pct_of_leader(plot_df["tps_32"], float(leader["tps_32"])).clip(upper=100.0)
+    tps1_pct = _pct_of_leader(plot_df["tps_1"], float(leader["tps_1"])).clip(upper=100.0)
+    txn_pct = _pct_of_leader(plot_df["txn_j_32"], float(leader["txn_j_32"])).clip(upper=100.0)
+    kj_pct = _pct_of_leader(plot_df["kj_32"], float(leader["kj_32"])).clip(upper=100.0)
     n = len(plot_df)
     y = list(range(n))
     bar_h = 0.18
@@ -388,7 +390,7 @@ def plot_platform_compare(df: pd.DataFrame, output: Path, show: bool = False) ->
     plain_axis(ax)
     _label_barh_values(ax, items)
     ax.legend(
-        loc="lower right",
+        loc="center right",
         ncol=1,
         fontsize=LEADERBOARD_LEGEND_FONTSIZE,
         framealpha=0.92,
@@ -413,10 +415,11 @@ def compare_markdown(table_md: str, n_systems: int) -> str:
         f"{COMPARE_BEGIN}\n\n"
         "One chart for the best **sockets prepared** run on each machine at "
         "**1** and **32** clients. Bar length is relative to the lead system on "
-        "that metric (**100%** = that system's value). Labels are the raw "
-        "values. A longer **kJ** bar means more energy used, not more "
-        "efficiency. **txn/J** is transactions per joule on the same 32-client "
-        "run — total transactions over total package joules.\n\n"
+        "that metric (**100%** = that system's value); anything above the lead "
+        "is drawn at **100%**. Labels and the table are the raw values. A "
+        "longer **kJ** bar means more energy used, not more efficiency. "
+        "**txn/J** is transactions per joule on the same 32-client run — total "
+        "transactions over total package joules.\n\n"
         f"{abbey_note}"
         "![pgbench SELECT - Platform energy comparison]"
         "({{ '/images/select-leaderboard-compare.png' | relative_url }})\n\n"

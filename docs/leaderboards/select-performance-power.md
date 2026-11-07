@@ -39,7 +39,7 @@ Mean across repeats (4 faces). **tps_1** is the old single-core cell; **tps_32**
 
 <!-- select-platform-compare:begin -->
 
-One chart for the best **sockets prepared** run on each machine at **1** and **32** clients. Bar length is relative to the lead system on that metric (**100%** = that system's value). Labels are the raw values. A longer **kJ** bar means more energy used, not more efficiency. **txn/J** is transactions per joule on the same 32-client run — total transactions over total package joules.
+One chart for the best **sockets prepared** run on each machine at **1** and **32** clients. Bar length is relative to the lead system on that metric (**100%** = that system's value); anything above the lead is drawn at **100%**. Labels and the table are the raw values. A longer **kJ** bar means more energy used, not more efficiency. **txn/J** is transactions per joule on the same 32-client run — total transactions over total package joules.
 
 ![pgbench SELECT - Platform energy comparison]({{ '/images/select-leaderboard-compare.png' | relative_url }})
 
