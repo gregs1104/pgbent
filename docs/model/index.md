@@ -10,7 +10,13 @@ has_children: true
 
 Sample results from `pgbent` have been [published]({{ '/results-summary/pg18/' | relative_url }}) as a reference to good PostgreSQL tuning practice, validating some parts of the standard PG [tuning guide](https://wiki.postgresql.org/wiki/Tuning_Your_PostgreSQL_Server).  pgbent has primarily published benchmark results optimizing the Open Street Map loading process.  That provides way to validate whether the way that database is [tuned](https://github.com/gregs1104/pgbent/tree/main/conf) for checkpoints and buffer cache is optimal.  The PG 18 release cycle is retired here as static tables; the [PostgreSQL 19rc1 snapshot]({{ '/results-summary/pg19/' | relative_url }}) continues the series.
 
-There's already a [osm2pgsql tuning guide](https://osm2pgsql.org/doc/manual.html#tuning-the-postgresql-server) that accurately covers related information about this workload.  The [OSM workload](https://getbent.io/workloads/osm) page here covers similar ground.  Outside of the loading stages bounded by the OSM's node cache, the rest of the loading work benefits from classic OLTP checkpoint tuning work.
+There's already a [osm2pgsql tuning guide](https://osm2pgsql.org/doc/manual.html#tuning-the-postgresql-server) that accurately covers related information about this workload.  The [OSM workload](https://getbent.io/workloads/osm) page here covers similar ground.  Outside of the loading stages bounded by the OSM's node cache, the rest of the loading work benefits from classic OLTP checkpoint tuning work. Related GUCs covered in this model:
+
+- [shared_buffers]({{ '/model/shared_buffers' | relative_url }})
+- [checkpoint_timeout]({{ '/model/checkpoint_timeout' | relative_url }})
+- [max_wal_size]({{ '/model/max_wal_size' | relative_url }})
+
+![OSM checkpoint write rate vs interval]({{ '/images/pg18-osm-checkpoint-write.png' | relative_url }})
 
 ## History
 

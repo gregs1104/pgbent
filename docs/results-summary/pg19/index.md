@@ -15,15 +15,6 @@ Initial **19rc1** report. Package date **2026-10-15**, catalog **20261006**. The
 
 19 took the top leaderboard spots, with a tiny delta over 18. That's how this lab judges a release; it's easier than tracking medians. CPU-bound SELECT is the canary; OSM barely moved. Siren 19rc1 OSM set **108** closed the 9950X pack: durable **4.49h**, alternate **4.14h**. [OSM Power]({{ '/results-summary/pg19/osm-power/' | relative_url }}) uses court **19rc1** for NVIDIA Spark and Abbey **PG18** for the Studio (no 19 during RC).
 
-## Pin
-
-| | |
-| --- | --- |
-| PostgreSQL | **19rc1** (catalog **20261006**) |
-| Planet | current extract, **10.79 billion** nodes |
-| Board cell (SELECT) | scale 100, **90s**, `SETTIMES=2`, clients 1–64 |
-| OSM default | replica WAL, `fsync` on; fast cells (`fsync` off / `wal_level=minimal`) stay labeled |
-
 ## Studies
 
 - [OSM Leaderboard]({{ '/results-summary/pg19/osm-leaderboard/' | relative_url }}) — 19rc1 load ranking vs PG18 on the same CPUs
@@ -44,3 +35,12 @@ Network Mbps, checkpoint timeout, and dirty-memory sweeps from PG18 have not bee
 | twilight | i5-13600K | SELECT four faces; OSM fast + durable (beta4) |
 | court | NVIDIA Spark | SELECT four faces + sockets `;` / `SELECT 1`; OSM Power 19rc1 fast cell |
 | abbey | M4 Max Studio | PG18 OSM on the current Planet (OSM Power stand-in); no PG19 during RC |
+
+## Pin
+
+| | |
+| --- | --- |
+| PostgreSQL | **19rc1** (catalog **20261006**) |
+| Planet | current extract, **10.79 billion** nodes |
+| Board cell (SELECT) | scale 100, **90s**, `SETTIMES=2`, clients 1–64 |
+| OSM default | replica WAL, `fsync` on; fast cells (`fsync` off / `wal_level=minimal`) stay labeled |

@@ -150,12 +150,12 @@ def relation_titles(pg: str) -> tuple[str, str, str]:
         return (
             "PostgreSQL 16-17 OSM load: relation phase efficiency",
             "PostgreSQL 16-18 OSM load: relation throughput vs average power",
-            "PostgreSQL 16-18 OSM load: relations/second vs package energy",
+            "PG16-18 OSM load: Relations/s vs Energy",
         )
     return (
         f"PostgreSQL {pg} OSM load: relation phase efficiency",
         f"PostgreSQL {pg} OSM load: relation throughput vs average power",
-        f"PostgreSQL {pg} OSM load: relations/second vs package energy",
+        f"PG{pg} OSM load: Relations/s vs Energy",
     )
 
 
