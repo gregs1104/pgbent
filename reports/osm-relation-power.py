@@ -61,7 +61,12 @@ PG19_RELATION_SCATTER_LABEL_OVERRIDES: dict[str, LabelOffset] = {
 RELATION_JOULES_LABEL_OVERRIDES: dict[str, LabelOffset] = {
     "i5-13600K": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
     "R9 9950X": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
-    "R5 9600X": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
+    "R5 9600X": LabelOffset(
+        _marker_x_gap() - POINT_LABEL_FONTSIZE * 0.6,
+        -POINT_LABEL_FONTSIZE / 2,
+        ha="left",
+        va="center",
+    ),
     "Apple M4 Max Studio": LabelOffset(_marker_x_gap(), 12, ha="left", va="bottom"),
     "NVIDIA P4242": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
 }

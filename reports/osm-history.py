@@ -35,7 +35,8 @@ DEFAULT_CONN = "host=localhost dbname=results user=gsmith password=secret"
 # Longer tokens first so 9950X wins over bare X patterns.
 _BATCH_CPU_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"(?i)\b9950X\b"), "R9 9950X"),
-    (re.compile(r"(?i)\b9700X\b"), "R9 9700X"),
+    # Early sets were tagged 9700X; that SKU was never in the chassis — 9600X.
+    (re.compile(r"(?i)\b9700X\b"), "R5 9600X"),
     (re.compile(r"(?i)\b7700X\b"), "R9 7700X"),
     (re.compile(r"(?i)\b9600X\b"), "R5 9600X"),
     (re.compile(r"(?i)\b5950X\b"), "R9 5950X"),
@@ -59,8 +60,7 @@ _CROSS_HOST = re.compile(
 # Distinct shades within vendor families for multi-chip lines.
 CPU_COLORS: dict[str, str] = {
     "R9 5950X": "#D4A017",
-    "R9 7700X": "#00FFFF",  # matplotlib cyan — distinct from 9700X dark red
-    "R9 9700X": "#8B0000",
+    "R9 7700X": "#00FFFF",  # matplotlib cyan — distinct from AMD reds
     "R9 9950X": "#ED1C24",
     "R5 9600X": "#FF7F50",
     "i9-14900K": "#003D7A",
