@@ -62,13 +62,14 @@ Best OpenStreetMap planet load per **machine × version × durability** cell (ho
 
 <!-- osm-leaderboard-table:begin -->
 
-_Query returned 20 rows._
+_Query returned 22 rows._
 
 | cpu | mem_gb | disk | ver | fsync | wal_level | max_wal_gb | conn | hours | score_kips | overall_kips | index_kips | rel_ps | avg_write | max_write | avg_read | max_read | pwr_est | avg_pkg | max_pkg | kj | score_per_watt | overall_per_watt | index_per_watt | wal |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | R9 9950X | 124 | SK51 2TB | 19 | off | minimal | 100 | host | 4.17 | 1480 | 719 | 364 | 4529 | 79 | 7772 | 68 | 9748 |  | 70 | 180 | 1046 | 8.2 | 4 | 2 | 20.4 |
 | i5-13600K | 188 | Fury G5 4TB | 19 | off | minimal | 100 | host | 4.78 | 1407 | 628 | 410 | 4590 | 51 | 9692 | 42 | 9342 |  | 48 | 146 | 824 | 9.6 | 4.3 | 2.8 | 17.8 |
 | R9 9950X | 124 | SK51 2TB | 18 | off | minimal | 100 | host | 4.07 | 1393 | 736 | 338 | 4560 | 84 | 7221 | 72 | 9477 |  | 71 | 199 | 1044 | 7 | 3.7 | 1.7 | 20.8 |
+| R5 9600X | 124 | SK51 2TB | 19 | off | minimal | 100 | host | 4.25 | 1354 | 706 | 403 | 4356 | 80 | 5533 | 70 | 9505 |  | 58 | 88 | 889 | 15.3 | 8 | 4.6 | 20 |
 | i5-13600K | 188 | Fury G5 4TB | 18 | off | minimal | 256 | host | 4.8 | 1310 | 625 | 319 | 4364 | 52 | 9742 | 43 | 7627 |  | 50 | 151 | 859 | 8.7 | 4.1 | 2.1 | 17.6 |
 | i5-13600K | 125 | Fury G5 4TB | 19 | off | minimal | 100 | host | 5.01 | 1213 | 599 | 383 | 4146 | 58 | 7331 | 41 | 8970 |  | 46 | 150 | 833 | 8.1 | 4 | 2.6 | 52.8 |
 | R9 9950X | 124 | SK51 2TB | 19 | on | replica | 100 | host | 4.34 | 1203 | 690 | 282 | 4516 | 106 | 6099 | 67 | 9666 |  | 70 | 183 | 1100 | 6.6 | 3.8 | 1.5 | 97.1 |
@@ -85,6 +86,7 @@ _Query returned 20 rows._
 | NVIDIA P4242 | 119 | Samsung MZAL | 19 | off | minimal | 100 | host | 8.3 | 521 | 361 | 263 | 1095 | 124 | 6351 | 110 | 9627 |  | 23 | 89 | 701 | 5.9 | 4.1 | 3 | 10.3 |
 | NVIDIA P4242 | 119 | Samsung MZAL | 19 | on | replica | 100 | host | 8.32 | 476 | 360 | 178 | 1150 | 169 | 7935 | 108 | 10599 |  | 25 | 86 | 756 | 5.5 | 4.2 | 2.1 | 50.7 |
 | NVIDIA P4242 | 119 | Samsung MZAL | 18 | on | replica | 100 | host | 8.68 | 454 | 346 | 195 | 1124 | 172 | 5262 | 105 | 9921 |  | 23 | 92 | 729 | 4.9 | 3.8 | 2.1 | 53 |
+| Apple M4 Max Studio | 128 | Apple AP2048 | 18 | off | replica | 100 | host | 8.75 | 407 | 343 | 123 | 1386 | 368 | 4230 | 368 | 4230 |  | 9 | 27 | 285 | 15.1 | 12.8 | 4.6 | 52.6 |
 | Apple M4 Max Studio | 128 | Apple AP2048 | 18 | on | replica | 100 | host | 11.1 | 265 | 270 | 69 | 1396 | 285 | 4578 | 285 | 4578 |  | 7 | 25 | 270 | 10.8 | 11 | 2.8 | 41.6 |
 
 <!-- osm-leaderboard-table:end -->

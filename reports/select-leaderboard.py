@@ -416,10 +416,10 @@ def _marker_x_gap(gap: float = 12) -> float:
 
 
 SCATTER_LABEL_OVERRIDES = {
-    # Low-left cluster: Apple above its dot, NVIDIA to the right.
-    # Mid/high x86: i5 right, R9 left so they do not share a lane.
+    # 9600X sits just right of NVIDIA; put 9600X above and NVIDIA right.
     "Apple M4 Max Studio": LabelOffset(0, 14, ha="center", va="bottom"),
     "NVIDIA P4242": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
+    "R5 9600X": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
     "i5-13600K": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
     "R9 9950X": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
 }
@@ -433,6 +433,9 @@ def cpu_color(cpu: str) -> str:
         return "#000000"
     if name[:1] == "i":
         return "#0071C5"
+    # Same coral as SELECT/OSM history charts for the 9600X series.
+    if "9600X" in name or name.startswith("R5"):
+        return "#FF7F50"
     if name[:1] == "R":
         return "#ED1C24"
     return "#333333"

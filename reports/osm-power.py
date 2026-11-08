@@ -67,11 +67,18 @@ PG19_CHART_LABEL_OVERRIDES: dict[str, dict[str, LabelOffset]] = {
         "Apple M4 Max Studio": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
         "NVIDIA P4242": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
         "i5-13600K": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
+        "R5 9600X": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
         "R9 9950X": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
     },
     "overall_kips": {
-        "Apple M4 Max Studio": LabelOffset(_marker_x_gap(), 10, ha="left", va="bottom"),
+        "Apple M4 Max Studio": LabelOffset(
+            _marker_x_gap(), -6 + POINT_LABEL_FONTSIZE / 2, ha="left", va="center"
+        ),
+        "NVIDIA P4242": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
         "i5-13600K": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
+        # Nudge slightly below geometric center so the glyph box reads
+        # level with the marker (large point labels look high at dy=0).
+        "R5 9600X": LabelOffset(_marker_x_gap(), -6, ha="left", va="center"),
         "R9 9950X": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
     },
 }
@@ -85,6 +92,9 @@ def cpu_color(cpu: str) -> str:
         return "#000000"
     if name[:1] == "i":
         return "#0071C5"
+    # Same coral as SELECT/OSM history charts for the 9600X series.
+    if "9600X" in name or name.startswith("R5"):
+        return "#FF7F50"
     if name[:1] == "R":
         return "#ED1C24"
     return DEFAULT_POINT_COLOR
@@ -237,7 +247,9 @@ def plot_single_throughput_vs_power(
     fig.tight_layout()
     if pg != "18":
         ymin, ymax = ax.get_ylim()
-        ax.set_ylim(ymin, ymax + (ymax - ymin) * 0.06)
+        # Extra headroom so a top-row label (9600X on total) can sit
+        # va=center without the override being rejected as off-grid.
+        ax.set_ylim(ymin, ymax + (ymax - ymin) * 0.12)
     overrides = (
         PG19_CHART_LABEL_OVERRIDES.get(metric_col)
         if pg != "18"

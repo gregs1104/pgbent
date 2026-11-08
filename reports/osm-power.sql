@@ -47,6 +47,8 @@ SELECT
       WHEN cpu LIKE 'NVIDIA%' THEN '#76B900'
       WHEN SUBSTRING(cpu FROM 1 FOR 1) = 'A' THEN '#000000'
       WHEN SUBSTRING(cpu FROM 1 FOR 1) = 'i' THEN '#0071C5'
+      -- Coral red matches the 9600X series on SELECT/OSM history charts.
+      WHEN cpu LIKE '%9600X%' OR SUBSTRING(cpu FROM 1 FOR 2) = 'R5' THEN '#FF7F50'
       WHEN SUBSTRING(cpu FROM 1 FOR 1) = 'R' THEN '#ED1C24'
     END AS cpu_c
 FROM best WHERE r = 1

@@ -25,13 +25,13 @@ Disk traces behind the OSM bars: [OSM Leaders: Performance vs. Power]({{ '/leade
 
 ## Not in this report
 
-Network Mbps, checkpoint timeout, and dirty-memory sweeps from PG18 have not been opened as PG19 studies. Abbey has not installed 19 during RC (Homebrew after GA). The 9600X joules-hole SKU is the next hardware swap on siren, not a published cell. OS upgrades on siren and twilight come after this pin.
+Network Mbps, checkpoint timeout, and dirty-memory sweeps from PG18 have not been opened as PG19 studies. Abbey has not installed 19 during RC (Homebrew after GA). Siren is back on the **9600X**; that mid-AM5 cell is on the SELECT and OSM power boards. OS upgrades on siren and twilight come after this pin.
 
 ## Machines
 
 | Host | CPU | In this report |
 | --- | --- | --- |
-| siren | R9 9950X | SELECT four faces; `;` / `SELECT 1` sockets; OSM set **108** durable **4.49h** + alternate **4.14h** (9950X testing closed) |
+| siren | R5 9600X (was R9 9950X) | 9950X pack closed (SELECT four faces; OSM set **108**). **9600X** SELECT set **118** + OSM set **117** now on the power boards |
 | twilight | i5-13600K | SELECT four faces; OSM fast + durable (beta4) |
 | court | NVIDIA Spark | SELECT four faces + sockets `;` / `SELECT 1`; OSM Power 19rc1 fast cell |
 | abbey | M4 Max Studio | PG18 OSM on the current Planet (OSM Power stand-in); no PG19 during RC |

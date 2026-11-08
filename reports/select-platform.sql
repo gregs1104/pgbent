@@ -1,7 +1,8 @@
--- Platform SELECT energy comparison: one row per reference system.
+-- Platform SELECT energy comparison: one row per reference CPU.
 -- Sockets prepared, scale-100 / 90s pin cells. Best TPS run at 1 and 32
 -- clients, with that run's package_joules (1-second power integral).
--- Abbey (Apple M4 Max Studio) joins when a PG18/19 SELECT pin lands.
+-- Siren contributes both R9 9950X (PG19 rc1) and R5 9600X; partition by
+-- stamped cpu so the AM5 pair both appear.
 
 WITH runs AS (
   SELECT
@@ -43,6 +44,7 @@ WITH runs AS (
     AND (
       s.info = 'PG19 rc1'
       OR s.info = 'PG19 rc1 SELECT four faces'
+      OR s.info = '9600X SELECT'
       OR (t.server = 'abbey' AND s.info ~* 'PG1[89]')
     )
 ),
@@ -54,7 +56,7 @@ ranked AS (
     tps,
     joules,
     trans,
-    row_number() OVER (PARTITION BY server, clients ORDER BY tps DESC) AS rn
+    row_number() OVER (PARTITION BY cpu, clients ORDER BY tps DESC) AS rn
   FROM runs
   WHERE joules IS NOT NULL AND joules > 0
 ),
@@ -80,6 +82,6 @@ SELECT
   b32.txn_per_j AS txn_j_32,
   round((b32.joules / 1000.0)::numeric, 1) AS kj_32
 FROM best b1
-JOIN best b32 ON b32.server = b1.server AND b32.clients = 32
+JOIN best b32 ON b32.cpu = b1.cpu AND b32.clients = 32
 WHERE b1.clients = 1
 ORDER BY b32.tps DESC;

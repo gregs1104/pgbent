@@ -158,9 +158,10 @@ def _marker_x_gap(gap: float = 12) -> float:
 
 
 JOULES_LABEL_OVERRIDES = {
-    # ~128 Gi board: both x86 peaks sit high-right — label left of marker.
-    "i5-13600K": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
+    # ~128 Gi board: 9950X high-right; 9600X / i5 share the mid band.
+    "i5-13600K": LabelOffset(-_marker_x_gap(), -8, ha="right", va="top"),
     "R9 9950X": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
+    "R5 9600X": LabelOffset(_marker_x_gap(), 8, ha="left", va="bottom"),
     "Apple M4 Max Studio": LabelOffset(0, 12, ha="center", va="bottom"),
     "NVIDIA P4242": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
 }
@@ -174,6 +175,9 @@ def cpu_color(cpu: str) -> str:
         return "#000000"
     if name[:1] == "i":
         return "#0071C5"
+    # Same coral as SELECT/OSM history charts for the 9600X series.
+    if "9600X" in name or name.startswith("R5"):
+        return "#FF7F50"
     if name[:1] == "R":
         return "#ED1C24"
     return "#333333"

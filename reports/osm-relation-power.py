@@ -51,14 +51,17 @@ RELATION_SCATTER_LABEL_OVERRIDES: dict[str, LabelOffset] = {
 
 PG19_RELATION_SCATTER_LABEL_OVERRIDES: dict[str, LabelOffset] = {
     "Apple M4 Max Studio": LabelOffset(_marker_x_gap(), 8, ha="left", va="bottom"),
+    "NVIDIA P4242": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
     "i5-13600K": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
-    "R9 9950X": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
+    "R5 9600X": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
+    "R9 9950X": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
 }
 
-# Same four points as the leaderboard score-vs-kJ chart; 9950X sits on the right edge.
+# Same points as the leaderboard score-vs-kJ chart; 9950X sits on the right edge.
 RELATION_JOULES_LABEL_OVERRIDES: dict[str, LabelOffset] = {
     "i5-13600K": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
     "R9 9950X": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
+    "R5 9600X": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
     "Apple M4 Max Studio": LabelOffset(_marker_x_gap(), 12, ha="left", va="bottom"),
     "NVIDIA P4242": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
 }
@@ -72,6 +75,9 @@ def cpu_color(cpu: str) -> str:
         return "#000000"
     if name[:1] == "i":
         return "#0071C5"
+    # Same coral as SELECT/OSM history charts for the 9600X series.
+    if "9600X" in name or name.startswith("R5"):
+        return "#FF7F50"
     if name[:1] == "R":
         return "#ED1C24"
     return DEFAULT_POINT_COLOR
