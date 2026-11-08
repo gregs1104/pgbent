@@ -44,7 +44,7 @@ Best OSM score per **x86** CPU across PostgreSQL majors.  Six years of history s
 
 Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/osm-history.py` (runs `reports/osm-history.sql`).
 
-Apple and NVIDIA lab hardware omitted, those systems are relatively new here.  This workload does not benefit very much from larger core or socket counts. Relation building does not fill a second CCD or a second socket; extra cores mostly add package watts. The past 9600X→9950X swap at PG17 barely moved the OSM score.
+Apple and NVIDIA lab hardware omitted, those systems are relatively new here.  This workload does not benefit very much from larger core or socket counts. Relation building does not fill a second CCD or a second socket; extra cores mostly add package watts.
 
 ### OSM Disk
 
