@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-OSM score history by reconstructed CPU across PostgreSQL majors.
+OSM score history by stamped CPU across PostgreSQL majors.
 
-Reads host-local osm2pgsql runs from submission, reconstructs CPU identity
-from set/batch names (reused chassis overwrite submission.cpu), then plots
-best score_kips per (cpu, major).
+Reads host-local osm2pgsql runs from submission and uses submission.cpu
+(tests.server_cpu mirrored at rebuild). Cross-host batches are excluded from
+the progression chart. Rising archive re-imports still need
+regress/rising-cpu-backfill.sql so stamps stay accurate.
 
 Usage:
   MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" \\
@@ -32,25 +33,10 @@ SQL_PATH = REPO_ROOT / "reports" / "osm-history.sql"
 PUBLIC_IMAGE = REPO_ROOT / "docs" / "images" / "osm-history.png"
 DEFAULT_CONN = "host=localhost dbname=results user=gsmith password=secret"
 
-# Longer tokens first so 9950X wins over bare X patterns.
-_BATCH_CPU_PATTERNS: list[tuple[re.Pattern[str], str]] = [
-    (re.compile(r"(?i)\b9950X\b"), "R9 9950X"),
-    # Early sets were tagged 9700X; that SKU was never in the chassis — 9600X.
-    (re.compile(r"(?i)\b9700X\b"), "R5 9600X"),
-    (re.compile(r"(?i)\b7700X\b"), "R7 7700X"),
-    (re.compile(r"(?i)\b9600X\b"), "R5 9600X"),
-    (re.compile(r"(?i)\b5950X\b"), "R9 5950X"),
-    (re.compile(r"(?i)\bi?9-?14900K\b"), "i9-14900K"),
-    (re.compile(r"(?i)\b14900K\b"), "i9-14900K"),
-    (re.compile(r"(?i)\bi?5-?13600K\b"), "i5-13600K"),
-    (re.compile(r"(?i)\b13600K\b"), "i5-13600K"),
-    (re.compile(r"(?i)\bi?3-?13100K?\b"), "i3-13100"),
-    (re.compile(r"(?i)\b13100K\b"), "i3-13100"),
-    (re.compile(r"(?i)\bM4\s*Max\s*Studio\b"), "Apple M4 Max Studio"),
-    (re.compile(r"(?i)\bM4\s*Max\b"), "Apple M4 Max"),
-    (re.compile(r"(?i)\bM1\s*Pro\b"), "Apple M1 Pro"),
-    (re.compile(r"(?i)\b(NVIDIA|DGX|Spark|P4242)\b"), "NVIDIA P4242"),
-]
+# Defensive renames if an old archive stamp slips through.
+_CPU_ALIASES = {
+    "R9 7700X": "R7 7700X",
+}
 
 _CROSS_HOST = re.compile(
     r"(?i)(\bClient\b|^Server\s+\w+|\bC\s+\w+\s+S\s+\w+|\w+\s+C\s+\w+\s+S\b|"
@@ -109,80 +95,26 @@ def fetch_sql_table(sql_path: Path, conn: str) -> pd.DataFrame:
     return df
 
 
-def parse_cpu_from_batch(batch: str) -> str | None:
-    text = str(batch or "")
-    for pattern, label in _BATCH_CPU_PATTERNS:
-        if pattern.search(text):
-            return label
-    return None
-
-
-def normalize_cpu(raw: str) -> str | None:
-    text = str(raw or "").strip()
-    if not text:
+def normalize_cpu(raw: object) -> str | None:
+    if raw is None or (isinstance(raw, float) and pd.isna(raw)):
         return None
-    from_batch = parse_cpu_from_batch(text)
-    if from_batch:
-        return from_batch
-    if text.startswith("AMD ") or text.startswith("R") or text.startswith("i"):
-        return text
-    if text.startswith("Apple") or text.startswith("NVIDIA"):
-        return text
-    return text
-
-
-def is_trustworthy_stamp(cpu: str) -> bool:
-    """Stamps that are not known to be rewritten on reused AMD chassis."""
-    name = str(cpu or "")
-    return (
-        name.startswith("Apple")
-        or name.startswith("NVIDIA")
-        or name.startswith("i")
-        or name.startswith("R5")
-    )
+    text = str(raw).strip()
+    if not text or text.lower() == "nan":
+        return None
+    return _CPU_ALIASES.get(text, text)
 
 
 def is_cross_host(batch: str) -> bool:
     return bool(_CROSS_HOST.search(str(batch or "")))
 
 
-def reconstruct_cpu(df: pd.DataFrame) -> pd.DataFrame:
+def stamp_cpu(df: pd.DataFrame) -> pd.DataFrame:
+    """Label each row from submission.cpu, falling back to server.server_cpu."""
     out = df.copy()
     out["batch"] = out["batch"].fillna("")
-    out["cpu"] = out["cpu"].fillna("").astype(str).str.strip()
-    out["server_cpu"] = out["server_cpu"].fillna("").astype(str).str.strip()
-    out = out.sort_values(["server", "run", "batch_id", "test"]).reset_index(drop=True)
-
-    hist: list[str] = []
-    carried: dict[str, str] = {}
-    for row in out.itertuples(index=False):
-        server = str(row.server)
-        from_batch = parse_cpu_from_batch(row.batch)
-        stamped = normalize_cpu(row.cpu)
-        server_fb = normalize_cpu(row.server_cpu)
-
-        if from_batch:
-            cpu = from_batch
-            # Cross-host / two-server one-offs label that row only; do not
-            # poison the chassis carry (rising 7700X guest, then back to 5950X).
-            if not is_cross_host(row.batch):
-                carried[server] = cpu
-        elif server in carried:
-            cpu = carried[server]
-        elif stamped and is_trustworthy_stamp(stamped):
-            cpu = stamped
-            carried[server] = cpu
-        elif server_fb:
-            cpu = server_fb
-            carried[server] = cpu
-        elif stamped:
-            cpu = stamped
-            carried[server] = cpu
-        else:
-            cpu = "unknown"
-        hist.append(cpu)
-
-    out["cpu_hist"] = hist
+    stamped = out["cpu"].map(normalize_cpu)
+    fallback = out["server_cpu"].map(normalize_cpu)
+    out["cpu_hist"] = stamped.combine_first(fallback).fillna("unknown")
     return out
 
 
@@ -267,10 +199,10 @@ def main() -> int:
     use_pg18_style()
     args = parse_args()
     raw = fetch_sql_table(args.sql, args.conn)
-    hist = reconstruct_cpu(raw)
+    hist = stamp_cpu(raw)
     best = best_by_cpu_major(hist)
     if best.empty:
-        raise SystemExit("No points after CPU reconstruction and filters")
+        raise SystemExit("No points after CPU stamps and filters")
     # Sanity dump for lab review.
     summary = (
         best.groupby("cpu_hist")["major"]

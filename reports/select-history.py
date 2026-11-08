@@ -4,9 +4,9 @@ pgbench SELECT TPS history by CPU across PostgreSQL majors.
 
 Only the sockets-prepared face — matching the public leaderboard cell.
 Face comes from tests.conn_method when present, else from set/batch names
-(older archives had no conn column). CPU labels reuse the OSM history
-reconstruction rules. SQL reads tests/testset directly (after ./download);
-a submission rebuild is not required for this chart.
+(older archives had no conn column). CPU comes from tests.server_cpu
+(same stamped path as OSM history). SQL reads tests/testset directly
+(after ./download); a submission rebuild is not required for this chart.
 
 Usage:
   MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" \\
@@ -35,21 +35,9 @@ SQL_PATH = REPO_ROOT / "reports" / "select-history.sql"
 PUBLIC_IMAGE = REPO_ROOT / "docs" / "images" / "select-history.png"
 DEFAULT_CONN = "host=localhost dbname=results user=gsmith password=secret"
 
-_BATCH_CPU_PATTERNS: list[tuple[re.Pattern[str], str]] = [
-    (re.compile(r"(?i)\b9950X\b"), "R9 9950X"),
-    # Early sets were tagged 9700X; that SKU was never in the chassis — 9600X.
-    (re.compile(r"(?i)\b9700X\b"), "R5 9600X"),
-    (re.compile(r"(?i)\b7700X\b"), "R7 7700X"),
-    (re.compile(r"(?i)\b9600X\b"), "R5 9600X"),
-    (re.compile(r"(?i)\b5950X\b"), "R9 5950X"),
-    (re.compile(r"(?i)\b3950X\b"), "R9 3950X"),
-    (re.compile(r"(?i)\bi?9-?14900K\b"), "i9-14900K"),
-    (re.compile(r"(?i)\b14900K\b"), "i9-14900K"),
-    (re.compile(r"(?i)\bi?5-?13600K\b"), "i5-13600K"),
-    (re.compile(r"(?i)\b13600K\b"), "i5-13600K"),
-    (re.compile(r"(?i)\bi?3-?13100K?\b"), "i3-13100"),
-    (re.compile(r"(?i)\b13100K\b"), "i3-13100"),
-]
+_CPU_ALIASES = {
+    "R9 7700X": "R7 7700X",
+}
 
 _CROSS_HOST = re.compile(
     r"(?i)(\bClient\b|^Server\s+\w+|\bC\s+\w+\s+S\s+\w+|\w+\s+C\s+\w+\s+S\b|"
@@ -120,22 +108,13 @@ def fetch_sql_table(sql_path: Path, conn: str) -> pd.DataFrame:
     return df
 
 
-def parse_cpu_from_batch(batch: str) -> str | None:
-    text = str(batch or "")
-    for pattern, label in _BATCH_CPU_PATTERNS:
-        if pattern.search(text):
-            return label
-    return None
-
-
-def normalize_cpu(raw: str) -> str | None:
-    text = str(raw or "").strip()
-    if not text:
+def normalize_cpu(raw: object) -> str | None:
+    if raw is None or (isinstance(raw, float) and pd.isna(raw)):
         return None
-    from_batch = parse_cpu_from_batch(text)
-    if from_batch:
-        return from_batch
-    return text
+    text = str(raw).strip()
+    if not text or text.lower() == "nan":
+        return None
+    return _CPU_ALIASES.get(text, text)
 
 
 def is_cross_host(batch: str) -> bool:
@@ -157,42 +136,14 @@ def batch_major(batch: str) -> int | None:
     return int(m.group(1))
 
 
-def reconstruct_cpu(df: pd.DataFrame) -> pd.DataFrame:
+def stamp_cpu(df: pd.DataFrame) -> pd.DataFrame:
+    """Label each row from tests.server_cpu, falling back to server.server_cpu."""
     out = df.copy()
     out["batch"] = out["batch"].fillna("")
-    out["cpu"] = out["cpu"].fillna("").astype(str).str.strip()
-    out["server_cpu"] = out["server_cpu"].fillna("").astype(str).str.strip()
     out["conn"] = out["conn"].fillna("").astype(str).str.strip()
-    out = out.sort_values(["server", "run", "batch_id", "test"]).reset_index(drop=True)
-
-    hist: list[str] = []
-    carried: dict[str, str] = {}
-    for row in out.itertuples(index=False):
-        server = str(row.server)
-        from_batch = parse_cpu_from_batch(row.batch)
-        stamped = normalize_cpu(row.cpu)
-        server_fb = normalize_cpu(row.server_cpu)
-
-        # Prefer an explicit set-name chip, then the stamped cpu on the row.
-        # Do not let an older carry (e.g. siren 7700X SELECT sets) override a
-        # later stamped identity on the same chassis.
-        if from_batch:
-            cpu = from_batch
-            if not is_cross_host(row.batch):
-                carried[server] = cpu
-        elif stamped:
-            cpu = stamped
-            carried[server] = cpu
-        elif server in carried:
-            cpu = carried[server]
-        elif server_fb:
-            cpu = server_fb
-            carried[server] = cpu
-        else:
-            cpu = "unknown"
-        hist.append(cpu)
-
-    out["cpu_hist"] = hist
+    stamped = out["cpu"].map(normalize_cpu)
+    fallback = out["server_cpu"].map(normalize_cpu)
+    out["cpu_hist"] = stamped.combine_first(fallback).fillna("unknown")
     return out
 
 
@@ -323,7 +274,7 @@ def main() -> int:
     use_pg18_style()
     args = parse_args()
     raw = fetch_sql_table(args.sql, args.conn)
-    hist = reconstruct_cpu(raw)
+    hist = stamp_cpu(raw)
     best = best_by_cpu_major(hist)
     if best.empty:
         raise SystemExit("No sockets-prepared SELECT points after filters")

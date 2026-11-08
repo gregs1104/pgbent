@@ -1,7 +1,5 @@
 -- OSM history: host-local planet loads for CPU × PostgreSQL major progression.
--- CPU identity is reconstructed in reports/osm-history.py from batch names
--- (reused chassis overwrite submission.cpu). server_cpu is the server-table
--- fallback when rising left cpu blank.
+-- reports/osm-history.py uses submission.cpu; server.server_cpu is fallback.
 
 SELECT
   s.server,

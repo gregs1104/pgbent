@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-OSM peak disk R/W history by reconstructed CPU across PostgreSQL majors.
+OSM peak disk R/W history by stamped CPU across PostgreSQL majors.
 
 Best per (cpu, major) of max(max_write_mbps, max_read_mbps) from host-local
-osm2pgsql runs. Same CPU reconstruction and x86 filter as osm-history.py.
+osm2pgsql runs. Same stamped-CPU path and x86 filter as osm-history.py.
 
 Usage:
   MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" \\
@@ -31,21 +31,9 @@ SQL_PATH = REPO_ROOT / "reports" / "osm-disk-history.sql"
 PUBLIC_IMAGE = REPO_ROOT / "docs" / "images" / "osm-disk-history.png"
 DEFAULT_CONN = "host=localhost dbname=results user=gsmith password=secret"
 
-_BATCH_CPU_PATTERNS: list[tuple[re.Pattern[str], str]] = [
-    (re.compile(r"(?i)\b9950X\b"), "R9 9950X"),
-    # Early sets were tagged 9700X; that SKU was never in the chassis — 9600X.
-    (re.compile(r"(?i)\b9700X\b"), "R5 9600X"),
-    (re.compile(r"(?i)\b7700X\b"), "R7 7700X"),
-    (re.compile(r"(?i)\b9600X\b"), "R5 9600X"),
-    (re.compile(r"(?i)\b5950X\b"), "R9 5950X"),
-    (re.compile(r"(?i)\b3950X\b"), "R9 3950X"),
-    (re.compile(r"(?i)\bi?9-?14900K\b"), "i9-14900K"),
-    (re.compile(r"(?i)\b14900K\b"), "i9-14900K"),
-    (re.compile(r"(?i)\bi?5-?13600K\b"), "i5-13600K"),
-    (re.compile(r"(?i)\b13600K\b"), "i5-13600K"),
-    (re.compile(r"(?i)\bi?3-?13100K?\b"), "i3-13100"),
-    (re.compile(r"(?i)\b13100K\b"), "i3-13100"),
-]
+_CPU_ALIASES = {
+    "R9 7700X": "R7 7700X",
+}
 
 _CROSS_HOST = re.compile(
     r"(?i)(\bClient\b|^Server\s+\w+|\bC\s+\w+\s+S\s+\w+|\w+\s+C\s+\w+\s+S\b|"
@@ -100,63 +88,26 @@ def fetch_sql_table(sql_path: Path, conn: str) -> pd.DataFrame:
     return df
 
 
-def parse_cpu_from_batch(batch: str) -> str | None:
-    text = str(batch or "")
-    for pattern, label in _BATCH_CPU_PATTERNS:
-        if pattern.search(text):
-            return label
-    return None
-
-
-def normalize_cpu(raw: str) -> str | None:
-    text = str(raw or "").strip()
-    if not text:
+def normalize_cpu(raw: object) -> str | None:
+    if raw is None or (isinstance(raw, float) and pd.isna(raw)):
         return None
-    from_batch = parse_cpu_from_batch(text)
-    if from_batch:
-        return from_batch
-    return text
+    text = str(raw).strip()
+    if not text or text.lower() == "nan":
+        return None
+    return _CPU_ALIASES.get(text, text)
 
 
 def is_cross_host(batch: str) -> bool:
     return bool(_CROSS_HOST.search(str(batch or "")))
 
 
-def reconstruct_cpu(df: pd.DataFrame) -> pd.DataFrame:
+def stamp_cpu(df: pd.DataFrame) -> pd.DataFrame:
+    """Label each row from submission.cpu, falling back to server.server_cpu."""
     out = df.copy()
     out["batch"] = out["batch"].fillna("")
-    out["cpu"] = out["cpu"].fillna("").astype(str).str.strip()
-    out["server_cpu"] = out["server_cpu"].fillna("").astype(str).str.strip()
-    out = out.sort_values(["server", "run", "batch_id", "test"]).reset_index(drop=True)
-
-    hist: list[str] = []
-    carried: dict[str, str] = {}
-    for row in out.itertuples(index=False):
-        server = str(row.server)
-        from_batch = parse_cpu_from_batch(row.batch)
-        stamped = normalize_cpu(row.cpu)
-        server_fb = normalize_cpu(row.server_cpu)
-
-        if from_batch:
-            cpu = from_batch
-            if not is_cross_host(row.batch):
-                carried[server] = cpu
-        elif server in carried:
-            cpu = carried[server]
-        elif stamped and (stamped.startswith("i") or stamped.startswith("R5")):
-            cpu = stamped
-            carried[server] = cpu
-        elif server_fb:
-            cpu = server_fb
-            carried[server] = cpu
-        elif stamped:
-            cpu = stamped
-            carried[server] = cpu
-        else:
-            cpu = "unknown"
-        hist.append(cpu)
-
-    out["cpu_hist"] = hist
+    stamped = out["cpu"].map(normalize_cpu)
+    fallback = out["server_cpu"].map(normalize_cpu)
+    out["cpu_hist"] = stamped.combine_first(fallback).fillna("unknown")
     return out
 
 
@@ -237,10 +188,10 @@ def main() -> int:
     use_pg18_style()
     args = parse_args()
     raw = fetch_sql_table(args.sql, args.conn)
-    hist = reconstruct_cpu(raw)
+    hist = stamp_cpu(raw)
     best = best_by_cpu_major(hist)
     if best.empty:
-        raise SystemExit("No points after CPU reconstruction and filters")
+        raise SystemExit("No points after CPU stamps and filters")
     summary = (
         best.groupby("cpu_hist")["major"]
         .agg(["min", "max", "count"])

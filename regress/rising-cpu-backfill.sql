@@ -1,10 +1,13 @@
 -- Backfill rising tests.server_cpu from set names + chronological carry-forward.
+-- Re-apply this file after any rising archive re-import (host is currently
+-- offline). Without it, set 86 comes back mislabeled as R9 7700X.
+--
 -- Early unnamed sets are still the 3950X era; set 32+ names 5950X.
 -- Set 86 "OSM Two Server 7700X": rising was the client (5950X); Postgres was
--- the 7700X box. client_info / server_cpu did not exist on the original
--- archive — fill them in the modern shape (client_info = rising, server_cpu
--- = remote 7700X). The 7700X token does not carry into later sets.
--- Also normalizes server.server_cpu and mirrors into submission.
+-- the R7 7700X box. client_info / server_cpu did not exist on the original
+-- archive — fill them in the modern shape (client_info = rising chassis,
+-- server_cpu = remote R7 7700X). The 7700X token does not carry into later
+-- sets. Also normalizes server.server_cpu and mirrors into submission.
 
 BEGIN;
 

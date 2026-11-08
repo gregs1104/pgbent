@@ -1,6 +1,7 @@
 -- pgbench SELECT history: host-local select script rows for CPU × major
 -- progression. Face filter (sockets prepared) is applied in
--- reports/select-history.py from conn and/or batch labels.
+-- reports/select-history.py from conn and/or batch labels; CPU comes from
+-- tests.server_cpu (server.server_cpu fallback).
 -- Reads tests/testset directly so a fresh ./download is enough (no
 -- submission rebuild required).
 

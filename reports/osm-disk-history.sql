@@ -1,6 +1,6 @@
 -- OSM disk history: host-local planet loads for peak read/write MB/s by
--- CPU × PostgreSQL major. CPU identity is reconstructed in
--- reports/osm-disk-history.py from batch names.
+-- CPU × PostgreSQL major. reports/osm-disk-history.py uses submission.cpu;
+-- server.server_cpu is fallback.
 
 SELECT
   s.server,
