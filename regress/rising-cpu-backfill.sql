@@ -13,7 +13,7 @@ WITH sets AS (
     set,
     info,
     CASE
-      WHEN info ~* '7700X' THEN 'R9 7700X'
+      WHEN info ~* '7700X' THEN 'R7 7700X'
       WHEN info ~* '5950X' THEN 'R9 5950X'
       WHEN info ~* '3950X' THEN 'R9 3950X'
     END AS parsed,
@@ -57,7 +57,7 @@ WHERE t.server = 'rising' AND t.set = r.set;
 -- Remote Postgres on the 7700X; rising (5950X) was the osm2pgsql client.
 UPDATE tests t
 SET
-  server_cpu = 'R9 7700X',
+  server_cpu = 'R7 7700X',
   client_info = 'R9 5950X  125GB'
 FROM testset ts
 WHERE t.server = 'rising'
