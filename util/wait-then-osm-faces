@@ -1,0 +1,29 @@
+#!/bin/bash
+# After the current util/repeat-gis OSM load exits, run durability faces.
+# Used mid-set when durable is already in flight (SKIP_FIRST=1).
+#
+# Usage (from pgbent root, typically under nohup):
+#   SKIP_FIRST=1 util/wait-then-osm-faces
+
+cd "$(dirname "$0")/.."
+
+ts() { date '+%Y-%m-%dT%H:%M:%S%z'; }
+
+echo "$(ts) waiting for durable repeat-gis / osm2pgsql to finish"
+
+# Match only real worker argv — not this script's path.
+while true; do
+  if pgrep -f '/bin/bash -x util/repeat-gis' >/dev/null 2>&1; then
+    sleep 60
+    continue
+  fi
+  if pgrep -f 'osm2pgsql --create' >/dev/null 2>&1; then
+    sleep 60
+    continue
+  fi
+  break
+done
+
+sleep 10
+echo "$(ts) durable done; starting wl/osm-durability-faces SKIP_FIRST=${SKIP_FIRST:-0}"
+exec ./wl/osm-durability-faces
