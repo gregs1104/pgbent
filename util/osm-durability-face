@@ -1,0 +1,109 @@
+#!/bin/bash
+# Activate one OSM durability 2×2 corner in the live conf.d and restart.
+# WAL volume and fsync waits only; full_page_writes stays on.
+#
+# Usage (from pgbent root, after sourcing config or with TESTPORT set):
+#   util/osm-durability-face replica on
+#   util/osm-durability-face minimal off
+#
+# Args: <wal_level: replica|minimal> <fsync: on|off>
+
+cd "$(dirname "$0")/.."
+# shellcheck source=/dev/null
+. ./config
+
+WAL=${1:-}
+FSYNC=${2:-}
+
+usage() {
+  echo "Usage: util/osm-durability-face <replica|minimal> <on|off>" >&2
+  exit 2
+}
+
+case "$WAL" in
+  replica|minimal) ;;
+  *) usage ;;
+esac
+case "$FSYNC" in
+  on|off) ;;
+  *) usage ;;
+esac
+
+if [ -z "$TESTPORT" ]; then
+  echo "osm-durability-face: TESTPORT unset" >&2
+  exit 1
+fi
+
+# Map TESTPORT → Debian/Ubuntu cluster version via pg_lsclusters.
+CLUSTER_VER=$(pg_lsclusters -h 2>/dev/null | awk -v p="$TESTPORT" '$3 == p { print $1; exit }')
+if [ -z "$CLUSTER_VER" ]; then
+  echo "osm-durability-face: no cluster on TESTPORT=$TESTPORT" >&2
+  exit 1
+fi
+
+CONF_D="/etc/postgresql/${CLUSTER_VER}/main/conf.d"
+if [ ! -d "$CONF_D" ]; then
+  echo "osm-durability-face: missing $CONF_D" >&2
+  exit 1
+fi
+
+activate_pair() {
+  local prefix=$1 want=$2
+  local other
+  case "$want" in
+    replica) other=minimal ;;
+    minimal) other=replica ;;
+    on) other=off ;;
+    off) other=on ;;
+    *) echo "osm-durability-face: bad pair want=$want" >&2; return 1 ;;
+  esac
+
+  # Prefer renaming whichever extension is present so exactly one is .conf.
+  if [ -f "$CONF_D/${prefix}-${want}.off" ]; then
+    sudo mv -f "$CONF_D/${prefix}-${want}.off" "$CONF_D/${prefix}-${want}.conf"
+  elif [ ! -f "$CONF_D/${prefix}-${want}.conf" ]; then
+    echo "osm-durability-face: missing ${prefix}-${want}.conf/.off in $CONF_D" >&2
+    return 1
+  fi
+  if [ -f "$CONF_D/${prefix}-${other}.conf" ]; then
+    sudo mv -f "$CONF_D/${prefix}-${other}.conf" "$CONF_D/${prefix}-${other}.off"
+  fi
+}
+
+activate_pair osm-wal "$WAL" || exit 1
+activate_pair osm-fsync "$FSYNC" || exit 1
+
+# FPW held on for the 2×2 (do not flip osm-fpw-*).
+if [ -f "$CONF_D/osm-fpw-on.off" ]; then
+  sudo mv -f "$CONF_D/osm-fpw-on.off" "$CONF_D/osm-fpw-on.conf"
+fi
+if [ -f "$CONF_D/osm-fpw-off.conf" ]; then
+  sudo mv -f "$CONF_D/osm-fpw-off.conf" "$CONF_D/osm-fpw-off.off"
+fi
+
+echo "osm-durability-face: cluster ${CLUSTER_VER} port ${TESTPORT} → wal_level=$WAL fsync=$FSYNC (fpw on)"
+sudo pg_ctlcluster "$CLUSTER_VER" main restart
+
+TESTPSQL="psql -X -h ${TESTHOST:-localhost} -U ${TESTUSER:-$(whoami)} -p $TESTPORT -d postgres"
+got_wal=$($TESTPSQL -Atqc "SHOW wal_level")
+got_fsync=$($TESTPSQL -Atqc "SHOW fsync")
+got_fpw=$($TESTPSQL -Atqc "SHOW full_page_writes")
+
+ok=1
+if [ "$got_wal" != "$WAL" ]; then
+  echo "osm-durability-face: wal_level want=$WAL got=$got_wal" >&2
+  ok=0
+fi
+if [ "$got_fsync" != "$FSYNC" ]; then
+  echo "osm-durability-face: fsync want=$FSYNC got=$got_fsync" >&2
+  ok=0
+fi
+if [ "$got_fpw" != "on" ]; then
+  echo "osm-durability-face: full_page_writes want=on got=$got_fpw" >&2
+  ok=0
+fi
+if [ "$ok" -ne 1 ]; then
+  exit 1
+fi
+
+echo "osm-durability-face: verified wal_level=$got_wal fsync=$got_fsync full_page_writes=$got_fpw"

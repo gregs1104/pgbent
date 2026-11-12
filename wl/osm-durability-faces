@@ -1,0 +1,93 @@
+#!/bin/bash
+# OSM durability 2×2 faces: wal_level × fsync (FPW held on).
+#
+# Same set; corners land in test_settings. Does not call newset.
+# Keeps the existing OSM params file (unlike wl/select-faces).
+#
+# Corner order:
+#   1. replica + fsync on   (durable baseline)
+#   2. replica + fsync off  (fat WAL, no sync waits)
+#   3. minimal + fsync on   (thin WAL, durable waits)
+#   4. minimal + fsync off  (both axes off)
+#
+# Usage (from pgbent root):
+#   ./wl/osm-durability-faces
+#   SKIP_FIRST=1 ./wl/osm-durability-faces   # durable already collected
+#
+# Expected under nohup. touch complete is not used — one pass then exit.
+
+cd "$(dirname "$0")/.."
+# shellcheck source=/dev/null
+. ./config
+# shellcheck source=/dev/null
+. ./params
+
+ts() { date '+%Y-%m-%dT%H:%M:%S%z'; }
+
+if [ -z "$RECOVERY" ]; then
+  RECOVERY=10
+fi
+
+SKIP_FIRST=${SKIP_FIRST:-0}
+FACES_FAILED=0
+FIRST=1
+
+run_face() {
+  local wal=$1 fsync=$2
+  echo "$(ts) face wal_level=$wal fsync=$fsync"
+  if ! util/osm-durability-face "$wal" "$fsync"; then
+    echo "WARNING: osm-durability-face failed for wal=$wal fsync=$fsync — skipping load"
+    FACES_FAILED=1
+    return
+  fi
+
+  if [ "$FIRST" -eq 0 ]; then
+    date
+    echo "Waiting $RECOVERY seconds for cooldown disk cache recovery"
+    sleep "$RECOVERY"
+  else
+    FIRST=0
+  fi
+
+  if ! util/newgis; then
+    echo "WARNING: util/newgis failed for wal=$wal fsync=$fsync — continuing"
+    FACES_FAILED=1
+    return
+  fi
+
+  # One Slack summary at sweep end; suppress per-face runset notifies.
+  SKIP_NOTIFY=1 ./runset
+  local rc=$?
+  echo "$(ts) face done rc=$rc wal_level=$wal fsync=$fsync"
+  if [ "$rc" -ne 0 ]; then
+    echo "WARNING: runset exited $rc — continuing remaining faces"
+    FACES_FAILED=1
+  fi
+
+  # A finished run with no TPS did not complete (full disk looks like this).
+  RESULTPSQL="psql -X -h $RESULTHOST -U $RESULTUSER -p $RESULTPORT -d $RESULTDB"
+  TPS=$($RESULTPSQL -Atqc "SELECT CASE WHEN tps > 0 THEN 'ok' END FROM tests WHERE server='${SERVERNAME}' ORDER BY test DESC LIMIT 1")
+  if [ "$TPS" != "ok" ]; then
+    echo "WARNING: last test has no TPS after wal=$wal fsync=$fsync — continuing"
+    FACES_FAILED=1
+  fi
+}
+
+set +e
+
+if [ "$SKIP_FIRST" != "1" ]; then
+  run_face replica on
+else
+  echo "$(ts) SKIP_FIRST=1 — durable replica+fsync on already collected"
+fi
+run_face replica off
+run_face minimal on
+run_face minimal off
+
+echo "$(ts) osm durability faces done"
+if [ "$FACES_FAILED" -eq 0 ]; then
+  util/notify-done done "osm durability faces done"
+  exit 0
+fi
+util/notify-done failed "osm durability faces finished with errors"
+exit 1
