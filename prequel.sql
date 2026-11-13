@@ -220,27 +220,102 @@ CREATE TABLE timing(
 ALTER TABLE tests ADD COLUMN server_cpu text;
 UPDATE tests t SET server_cpu=(SELECT server_cpu FROM server s WHERE t.server=s.server);
 
+-- 2026-11-13 Buffercache detail/summary + test_stats (avg_usage, dirty_pct, unused_pct).
+-- Same definitions as reports/buffercache-views.sql / init/resultdb.sql.
+-- After this block, re-apply reports/write_internals.sql if that view is in use.
+DROP VIEW IF EXISTS test_buffercache_detail CASCADE;
+CREATE OR REPLACE VIEW test_buffercache_detail AS
+SELECT
+  tests.server,
+  tests.set,
+  testset.info,
+  tests.test,
+  tests.script,
+  tests.clients,
+  tests.scale,
+  pg_size_pretty(tests.dbsize) AS dbsize,
+  round(tests.tps) AS tps,
+  CASE WHEN (test_bgwriter.checkpoints_timed + test_bgwriter.checkpoints_req) > 0
+    THEN round(extract(epoch FROM (tests.end_time - tests.start_time))
+         / (test_bgwriter.checkpoints_timed + test_bgwriter.checkpoints_req) / 60)
+    ELSE 0 END AS min_per_chkp,
+  bc.schemaname,
+  bc.relname,
+  pg_size_pretty(bc.bytes) AS bytes,
+  bc.bytes AS bytes_raw,
+  CASE WHEN coalesce(tests.dbsize, 0) > 0
+    THEN round(100.0 * bc.bytes / tests.dbsize, 2)
+    ELSE 0 END AS pct_db,
+  CASE WHEN (test_stat_database.blks_hit + test_stat_database.blks_read) > 0
+    THEN round(100.0 * test_stat_database.blks_hit
+         / (test_stat_database.blks_hit + test_stat_database.blks_read), 2)
+    ELSE 0 END AS hit_pct,
+  bc.avg_usage,
+  bc.max_usage,
+  bc.isdirty,
+  CASE WHEN bc.isdirty THEN 100.0 ELSE 0.0 END AS dirty_pct_row
+FROM test_buffercache bc
+JOIN tests ON bc.test = tests.test AND bc.server = tests.server
+JOIN testset ON testset.server = tests.server AND testset.set = tests.set
+LEFT JOIN test_stat_database ON
+  tests.test = test_stat_database.test AND tests.server = test_stat_database.server
+LEFT JOIN test_bgwriter ON
+  tests.test = test_bgwriter.test AND tests.server = test_bgwriter.server
+;
+
+DROP VIEW IF EXISTS test_buffercache_summary CASCADE;
+CREATE OR REPLACE VIEW test_buffercache_summary AS
+WITH usage_detail AS (
+  SELECT server, test, schemaname, relname, bytes, avg_usage, isdirty
+  FROM test_buffercache
+  GROUP BY server, test, schemaname, relname, bytes, avg_usage, max_usage, isdirty
+),
+rolled AS (
+  SELECT
+    server,
+    test,
+    sum(CASE WHEN relname IS NOT NULL THEN bytes ELSE 0 END) AS cached,
+    sum(CASE WHEN relname IS NULL THEN bytes ELSE 0 END) AS empty,
+    bool_or(relname IS NULL) AS captured_empty,
+    round(sum(CASE WHEN relname IS NOT NULL THEN avg_usage * bytes ELSE 0 END)
+          / nullif(sum(CASE WHEN relname IS NOT NULL THEN bytes ELSE 0 END), 0), 2) AS avg_usage,
+    round(100.0 * sum(CASE WHEN isdirty THEN bytes ELSE 0 END)
+          / nullif(sum(CASE WHEN relname IS NOT NULL THEN bytes ELSE 0 END), 0), 2) AS dirty_pct
+  FROM usage_detail
+  GROUP BY server, test
+),
+shared AS (
+  SELECT server, test,
+    CASE
+      WHEN unit = '8kB' THEN setting::numeric * 8192
+      WHEN unit = 'kB' THEN setting::numeric * 1024
+      ELSE setting::numeric
+    END AS shared_bytes
+  FROM test_settings
+  WHERE name = 'shared_buffers'
+)
+SELECT
+  r.server,
+  r.test,
+  r.cached,
+  r.empty,
+  r.avg_usage,
+  r.dirty_pct,
+  round(100.0 * CASE
+      WHEN r.captured_empty THEN r.empty
+      ELSE greatest(coalesce(s.shared_bytes, 0) - r.cached, 0)
+    END / nullif(coalesce(s.shared_bytes, r.cached + r.empty), 0), 2) AS unused_pct
+FROM rolled r
+LEFT JOIN shared s ON s.server = r.server AND s.test = r.test
+;
+
 DROP VIEW IF EXISTS test_stats CASCADE;
 CREATE OR REPLACE VIEW test_stats AS
 WITH test_wrap AS
   (SELECT *,
       CASE WHEN extract(epoch FROM (end_time - start_time))::bigint<1
           THEN 1::bigint ELSE extract(epoch FROM (end_time - start_time))::bigint END AS seconds
-   FROM TESTS),
-usage AS
-  (SELECT
-    server,test,sum(bytes) AS cached,round(sum(weighted) / sum(bytes),2) AS avg_usage
-    FROM
-    (SELECT
-      server,test,
-      bytes,
-      avg_usage,
-      avg_usage * bytes AS weighted
-     FROM test_buffercache
-     GROUP BY server,test,relname,bytes,avg_usage,max_usage,isdirty  -- Eliminate accidental duplicates
-    ) AS usage_detail
-    GROUP BY server,test
-  )
+   FROM TESTS)
 SELECT
   testset.set, testset.info, server.server,script,scale,clients,multi,rate_limit,test_wrap.test,
   round(dbsize / (1024 * 1024)) as dbsize_mb,
@@ -255,9 +330,9 @@ SELECT
       THEN round(100.0 * blks_hit / (blks_hit + blks_read),2)
       ELSE 0 END AS blk_cached_pct,
   CASE WHEN (buffers_checkpoint + buffers_clean + buffers_backend + buffers_alloc)  > 0
-      THEN round(100.0 * buffers_alloc / (buffers_checkpoint + buffers_clean + buffers_backend + buffers_alloc),2) 
+      THEN round(100.0 * buffers_alloc / (buffers_checkpoint + buffers_clean + buffers_backend + buffers_alloc),2)
       ELSE 0 END AS blk_read_pct,
-  cached,avg_usage,
+  buf.cached, buf.empty, buf.avg_usage, buf.dirty_pct, buf.unused_pct,
   max_dirty,
   server_version,
   server_info,
@@ -272,7 +347,8 @@ FROM
   FULL OUTER JOIN test_stat_database ON
       test_wrap.test=test_stat_database.test AND test_wrap.server=test_stat_database.server
   JOIN testset ON testset.set=test_wrap.set and testset.server=test_wrap.server
-  JOIN usage ON usage.test=test_wrap.test AND usage.server=test_wrap.server
+  LEFT JOIN test_buffercache_summary buf ON
+      buf.test=test_wrap.test AND buf.server=test_wrap.server
   FULL OUTER JOIN server on test_wrap.server=server.server
 ORDER BY server,set,info,script,scale,clients,test_wrap.test
 ;

@@ -4,8 +4,8 @@
 # Suggested install: /usr/local/bin
 #
 # This is the general NOPASSWD entry point for operations that need root
-# before/with a cluster restart. Add new --test-* verbs here (next up:
-# shared_buffers) rather than bare `sudo mv` / `sudo pg_ctlcluster`.
+# before/with a cluster restart. Add new --test-* verbs here rather than
+# bare `sudo mv` / `sudo pg_ctlcluster`.
 #
 # Usage:
 #   pgbent_drop_caches VERSION CLUSTER
@@ -15,6 +15,10 @@
 #   pgbent_drop_caches --test-wal-fsync WAL FSYNC VERSION CLUSTER
 #       Flip conf.d osm-wal / osm-fsync pairs (hold FPW on), restart only.
 #       WAL is replica|minimal; FSYNC is on|off.
+#   pgbent_drop_caches [--prefix PREFIX] --test-shared-buffers TIER VERSION CLUSTER
+#       Activate exactly one PREFIX-TIER conf.d file, disable every other
+#       PREFIX-* numeric tier present, restart only.
+#       PREFIX defaults to osm-mem (e.g. osm-mem-48); TIER is numeric.
 #
 # Install (as a user with real sudo), then NOPASSWD for postgres:
 #
@@ -31,15 +35,36 @@ fi
 
 RESTART_ONLY=0
 TEST_WAL_FSYNC=0
+TEST_SHARED_BUFFERS=0
 WAL=""
 FSYNC=""
+MEM_TIER=""
+MEM_PREFIX="osm-mem"
 
 usage() {
   echo "Usage:" >&2
   echo "  pgbent_drop_caches VERSION CLUSTER" >&2
   echo "  pgbent_drop_caches --restart-only VERSION CLUSTER" >&2
   echo "  pgbent_drop_caches --test-wal-fsync WAL FSYNC VERSION CLUSTER" >&2
+  echo "  pgbent_drop_caches [--prefix PREFIX] --test-shared-buffers TIER VERSION CLUSTER" >&2
+  echo "    PREFIX defaults to osm-mem; TIER is numeric (16 32 48 64 96 128 …)" >&2
   exit 2
+}
+
+# Numeric suffixes present as PREFIX-N.conf or PREFIX-N.off under CONF_D.
+list_mem_tiers() {
+  local conf_d=$1 prefix=$2
+  local f base tier
+  for f in "$conf_d"/"${prefix}"-*.conf "$conf_d"/"${prefix}"-*.off; do
+    [ -e "$f" ] || continue
+    base=$(basename "$f")
+    base=${base%.conf}
+    base=${base%.off}
+    tier=${base#"${prefix}-"}
+    if [[ "$tier" =~ ^[0-9]+$ ]]; then
+      echo "$tier"
+    fi
+  done | sort -nu
 }
 
 restart_cluster() {
@@ -88,6 +113,39 @@ activate_pair() {
   fi
 }
 
+# Exactly one PREFIX-TIER active; all other PREFIX-* numeric tiers .off.
+activate_mem_tier() {
+  local conf_d=$1 prefix=$2 want=$3
+  local tier base
+
+  if [ -f "$conf_d/${prefix}-${want}.off" ]; then
+    mv -f "$conf_d/${prefix}-${want}.off" "$conf_d/${prefix}-${want}.conf"
+  elif [ ! -f "$conf_d/${prefix}-${want}.conf" ]; then
+    echo "pgbent_drop_caches: missing ${prefix}-${want}.conf/.off in $conf_d" >&2
+    return 1
+  fi
+
+  while read -r tier; do
+    [ -n "$tier" ] || continue
+    [ "$tier" = "$want" ] && continue
+    base="$conf_d/${prefix}-${tier}"
+    if [ -f "${base}.conf" ]; then
+      mv -f "${base}.conf" "${base}.off"
+    fi
+  done < <(list_mem_tiers "$conf_d" "$prefix")
+
+  for base in "$conf_d"/"${prefix}"-*.conf; do
+    [ -e "$base" ] || continue
+    case "$(basename "$base")" in
+      "${prefix}-${want}.conf") ;;
+      *)
+        echo "pgbent_drop_caches: unexpected active $(basename "$base"); only ${prefix}-${want} should be .conf" >&2
+        return 1
+        ;;
+    esac
+  done
+}
+
 test_wal_fsync_activate() {
   local wal=$1 fsync=$2 ver=$3 name=$4
   local conf_d="/etc/postgresql/${ver}/${name}/conf.d"
@@ -126,10 +184,53 @@ test_wal_fsync_activate() {
   restart_cluster "$ver" "$name"
 }
 
+test_shared_buffers_activate() {
+  local prefix=$1 tier=$2 ver=$3 name=$4
+  local conf_d="/etc/postgresql/${ver}/${name}/conf.d"
+  local tiers ok=0 t
+
+  if [[ ! "$prefix" =~ ^[A-Za-z0-9_-]+$ ]]; then
+    echo "pgbent_drop_caches: bad mem prefix '$prefix'" >&2
+    exit 1
+  fi
+  if [ ! -d "$conf_d" ]; then
+    echo "pgbent_drop_caches: missing $conf_d" >&2
+    exit 1
+  fi
+  if [[ ! "$tier" =~ ^[0-9]+$ ]]; then
+    echo "pgbent_drop_caches: bad mem tier '$tier'" >&2
+    exit 1
+  fi
+
+  tiers=$(list_mem_tiers "$conf_d" "$prefix" | tr '\n' ' ')
+  for t in $tiers; do
+    if [ "$t" = "$tier" ]; then
+      ok=1
+      break
+    fi
+  done
+  if [ "$ok" -ne 1 ]; then
+    echo "pgbent_drop_caches: ${prefix}-${tier} not in $conf_d (have: $tiers)" >&2
+    exit 1
+  fi
+
+  activate_mem_tier "$conf_d" "$prefix" "$tier"
+  echo "pgbent_drop_caches: --test-shared-buffers ${prefix}-${tier} → ${ver}/${name}"
+  restart_cluster "$ver" "$name"
+}
+
 while [ $# -gt 0 ]; do
   case "$1" in
     --restart-only)
       RESTART_ONLY=1
+      shift
+      ;;
+    --prefix)
+      shift
+      MEM_PREFIX=${1:-}
+      if [ -z "$MEM_PREFIX" ]; then
+        usage
+      fi
       shift
       ;;
     --test-wal-fsync)
@@ -141,6 +242,15 @@ while [ $# -gt 0 ]; do
         usage
       fi
       shift 2
+      ;;
+    --test-shared-buffers)
+      TEST_SHARED_BUFFERS=1
+      shift
+      MEM_TIER=${1:-}
+      if [ -z "$MEM_TIER" ]; then
+        usage
+      fi
+      shift
       ;;
     -h|--help)
       usage
@@ -156,6 +266,14 @@ if [ "$TEST_WAL_FSYNC" -eq 1 ]; then
     usage
   fi
   test_wal_fsync_activate "$WAL" "$FSYNC" "$1" "$2"
+  exit 0
+fi
+
+if [ "$TEST_SHARED_BUFFERS" -eq 1 ]; then
+  if [ $# -ne 2 ]; then
+    usage
+  fi
+  test_shared_buffers_activate "$MEM_PREFIX" "$MEM_TIER" "$1" "$2"
   exit 0
 fi
 

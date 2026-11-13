@@ -1,0 +1,112 @@
+#!/bin/bash
+# Activate one PREFIX-TIER shared_buffers conf.d file and restart.
+#
+# Privileged conf.d renames + restart go through NOPASSWD
+# /usr/local/bin/pgbent_drop_caches --test-shared-buffers.
+# PREFIX defaults to osm-mem for the OSM memory study tiers.
+#
+# Usage (from pgbent root, after sourcing config or with TESTPORT set):
+#   util/test-shared-buffers 128
+#   util/test-shared-buffers 48
+#   util/test-shared-buffers --prefix osm-mem 96
+#   util/test-shared-buffers --prefix select-mem 48
+#
+# Args: [--prefix PREFIX] <tier>
+
+cd "$(dirname "$0")/.."
+# shellcheck source=/dev/null
+. ./config
+
+MEM_PREFIX="osm-mem"
+TIER=""
+PGBENT_DROP_CACHES="${PGBENT_DROP_CACHES:-/usr/local/bin/pgbent_drop_caches}"
+
+usage() {
+  echo "Usage: util/test-shared-buffers [--prefix PREFIX] <tier>" >&2
+  echo "  PREFIX defaults to osm-mem; tier is the numeric suffix under conf.d" >&2
+  exit 2
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --prefix)
+      shift
+      MEM_PREFIX=${1:-}
+      [ -n "$MEM_PREFIX" ] || usage
+      shift
+      ;;
+    -h|--help)
+      usage
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+TIER=${1:-}
+if [[ ! "$TIER" =~ ^[0-9]+$ ]]; then
+  usage
+fi
+if [[ ! "$MEM_PREFIX" =~ ^[A-Za-z0-9_-]+$ ]]; then
+  echo "test-shared-buffers: bad prefix '$MEM_PREFIX'" >&2
+  exit 1
+fi
+
+if [ -z "$TESTPORT" ]; then
+  echo "test-shared-buffers: TESTPORT unset" >&2
+  exit 1
+fi
+
+if [ ! -x "$PGBENT_DROP_CACHES" ]; then
+  echo "test-shared-buffers: missing $PGBENT_DROP_CACHES (install util/pgbent_drop_caches + NOPASSWD)" >&2
+  exit 1
+fi
+
+CLUSTER_VER=$(pg_lsclusters -h 2>/dev/null | awk -v p="$TESTPORT" '$3 == p { print $1; exit }')
+if [ -z "$CLUSTER_VER" ]; then
+  echo "test-shared-buffers: no cluster on TESTPORT=$TESTPORT" >&2
+  exit 1
+fi
+
+CLUSTER_NAME=$(pg_lsclusters -h 2>/dev/null | awk -v p="$TESTPORT" '$3 == p { print $2; exit }')
+if [ -z "$CLUSTER_NAME" ]; then
+  CLUSTER_NAME=main
+fi
+
+CONF_D="/etc/postgresql/${CLUSTER_VER}/${CLUSTER_NAME}/conf.d"
+MEM_FILE=""
+if [ -f "$CONF_D/${MEM_PREFIX}-${TIER}.conf" ]; then
+  MEM_FILE="$CONF_D/${MEM_PREFIX}-${TIER}.conf"
+elif [ -f "$CONF_D/${MEM_PREFIX}-${TIER}.off" ]; then
+  MEM_FILE="$CONF_D/${MEM_PREFIX}-${TIER}.off"
+else
+  echo "test-shared-buffers: missing ${MEM_PREFIX}-${TIER}.conf/.off in $CONF_D" >&2
+  exit 1
+fi
+
+# Read expected shared_buffers from the tier file (authoritative vs hardcoding).
+want_sb=$(awk -F= '
+  /^[[:space:]]*shared_buffers[[:space:]]*=/ {
+    gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2)
+    print $2
+    exit
+  }
+' "$MEM_FILE")
+if [ -z "$want_sb" ]; then
+  echo "test-shared-buffers: no shared_buffers= in $MEM_FILE" >&2
+  exit 1
+fi
+
+echo "test-shared-buffers: cluster ${CLUSTER_VER}/${CLUSTER_NAME} port ${TESTPORT} → ${MEM_PREFIX}-${TIER} (shared_buffers=$want_sb)"
+sudo "$PGBENT_DROP_CACHES" --prefix "$MEM_PREFIX" --test-shared-buffers "$TIER" "$CLUSTER_VER" "$CLUSTER_NAME"
+
+TESTPSQL="psql -X -h ${TESTHOST:-localhost} -U ${TESTUSER:-$(whoami)} -p $TESTPORT -d postgres"
+got_sb=$($TESTPSQL -Atqc "SHOW shared_buffers")
+
+if [ "$got_sb" != "$want_sb" ]; then
+  echo "test-shared-buffers: shared_buffers want=$want_sb got=$got_sb" >&2
+  exit 1
+fi
+
+echo "test-shared-buffers: verified shared_buffers=$got_sb (${MEM_PREFIX}-${TIER})"

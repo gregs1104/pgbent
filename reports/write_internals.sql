@@ -125,6 +125,9 @@ CREATE OR REPLACE VIEW write_internals AS
     THEN round(100::numeric * test_bgwriter.buffers_clean/(test_bgwriter.buffers_checkpoint + test_bgwriter.buffers_clean))
     ELSE 100 END AS cleaned_pct,
   max_dirty,
+  buf.avg_usage,
+  buf.dirty_pct,
+  buf.unused_pct,
   round(100.0 * blks_hit / (blks_read + blks_hit)) as hit_pct,
   round(blks_hit * 8192 / extract(epoch from (tests.end_time - tests.start_time)) / 1024 / 1024,1) AS hit_mbps,
   round(blks_read * 8192 / extract(epoch from (tests.end_time - tests.start_time)) / 1024 / 1024,1) AS read_mbps,
@@ -205,12 +208,17 @@ CREATE OR REPLACE VIEW write_internals AS
       d.collected <= tests.end_time
   ) x
   ) AS package_joules
-FROM tests,server,test_bgwriter,test_stat_database,testset
+FROM tests
+JOIN server ON tests.server = server.server
+JOIN test_bgwriter ON
+  tests.test = test_bgwriter.test AND tests.server = test_bgwriter.server
+JOIN test_stat_database ON
+  tests.test = test_stat_database.test AND tests.server = test_stat_database.server
+JOIN testset ON
+  testset.set = tests.set AND testset.server = tests.server
+LEFT JOIN test_buffercache_summary buf ON
+  buf.test = tests.test AND buf.server = tests.server
 WHERE
-  tests.server=server.server AND
-  tests.test=test_bgwriter.test AND tests.server=test_bgwriter.server AND
-  tests.test=test_stat_database.test AND tests.server=test_stat_database.server AND
-  testset.set=tests.set AND testset.server=tests.server AND
   extract(epoch from (tests.end_time - tests.start_time))::bigint > 0
 ORDER BY tests.server,tests.server_cpu,tests.server_mem_gb,
   script,

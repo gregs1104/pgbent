@@ -48,10 +48,16 @@ FPW on. Historical bundled `osm-sync-fast` was all three off plus
     mv osm-fpw-on.conf osm-fpw-on.off
     mv osm-fpw-off.off osm-fpw-off.conf
 
-There are 3 different OSM memory size examples.  These assume you are
-running osm2pgsql on the server itself, so settings like
-effective_cache_size are smaller than a normal server.
-For example, to switch from the standard 128GB to the 16GB one:
+OSM memory tiers (`osm-mem-{16,32,48,64,96,128}`) assume osm2pgsql runs on
+the server itself, so `effective_cache_size` is smaller than a normal
+dedicated-DB host. Exactly one should be `.conf`. Prefer the NOPASSWD helper:
+
+    sudo /usr/local/bin/pgbent_drop_caches --test-shared-buffers 48 19 main
+    # optional: --prefix osm-mem (default); other families use --prefix NAME
+    # or from a checkout with config sourced: util/test-shared-buffers 48
+
+
+Manual flip example (128GB tier → 16GB):
 
     mv osm-mem-128.conf osm-mem-128.off
     mv osm-mem-16.off osm-mem-16.conf

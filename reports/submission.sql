@@ -37,6 +37,7 @@ INSERT INTO submission (
     w_p_g,p_m_w,
     csum, fsync, wal_level, timeout,
     timed_pct, chkp_mins, chkp_mbph, clean_mbph, backend_mbph, cleaned_pct, max_dirty,
+    avg_usage, dirty_pct, unused_pct,
     hit_pct, hit_mbps, read_mbps, wal_mbps,
     avg_write_mbps, max_write_mbps, avg_read_mbps, max_read_mbps,
     avg_package_watts, max_package_watts, package_joules)
