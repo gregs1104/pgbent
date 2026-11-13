@@ -126,8 +126,8 @@ def plot_usage(df: pd.DataFrame, output: Path, show: bool = False) -> None:
     )
 
     ax.set_xlabel("Database size (GB)")
-    ax.set_ylabel("Average usagecount")
-    ax.set_title("Buffer cache usagecount vs working-set size")
+    ax.set_ylabel("Average usage count")
+    ax.set_title("Buffer cache usage count vs working-set size")
     ax.set_ylim(0, 5.4)
     ax.set_xlim(left=0)
     ax.grid(True, which="major", linestyle="--", alpha=0.4)

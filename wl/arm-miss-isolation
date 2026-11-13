@@ -1,0 +1,151 @@
+#!/bin/bash
+# ARM buffer-miss isolation series (durable face only).
+#
+# Miniature of OSM Relations: cold, scattered index → heap fetches via
+# tests/select-scatter.sql on a pgbench DB that does not fit in RAM.
+#
+# Cells (one durable wal/fsync face — replica + fsync on):
+#   0) baseline: io_method=worker, read_ahead_kb=2048
+#   1) io_method=sync          (both hosts)
+#   2) court read_ahead_kb 128 then 0  (twilight stays 2048 unless #2 moves court)
+#   3) effective_io_concurrency=0  (CELL=eic0; restores prior value after run)
+#
+# Usage (from pgbent root):
+#   ./newset 'ARM miss isolation — select-scatter durable baseline'
+#   SKIPINIT=0 COLD=0 ./wl/arm-miss-isolation          # build scale
+#   SKIPINIT=1 COLD=1 ./wl/arm-miss-isolation          # cold baseline grid
+#   CELL=sync SKIPINIT=1 COLD=1 ./wl/arm-miss-isolation
+#   CELL=eic0 SKIPINIT=1 COLD=1 SCALES=13700 ./wl/arm-miss-isolation
+#
+# Env:
+#   SCALES     default 17500 (~256GB, 2×RAM on 128GB hosts) — cache-miss standard
+#   SETCLIENTS default "1 8 32"
+#   RUNTIME    default 180
+#   SETTIMES   default 2
+#   MULTI      recorded as 64 (script uses 64 aids)
+#   SKIPINIT   default 1
+#   COLD       default 1 — drop OS caches before runset
+#              Linux: pgbent_drop_caches; Darwin: sudo purge
+#   PGVER      default 19 (Linux pg_ctlcluster only)
+#   CLUSTER    default main
+#   CELL       baseline|sync|ra128|ra0|eic0
+#   RA_DEVICE  default nvme0n1 (Linux only)
+
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+CELL="${CELL:-baseline}"
+SCALES="${SCALES:-17500}"
+SETCLIENTS="${SETCLIENTS:-1 8 32}"
+RUNTIME="${RUNTIME:-180}"
+SETTIMES="${SETTIMES:-2}"
+MULTI="${MULTI:-64}"
+SKIPINIT="${SKIPINIT:-1}"
+COLD="${COLD:-1}"
+PGVER="${PGVER:-19}"
+CLUSTER="${CLUSTER:-main}"
+PGBENT_DROP_CACHES="${PGBENT_DROP_CACHES:-/usr/local/bin/pgbent_drop_caches}"
+RA_DEVICE="${RA_DEVICE:-nvme0n1}"
+UNAME_S="$(uname -s)"
+
+ts() { date '+%Y-%m-%dT%H:%M:%S%z'; }
+sudo_n() { sudo -n "$@"; }
+
+# Capture workload env before sourcing config — config defaults SKIPINIT=0 / SCALES /
+# SETCLIENTS and must not override the CELL invocation.
+_SAVE_CELL=$CELL
+_SAVE_SCALES=$SCALES
+_SAVE_SETCLIENTS=$SETCLIENTS
+_SAVE_RUNTIME=$RUNTIME
+_SAVE_SETTIMES=$SETTIMES
+_SAVE_MULTI=$MULTI
+_SAVE_SKIPINIT=$SKIPINIT
+_SAVE_COLD=$COLD
+
+if [ -f ./config ]; then
+  # shellcheck source=/dev/null
+  . ./config
+fi
+CELL=$_SAVE_CELL
+SCALES=$_SAVE_SCALES
+SETCLIENTS=$_SAVE_SETCLIENTS
+RUNTIME=$_SAVE_RUNTIME
+SETTIMES=$_SAVE_SETTIMES
+MULTI=$_SAVE_MULTI
+SKIPINIT=$_SAVE_SKIPINIT
+COLD=$_SAVE_COLD
+
+# Sysinfo for comments only — do not let pgsysinfo SCALES/SETCLIENTS leak into params.
+{
+  echo "SCRIPT=select-scatter"
+  echo "SETTIMES=$SETTIMES"
+  echo "RUNTIME=$RUNTIME"
+  echo "MULTI=$MULTI"
+  echo "SCALES=\"$SCALES\""
+  echo "SETCLIENTS=\"$SETCLIENTS\""
+  echo "SKIPINIT=$SKIPINIT"
+  ./pgsysinfo 2>/dev/null | grep -E '^#' || true
+} > params
+
+TESTPSQL="${TESTPSQL:-psql -h ${TESTHOST:-localhost} -p ${TESTPORT:-5432} -U ${TESTUSER:-postgres} -d ${TESTDB:-pgbench}}"
+$TESTPSQL -v ON_ERROR_STOP=1 <<'SQL' || true
+ALTER DATABASE pgbench SET enable_seqscan = off;
+ALTER DATABASE pgbench SET enable_bitmapscan = off;
+ALTER DATABASE pgbench SET enable_hashjoin = off;
+ALTER DATABASE pgbench SET enable_mergejoin = off;
+SQL
+
+EIC_RESTORE=""
+if [ "$CELL" = "eic0" ]; then
+  EIC_RESTORE="$($TESTPSQL -Atc "SHOW effective_io_concurrency" 2>/dev/null || echo 16)"
+  echo "$(ts) setting effective_io_concurrency=0 (was $EIC_RESTORE)"
+  $TESTPSQL -v ON_ERROR_STOP=1 -c "ALTER SYSTEM SET effective_io_concurrency = 0;"
+  $TESTPSQL -c "SELECT pg_reload_conf();" >/dev/null
+  echo "$(ts) effective_io_concurrency=$($TESTPSQL -Atc "SHOW effective_io_concurrency")"
+fi
+
+if [ "$UNAME_S" = "Linux" ]; then
+  case "$CELL" in
+    ra128)
+      echo "$(ts) setting ${RA_DEVICE} read_ahead_kb=128"
+      echo 128 | sudo_n tee "/sys/block/${RA_DEVICE}/queue/read_ahead_kb" >/dev/null || true
+      ;;
+    ra0)
+      echo "$(ts) setting ${RA_DEVICE} read_ahead_kb=0"
+      echo 0 | sudo_n tee "/sys/block/${RA_DEVICE}/queue/read_ahead_kb" >/dev/null || true
+      ;;
+    baseline|sync|eic0)
+      echo "$(ts) ensuring ${RA_DEVICE} read_ahead_kb=2048"
+      echo 2048 | sudo_n tee "/sys/block/${RA_DEVICE}/queue/read_ahead_kb" >/dev/null || true
+      ;;
+  esac
+  echo "$(ts) CELL=$CELL RA=$(cat /sys/block/${RA_DEVICE}/queue/read_ahead_kb 2>/dev/null || echo '?')"
+else
+  echo "$(ts) CELL=$CELL (Darwin — skip Linux read_ahead_kb)"
+fi
+grep -E '^(SCRIPT|SCALES|SETCLIENTS|SKIPINIT|MULTI|RUNTIME|SETTIMES)=' params
+
+if [ "$COLD" = "1" ] && [ "$SKIPINIT" = "1" ]; then
+  if [ "$UNAME_S" = "Darwin" ]; then
+    echo "$(ts) cold start: sudo purge"
+    sudo_n purge || sudo purge
+  else
+    echo "$(ts) cold start: $PGBENT_DROP_CACHES $PGVER $CLUSTER"
+    sudo_n "$PGBENT_DROP_CACHES" "$PGVER" "$CLUSTER"
+  fi
+fi
+
+echo "$(ts) runset starting (CELL=$CELL)"
+set +e
+./runset
+rc=$?
+set -e
+
+if [ -n "$EIC_RESTORE" ]; then
+  echo "$(ts) restoring effective_io_concurrency=$EIC_RESTORE"
+  $TESTPSQL -v ON_ERROR_STOP=1 -c "ALTER SYSTEM SET effective_io_concurrency = $EIC_RESTORE;"
+  $TESTPSQL -c "SELECT pg_reload_conf();" >/dev/null
+fi
+
+echo "$(ts) arm-miss-isolation finished rc=$rc CELL=$CELL"
+exit "$rc"

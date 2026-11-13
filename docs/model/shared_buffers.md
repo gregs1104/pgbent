@@ -32,7 +32,7 @@ Larger values ultimately take too much from the OS read cache as well.  There is
 
 End-of-run `pg_buffercache` snapshots roll up into a few numbers that are easy to watch: **average usagecount** (how hard the clock-sweep pins are held), **% dirty**, and **% unused** (empty slots — evidence `shared_buffers` is oversized). Relation-level detail is there when you need it; the submission/summary views keep the two cache-content signals next to throughput.
 
-![Buffer cache usagecount vs working-set size]({{ '/images/shared-buffers-usage.png' | relative_url }})
+![Buffer cache usage count vs working-set size]({{ '/images/shared-buffers-usage.png' | relative_url }})
 
 Rising set **65** (Ryzen 5950X, ~48 GB `shared_buffers`, pgbench SELECT at 128 clients): database size stepped from ~1.5 GB through 1 TB. While the hot index fits in cache, `pgbench_accounts_pkey` usagecount sits at the clock maximum (**5**). As the working set outgrows `shared_buffers`, both whole-cache and index usage fall in step with hit rate. Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/shared-buffers-usage.py`.
 

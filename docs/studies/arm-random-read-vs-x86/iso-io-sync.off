@@ -1,0 +1,2 @@
+# ARM miss isolation — sync control. Activate as .conf, set iso-io-worker.off.
+io_method = sync
