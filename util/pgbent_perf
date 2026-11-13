@@ -12,8 +12,8 @@
 #    sudo cp /tmp/pgbent_perf /usr/local/bin/
 #    sudo sh -c "echo \"postgres ALL = (ALL) NOPASSWD: /usr/local/bin/pgbent_perf\" >> /etc/sudoers.d/postgres"
 #
-# Used by util/osm-rel-prof:
-#    sudo /usr/local/bin/pgbent_perf record -a -g -o osm-rel-perf.data
+# Used by util/osm-rel-prof (process-tree targets, not system-wide -a):
+#    sudo /usr/local/bin/pgbent_perf record -g -p PIDLIST -o osm-rel-perf.data
 #    sudo /usr/local/bin/pgbent_perf stop -o osm-rel-perf.data
 #    sudo /usr/local/bin/pgbent_perf report -i osm-rel-perf.data --stdio
 #

@@ -7,6 +7,12 @@
 # report and exits.  A few seconds of edge jitter is acceptable; the
 # relation phase runs long enough that it does not matter.
 #
+# Sampling targets process trees only (not `-a` system-wide), so power
+# monitors / sensors / idle CPUs do not drown the profile:
+#   1. PostgreSQL postmaster tree (server root + backends / aux)
+#   2. Load client tree (osm2pgsql for this workload)
+#   3. osm2pgsql process tree root (explicit; same as client here)
+#
 # Stop after ten minutes by default (`OSMRELPROF_MAX_SEC=600`). Long enough
 # to be useful under relation load; short enough that stop/flush stayed
 # proven after the court 60s calibration (~64MB idle). Recording the whole
@@ -15,12 +21,17 @@
 # (`OSMRELPROF_MAX_MB`, default 8192) stays a backstop. Set MAX_SEC=0 to
 # record until COPY ends.
 #
+# Optional:
+#   OSMRELPROF_TAG=tree   → osm-rel-perf-tree.data / report (avoid clobber)
+#   OSMRELPROF_EXTRA_PIDS → comma/space PIDs merged into the target set
+#
 # Requires util/pgbent_perf installed under /usr/local/bin with a NOPASSWD
 # sudoers rule (same idiom as pgbent_powermon / pgbent_tune).  Artifacts
 # land in the current directory (the test results dir when launched from
 # osm-importer):
-#   osm-rel-perf.data
+#   osm-rel-perf.data          (or osm-rel-perf-<TAG>.data)
 #   osm-rel-perf-report.txt
+#   osm-rel-perf.pids          (which PIDs were targeted)
 #
 # Stopping goes through `pgbent_perf stop`, which SIGINTs the real recorder
 # (not sudo) and waits for perf to flush. SIGINT to sudo alone does not
@@ -48,8 +59,15 @@ else
   MAX_SEC="$OSMRELPROF_MAX_SEC"
 fi
 PGBENT_PERF="sudo /usr/local/bin/pgbent_perf"
-PERF_DATA="$(pwd)/osm-rel-perf.data"
-PERF_REPORT="$(pwd)/osm-rel-perf-report.txt"
+if [ -n "$OSMRELPROF_TAG" ]; then
+  PERF_DATA="$(pwd)/osm-rel-perf-${OSMRELPROF_TAG}.data"
+  PERF_REPORT="$(pwd)/osm-rel-perf-${OSMRELPROF_TAG}-report.txt"
+  PERF_PIDS="$(pwd)/osm-rel-perf-${OSMRELPROF_TAG}.pids"
+else
+  PERF_DATA="$(pwd)/osm-rel-perf.data"
+  PERF_REPORT="$(pwd)/osm-rel-perf-report.txt"
+  PERF_PIDS="$(pwd)/osm-rel-perf.pids"
+fi
 PERF_PID=""
 STOPPING=0
 
@@ -96,6 +114,117 @@ data_bytes() {
   stat -c%s "$PERF_DATA" 2>/dev/null || echo 0
 }
 
+# First line of postmaster.pid is the server root.
+find_postmaster_pid() {
+  local dd
+  dd=$($TESTPSQL -c "SHOW data_directory") || return 1
+  if [ -z "$dd" ] || [ ! -r "$dd/postmaster.pid" ]; then
+    return 1
+  fi
+  head -1 "$dd/postmaster.pid"
+}
+
+# Roots: processes named osm2pgsql whose parent is not also osm2pgsql.
+find_osm2pgsql_roots() {
+  local pid ppid comm pcomm
+  for pid in $(pgrep -x osm2pgsql 2>/dev/null || true); do
+    [ -r "/proc/$pid/status" ] || continue
+    ppid=$(awk '/^PPid:/ {print $2}' "/proc/$pid/status")
+    pcomm=""
+    if [ -n "$ppid" ] && [ -r "/proc/$ppid/comm" ]; then
+      pcomm=$(tr -d '\0' < "/proc/$ppid/comm")
+    fi
+    if [ "$pcomm" != "osm2pgsql" ]; then
+      echo "$pid"
+    fi
+  done
+}
+
+# All PIDs in the process tree under each root (root included).
+tree_pids() {
+  local root children pid
+  for root in "$@"; do
+    [ -n "$root" ] || continue
+    [ -d "/proc/$root" ] || continue
+    echo "$root"
+    children=$(pgrep -P "$root" 2>/dev/null || true)
+    if [ -n "$children" ]; then
+      # shellcheck disable=SC2086
+      tree_pids $children
+    fi
+  done
+}
+
+# Unique numeric PIDs, one per line, only those still alive.
+uniq_live_pids() {
+  local pid
+  for pid in $(printf '%s\n' "$@" | tr ', ' '\n' | grep -E '^[0-9]+$' | sort -nu); do
+    if [ -d "/proc/$pid" ]; then
+      echo "$pid"
+    fi
+  done
+}
+
+# Build comma-separated -p list from server + client + osm2pgsql trees.
+build_perf_pid_list() {
+  local postmaster osm_roots server_pids client_pids osm_pids extra all_pids
+  postmaster=$(find_postmaster_pid) || postmaster=""
+  osm_roots=$(find_osm2pgsql_roots | tr '\n' ' ')
+
+  if [ -z "$postmaster" ] && [ -z "$osm_roots" ]; then
+    echo "osm-rel-prof: no postmaster or osm2pgsql PIDs found" >&2
+    return 1
+  fi
+
+  server_pids=""
+  if [ -n "$postmaster" ]; then
+    server_pids=$(tree_pids "$postmaster" | tr '\n' ' ')
+  fi
+  # Load client for this workload is osm2pgsql (local planet import).
+  client_pids=""
+  if [ -n "$osm_roots" ]; then
+    # shellcheck disable=SC2086
+    client_pids=$(tree_pids $osm_roots | tr '\n' ' ')
+  fi
+  osm_pids="$client_pids"
+
+  extra=""
+  if [ -n "$OSMRELPROF_EXTRA_PIDS" ]; then
+    extra=$(printf '%s' "$OSMRELPROF_EXTRA_PIDS" | tr ',' ' ')
+  fi
+
+  {
+    echo "# osm-rel-prof PID targets $(date -Is)"
+    echo "# postmaster $postmaster"
+    echo "# osm2pgsql_roots $osm_roots"
+    echo "# server_tree"
+    # shellcheck disable=SC2086
+    uniq_live_pids $server_pids | sed 's/^/server /'
+    echo "# client_tree (osm2pgsql)"
+    # shellcheck disable=SC2086
+    uniq_live_pids $client_pids | sed 's/^/client /'
+    echo "# osm2pgsql_tree"
+    # shellcheck disable=SC2086
+    uniq_live_pids $osm_pids | sed 's/^/osm2pgsql /'
+    if [ -n "$extra" ]; then
+      echo "# extra"
+      # shellcheck disable=SC2086
+      uniq_live_pids $extra | sed 's/^/extra /'
+    fi
+  } > "$PERF_PIDS"
+
+  # shellcheck disable=SC2086
+  all_pids=$(uniq_live_pids $server_pids $client_pids $osm_pids $extra | tr '\n' ',' | sed 's/,$//')
+  if [ -z "$all_pids" ]; then
+    echo "osm-rel-prof: PID list empty after live filter" >&2
+    return 1
+  fi
+  echo "osm-rel-prof: targeting PIDs $all_pids" >&2
+  echo "osm-rel-prof: PID map $PERF_PIDS" >&2
+  # stdout is only the comma list for `perf record -p`
+  printf '%s\n' "$all_pids"
+}
+
 echo "osm-rel-prof: waiting for planet_osm_rels COPY"
 while true; do
   if [ "$(rels_copy_active)" = "1" ]; then
@@ -105,8 +234,9 @@ while true; do
 done
 
 echo "osm-rel-prof: relation phase detected, starting perf"
-rm -f "$PERF_DATA" "$PERF_REPORT"
-$PGBENT_PERF record -a -g -o "$PERF_DATA" &
+rm -f "$PERF_DATA" "$PERF_REPORT" "$PERF_PIDS"
+PID_LIST=$(build_perf_pid_list) || exit 1
+$PGBENT_PERF record -g -p "$PID_LIST" -o "$PERF_DATA" &
 PERF_PID=$!
 STARTED_AT=$(date +%s)
 STOP_REASON="planet_osm_rels COPY gone"

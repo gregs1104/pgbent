@@ -1,31 +1,175 @@
 #!/bin/bash
-# Linux drop OS caching as user like postgres, probably with sudo.
-# Suggested install directory is /usr/local/bin
+# Privileged helper for postgres: OS page-cache drop and restart-gated
+# test parameter changes on a Debian/Ubuntu pg_ctlcluster instance.
+# Suggested install: /usr/local/bin
 #
-# For Debian/Ubuntu Linux installs, supports two optional parameters:
-# version of PG and cluster name to restart as part of cache dropping.
-# Sample:
+# This is the general NOPASSWD entry point for operations that need root
+# before/with a cluster restart. Add new --test-* verbs here (next up:
+# shared_buffers) rather than bare `sudo mv` / `sudo pg_ctlcluster`.
 #
-#   /usr/local/bin/pgbent_drop_caches 17 main
+# Usage:
+#   pgbent_drop_caches VERSION CLUSTER
+#       Restart the cluster, then drop OS caches (legacy newgis-style).
+#   pgbent_drop_caches --restart-only VERSION CLUSTER
+#       Restart only — no /proc/sys/vm/drop_caches.
+#   pgbent_drop_caches --test-wal-fsync WAL FSYNC VERSION CLUSTER
+#       Flip conf.d osm-wal / osm-fsync pairs (hold FPW on), restart only.
+#       WAL is replica|minimal; FSYNC is on|off.
 #
-# Starting from a checkout of pgbent into the postgres user's home directory, you
-# likely need to run sudo as another user to install this, then add a sudo rule to allow
-# the postgres user to run it.  This idiom works here:
+# Install (as a user with real sudo), then NOPASSWD for postgres:
 #
 #    cp util/pgbent_drop_caches /tmp
-#    logout
 #    sudo cp /tmp/pgbent_drop_caches /usr/local/bin/
 #    sudo sh -c "echo \"postgres ALL = (ALL) NOPASSWD: /usr/local/bin/pgbent_drop_caches\" >> /etc/sudoers.d/postgres"
-#
 
-if [[ $(id -u) -ne 0 ]] ; then echo "Cache dropping must run as root" ; exit 1 ; fi
+set -euo pipefail
 
-# TODO Wrap the cluster parameters better to reduce sudo exploit potential.
-if [ -n "$2" ] ; then
-  svctl $1 $2 restart:wq
+if [[ $(id -u) -ne 0 ]]; then
+  echo "pgbent_drop_caches: must run as root" >&2
+  exit 1
 fi
 
-echo -n "Dropping "
-grep ^Cached: /proc/meminfo
-sync
-echo 3 > /proc/sys/vm/drop_caches
+RESTART_ONLY=0
+TEST_WAL_FSYNC=0
+WAL=""
+FSYNC=""
+
+usage() {
+  echo "Usage:" >&2
+  echo "  pgbent_drop_caches VERSION CLUSTER" >&2
+  echo "  pgbent_drop_caches --restart-only VERSION CLUSTER" >&2
+  echo "  pgbent_drop_caches --test-wal-fsync WAL FSYNC VERSION CLUSTER" >&2
+  exit 2
+}
+
+restart_cluster() {
+  local ver=$1 name=$2
+  if [[ ! "$ver" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+    echo "pgbent_drop_caches: bad VERSION '$ver'" >&2
+    exit 1
+  fi
+  if [[ ! "$name" =~ ^[A-Za-z0-9_-]+$ ]]; then
+    echo "pgbent_drop_caches: bad CLUSTER '$name'" >&2
+    exit 1
+  fi
+  pg_ctlcluster "$ver" "$name" restart
+}
+
+drop_os_caches() {
+  echo -n "Dropping "
+  grep ^Cached: /proc/meminfo || true
+  sync
+  echo 3 > /proc/sys/vm/drop_caches
+}
+
+# Exactly one of prefix-want.conf vs prefix-other.conf active under CONF_D.
+activate_pair() {
+  local conf_d=$1 prefix=$2 want=$3
+  local other
+  case "$want" in
+    replica) other=minimal ;;
+    minimal) other=replica ;;
+    on) other=off ;;
+    off) other=on ;;
+    *)
+      echo "pgbent_drop_caches: bad pair want=$want" >&2
+      return 1
+      ;;
+  esac
+
+  if [ -f "$conf_d/${prefix}-${want}.off" ]; then
+    mv -f "$conf_d/${prefix}-${want}.off" "$conf_d/${prefix}-${want}.conf"
+  elif [ ! -f "$conf_d/${prefix}-${want}.conf" ]; then
+    echo "pgbent_drop_caches: missing ${prefix}-${want}.conf/.off in $conf_d" >&2
+    return 1
+  fi
+  if [ -f "$conf_d/${prefix}-${other}.conf" ]; then
+    mv -f "$conf_d/${prefix}-${other}.conf" "$conf_d/${prefix}-${other}.off"
+  fi
+}
+
+test_wal_fsync_activate() {
+  local wal=$1 fsync=$2 ver=$3 name=$4
+  local conf_d="/etc/postgresql/${ver}/${name}/conf.d"
+
+  case "$wal" in
+    replica|minimal) ;;
+    *)
+      echo "pgbent_drop_caches: bad wal_level '$wal'" >&2
+      exit 1
+      ;;
+  esac
+  case "$fsync" in
+    on|off) ;;
+    *)
+      echo "pgbent_drop_caches: bad fsync '$fsync'" >&2
+      exit 1
+      ;;
+  esac
+  if [ ! -d "$conf_d" ]; then
+    echo "pgbent_drop_caches: missing $conf_d" >&2
+    exit 1
+  fi
+
+  activate_pair "$conf_d" osm-wal "$wal"
+  activate_pair "$conf_d" osm-fsync "$fsync"
+
+  # FPW held on for the durability 2×2.
+  if [ -f "$conf_d/osm-fpw-on.off" ]; then
+    mv -f "$conf_d/osm-fpw-on.off" "$conf_d/osm-fpw-on.conf"
+  fi
+  if [ -f "$conf_d/osm-fpw-off.conf" ]; then
+    mv -f "$conf_d/osm-fpw-off.conf" "$conf_d/osm-fpw-off.off"
+  fi
+
+  echo "pgbent_drop_caches: --test-wal-fsync wal_level=$wal fsync=$fsync (fpw on) → ${ver}/${name}"
+  restart_cluster "$ver" "$name"
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --restart-only)
+      RESTART_ONLY=1
+      shift
+      ;;
+    --test-wal-fsync)
+      TEST_WAL_FSYNC=1
+      shift
+      WAL=${1:-}
+      FSYNC=${2:-}
+      if [ -z "$WAL" ] || [ -z "$FSYNC" ]; then
+        usage
+      fi
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+if [ "$TEST_WAL_FSYNC" -eq 1 ]; then
+  if [ $# -ne 2 ]; then
+    usage
+  fi
+  test_wal_fsync_activate "$WAL" "$FSYNC" "$1" "$2"
+  exit 0
+fi
+
+if [ $# -eq 0 ]; then
+  # Cache drop only (no cluster).
+  drop_os_caches
+  exit 0
+fi
+
+if [ $# -ne 2 ]; then
+  usage
+fi
+
+restart_cluster "$1" "$2"
+if [ "$RESTART_ONLY" -eq 0 ]; then
+  drop_os_caches
+fi
