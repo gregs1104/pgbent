@@ -1,0 +1,50 @@
+#!/bin/bash
+# Buffercache usage-count calibration: step pgbench SELECT through the
+# pgsysinfo 4×RAM scale ladder (tiny + 20%…100% of max).
+#
+# Historical twilight sets 1 / 77 / 81 / 84 used SCALES
+#   100 6850 13700 20550 27400 34250  (~1.5GB … 500GB)
+# with shared_buffers ~32–48GB. When the hot index fits in shared_buffers,
+# pg_buffercache avg usagecount stays high; once the working set spills,
+# usage drops. That validated avg_usage as a cache-effectiveness signal.
+#
+# This run also records empty slots → unused_pct (oversizing evidence).
+#
+# Default clients match the later 14900K sweeps (through 128). Override:
+#   SETCLIENTS="128" ./wl/buffercache-scale
+#   SETTIMES=1 RUNTIME=30 ./wl/buffercache-scale   # smoke
+#
+# Usage (from pgbent root, postgres / results wired in config):
+#   ./newset 'buffercache scale sweep — avg_usage calibration'
+#   ./wl/buffercache-scale
+
+cd "$(dirname "$0")/.."
+
+SCRIPT=select
+SETTIMES="${SETTIMES:-2}"
+RUNTIME="${RUNTIME:-60}"
+
+echo "SCRIPT=$SCRIPT" > params
+echo "SETTIMES=$SETTIMES" >> params
+echo "RUNTIME=$RUNTIME" >> params
+./pgsysinfo >> params
+
+# Keep pgsysinfo SCALES; replace clients with the historical high-concurrency grid
+# unless the caller already exported SETCLIENTS.
+if [ -z "${SETCLIENTS:-}" ]; then
+  SETCLIENTS="1 2 4 8 16 32 64 128"
+fi
+grep -vE '^SETCLIENTS=' params > params.tmp
+echo "SETCLIENTS=\"$SETCLIENTS\"" >> params.tmp
+mv params.tmp params
+
+# Fresh scale ladder needs init at each size.
+grep -vE '^SKIPINIT=' params > params.tmp
+echo "SKIPINIT=0" >> params.tmp
+mv params.tmp params
+
+echo "=== buffercache-scale ==="
+grep -E '^(SCRIPT|SETTIMES|RUNTIME|SCALES|SETCLIENTS|SKIPINIT)=' params
+echo "Starting runset…"
+./runset
+echo "buffercache-scale finished rc=$?"

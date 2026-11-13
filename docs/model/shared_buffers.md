@@ -28,6 +28,18 @@ Increase it to 38%/48GB and it gets faster.  But the CPU overhead of running the
 
 Larger values ultimately take too much from the OS read cache as well.  There is some worst case pathological behavior possible with both PG and Linux's cache designs.  The diversity to page evication logic of combining both PG's reference counting and the OS's LRU approach triages some of those.
 
+## Buffer cache internals
+
+End-of-run `pg_buffercache` snapshots roll up into a few numbers that are easy to watch: **average usagecount** (how hard the clock-sweep pins are held), **% dirty**, and **% unused** (empty slots — evidence `shared_buffers` is oversized). Relation-level detail is there when you need it; the submission/summary views keep the two cache-content signals next to throughput.
+
+![Buffer cache usagecount vs working-set size]({{ '/images/shared-buffers-usage.png' | relative_url }})
+
+Rising set **65** (Ryzen 5950X, ~48 GB `shared_buffers`, pgbench SELECT at 128 clients): database size stepped from ~1.5 GB through 1 TB. While the hot index fits in cache, `pgbench_accounts_pkey` usagecount sits at the clock maximum (**5**). As the working set outgrows `shared_buffers`, both whole-cache and index usage fall in step with hit rate. Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/shared-buffers-usage.py`.
+
+The size of the buffer cache doesn't have a single simple feedback tuning loop.  Useful, effective `shared_buffers` values are normally above an average usage count of **2.5**.  When you see that, the database might improve further with an increment more `shared_buffers`.  When the buffer cache isn't effective anymore, average usage count drops below **1** — there you might lower `shared_buffers` and let the OS handle more of the work.  Sometimes though a very low usage count is a clue `shared_buffers` is extremely undersized, and a large increase would help.  Reviewing cache size relative to the most-used indexes sorts out which case you're in.
+
+Scanning `pg_buffercache` is not free on a large pool.  Treat these internals as a **weekly or longer** health check, not a per-minute metric.
+
 ## Buffer hit overhead
 
 The nailed down reads in `shared_buffers` look like the high performance path.  A buffer hit means no slow read to storage.
