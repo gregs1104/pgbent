@@ -44,27 +44,41 @@ Artifacts in this study directory (also wired into the live toolkit as `tests/se
 
 ## Results (tps, select-scatter)
 
-Second pass is warmer; gaps are stable either way.
+Two passes after a cold OS cache drop: **cold** = first pass, **hot** = second. Gaps are stable either way.
 
 ### Linux isolation (PG 19rc2, scale 13700)
 
-| cell | court c=1 | court c=32 | twilight c=1 | twilight c=32 |
-|------|-----------|------------|--------------|---------------|
-| worker, RA=2048 | ~35 → ~73 | ~1865 / ~1871 | ~158 → ~306 | ~6655 / ~6699 |
-| **sync**, RA=2048 | ~34 → ~72 | ~1936 / ~1879 | ~158 → ~306 | ~6540 / ~6678 |
-| worker, **RA=128** (court) | ~33 → ~70 | ~1848 / ~1851 | — | — |
-| worker, **RA=0** (court) | ~17 → ~36 | ~913 / ~1018 | — | — |
-| worker, **eic=0** | ~35 → ~72 | ~1868 / ~1883 | ~158 → ~306 | ~6522 / ~6678 |
+**Clients = 1**
+
+| cell | court cold | court hot | twilight cold | twilight hot |
+|------|------------|-----------|---------------|--------------|
+| worker, RA=2048 | 35 | 73 | 158 | 306 |
+| sync, RA=2048 | 34 | 72 | 158 | 306 |
+| worker, RA=128 | 33 | 70 | — | — |
+| worker, RA=0 | 17 | 36 | — | — |
+| worker, eic=0 | 35 | 72 | 158 | 306 |
+
+**Clients = 32**
+
+| cell | court cold | court hot | twilight cold | twilight hot |
+|------|------------|-----------|---------------|--------------|
+| worker, RA=2048 | 1865 | 1871 | 6655 | 6699 |
+| sync, RA=2048 | 1936 | 1879 | 6540 | 6678 |
+| worker, RA=128 | 1848 | 1851 | — | — |
+| worker, RA=0 | 913 | 1018 | — | — |
+| worker, eic=0 | 1868 | 1883 | 6522 | 6678 |
 
 Sets: court **14–18**; twilight **124–126**.
 
 ### Darwin ARM cross-check (PG 18.6, scale 17500)
 
-| host | CPU | c=1 | c=8 | c=32 |
-|------|-----|-----|-----|------|
-| abbey | Apple M4 Max, 128 GB, macOS | 85 → 115 | 867 → 957 | 2331 → 2400 |
+Abbey — Apple M4 Max, 128 GB, macOS. Set **13**, durable face (`fsync=on`, `wal_level=replica`, `io_method=worker`). Slightly larger DB than the Linux pair, so if anything this understates Abbey vs court/twilight.
 
-Set **13**, durable face (`fsync=on`, `wal_level=replica`, `io_method=worker`). Slightly larger DB than the Linux pair, so if anything this understates Abbey vs court/twilight.
+| clients | cold | hot |
+|---------|------|-----|
+| 1 | 85 | 115 |
+| 8 | 867 | 957 |
+| 32 | 2331 | 2400 |
 
 ### Takeaways
 
