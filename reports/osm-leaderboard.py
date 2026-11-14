@@ -264,6 +264,11 @@ def joules_takeaway(df: pd.DataFrame) -> str:
             f"({format_markdown_cell(fast['score_kips'])} vs "
             f"{format_markdown_cell(nv['score_kips'])})."
         )
+    bits.append(
+        "ARM’s “cheap” joules are partly stalls on scattered index→heap misses "
+        "during Relations — see "
+        "[ARM random read vs x86]({{ '/studies/arm-random-read-vs-x86/' | relative_url }})."
+    )
     return " ".join(bits)
 
 

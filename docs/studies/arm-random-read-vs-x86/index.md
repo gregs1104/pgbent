@@ -27,7 +27,30 @@ To separate hypotheses, a small durable-face miniature of that access shape was 
 
 ## Workload
 
-`pgbench` custom script **select-scatter**: **64 unsorted random `aid`s** → nested-loop index probes + heap fetches on `pgbench_accounts` (planner forced off seq/bitmap).
+`pgbench` custom script **select-scatter**: **64 unsorted random `aid`s** → nested-loop index probes + heap fetches on `pgbench_accounts`. Planner forced onto that shape:
+
+```sql
+ALTER DATABASE pgbench SET enable_seqscan = off;
+ALTER DATABASE pgbench SET enable_bitmapscan = off;
+ALTER DATABASE pgbench SET enable_hashjoin = off;
+ALTER DATABASE pgbench SET enable_mergejoin = off;
+```
+
+Trimmed script (full file has `\set a01` … `\set a64`; each txn draws 64 independent aids):
+
+```sql
+\set limit 100000 * :scale
+\set a01 random(1, :limit)
+\set a02 random(1, :limit)
+-- … a03 … a63 …
+\set a64 random(1, :limit)
+
+SELECT sum(a.abalance)
+FROM unnest(ARRAY[
+  :a01,:a02, /* … :a03 … :a63 … */ :a64
+]::bigint[]) AS u(aid)
+JOIN pgbench_accounts a ON a.aid = u.aid;
+```
 
 Artifacts in this study directory (also wired into the live toolkit as `tests/select-scatter.sql` and `wl/arm-miss-isolation`):
 
