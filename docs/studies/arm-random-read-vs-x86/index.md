@@ -54,8 +54,9 @@ Second pass is warmer; gaps are stable either way.
 | **sync**, RA=2048 | ~34 → ~72 | ~1936 / ~1879 | ~158 → ~306 | ~6540 / ~6678 |
 | worker, **RA=128** (court) | ~33 → ~70 | ~1848 / ~1851 | — | — |
 | worker, **RA=0** (court) | ~17 → ~36 | ~913 / ~1018 | — | — |
+| worker, **eic=0** | ~35 → ~72 | ~1868 / ~1883 | ~158 → ~306 | ~6522 / ~6678 |
 
-Sets: court **14–17**; twilight **124–125**.
+Sets: court **14–18**; twilight **124–126**.
 
 ### Darwin ARM cross-check (PG 18.6, scale 17500)
 
@@ -69,8 +70,9 @@ Set **13**, durable face (`fsync=on`, `wal_level=replica`, `io_method=worker`). 
 
 1. **`io_method=sync` ≈ `worker` on both Linux hosts.** The ARM/x86 gap does **not** move. That kills “PG19 AIO worker glue is the ARM tax” for this shape.
 2. **Court `read_ahead_kb` 2048 vs 128 is flat.** Setting **0 hurts** (~½ throughput). So the gap is not “ARM is over-readaheading at 2048.”
-3. **A second ARM vendor/OS is also well below x86.** At 32 clients, twilight is ~**3.5×** court and ~**2.8×** Abbey. Abbey beating court by ~**1.3×** is more or less the **standard CPU gap** between an M4 and the ARM cores in the DGX Spark — not evidence that Darwin “fixed” the miss path. Both ARM hosts still lose the same way to the x86 box (and Abbey was on PG 18 with a slightly larger DB).
-4. After (1)–(3), what remains is the boring, hard one: **miss cost / miss behavior on ARM hosts** for this scattered index→heap pattern (page cache, storage, copy/clear, locality — not the AIO method switch and not the usual readahead knob).
+3. **`effective_io_concurrency=0` is flat on both hosts** (court **18**, twilight **126** vs their worker baselines). Prefetch/eic is not the lever for this NL heap-fetch shape either.
+4. **A second ARM vendor/OS is also well below x86.** At 32 clients, twilight is ~**3.5×** court and ~**2.8×** Abbey. Abbey beating court by ~**1.3×** is more or less the **standard CPU gap** between an M4 and the ARM cores in the DGX Spark — not evidence that Darwin “fixed” the miss path. Both ARM hosts still lose the same way to the x86 box (and Abbey was on PG 18 with a slightly larger DB).
+5. After (1)–(4), what remains is the boring, hard one: **miss cost / miss behavior on ARM hosts** for this scattered index→heap pattern (page cache, storage, copy/clear, locality — not AIO, not `read_ahead_kb`, not `effective_io_concurrency`).
 
 ## Handoff
 
@@ -78,7 +80,7 @@ The useful product of this investigation is the **public reproduction**, not a r
 
 Natural next reproduction: **Graviton** (another Linux ARM vendor, easy for cloud folks to spin). Worth pinging Andres, Haas, or one of the Amazon people on `-hackers` to try the same `select-scatter` cold grid there — if Graviton matches court/abbey, the story is “ARM buffered random miss” broadly; if it matches twilight, we learn something about the DGX/Apple side instead.
 
-Open threads for someone else (optional): `effective_io_concurrency=0`, `posix_fadvise`/prefetch shape, filesystem, `perf` on the fill path under `io_method=sync`, sequential heap walk of similar bytes.
+Open threads for someone else (optional): filesystem, `perf` on the fill path under `io_method=sync`, sequential heap walk of similar bytes.
 
 ## Reproduce
 
