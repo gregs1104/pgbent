@@ -8,9 +8,9 @@ nav_order: 1
 
 # ARM vs x86: slow scattered index→heap buffer misses
 
-**Status:** Initial report (2026-11-13), updated 2026-11-15 with the court culprit. Intended for discussion on pgsql-hackers.
+**Status:** Initial report (2026-11-13), updated 2026-11-15 with the court and Darwin culprits. Intended for discussion on pgsql-hackers.
 
-**Not a PG19 regression, and not an AIO bug.** This Relations lag has shown up consistently on Darwin (Abbey) since **PG17**, and on court (NVIDIA DGX Spark) back through **PG16**. It looks “new” only because nobody had isolated a small public case before. The causes are in the desktop ARM platforms' I/O path, not in Postgres. On court the main culprit is now identified: the NVMe drive ships with **interrupt coalescing** enabled, which holds every low queue depth read for up to 100 µs. Turning it off triples cold single-client throughput. See [Culprits identified so far](#culprits-identified-so-far). It also barely shows up in the wild: the OSM planet load that surfaces it needs a fast database **and** a client with enough RAM to hold a large nodes cache (~128 GB class). Most setups never get into that corner.
+**Not a PG19 regression, and not an AIO bug.** This Relations lag has shown up consistently on Darwin (Abbey) since **PG17**, and on court (NVIDIA DGX Spark) back through **PG16**. It looks “new” only because nobody had isolated a small public case before. The causes are in the desktop ARM platforms' I/O path, not in Postgres. On court the main culprit is NVMe **interrupt coalescing** left on by the drive firmware. On Darwin it is Homebrew's **`brew services` LaunchAgent**, which clamps Postgres to a utility I/O class. See [Culprits identified so far](#culprits-identified-so-far). It also barely shows up in the wild: the OSM planet load that surfaces it needs a fast database **and** a client with enough RAM to hold a large nodes cache (~128 GB class). Most setups never get into that corner.
 
 On a pair of ~128 GB bare metal NVMe boxes, the OSM **Relations** phase is about **3.5× slower on ARM** than on a similar-class x86 host. The numbers below happen to be from a **19** durable face; older majors show the same shape.
 
@@ -111,7 +111,7 @@ Sets: court **14–18**; twilight **124–126**. Court's grid ran with the drive
 
 ### Darwin ARM cross-check (PG 18.6, scale 17500)
 
-Abbey — Apple M4 Max, 128 GB, macOS. Set **13**, high durability (`fsync=on`, `wal_level=replica`, `io_method=worker`). Slightly larger DB than the Linux pair, mild handicap versus Linux tests.
+Abbey — Apple M4 Max, 128 GB, macOS. Set **13**, high durability (`fsync=on`, `wal_level=replica`, `io_method=worker`). Slightly larger DB than the Linux pair, mild handicap versus Linux tests. Ran under Homebrew `brew services` (utility I/O clamp — see Darwin section below); treat these numbers as soft.
 
 | clients | M4 cold | M4 hot |
 |---------|------|-----|
@@ -167,18 +167,26 @@ Things checked and ruled out on court along the way:
 
 pgbent now disables NVMe coalescing in `util/pgbent_tune`, which `newgis` runs after every boot alongside readahead and the CPU governor. The setting is not saved to the drive, so a power cycle restores the firmware default — same convention as the other post-boot knobs.
 
-### Darwin (Abbey): still open
+### Darwin (Abbey): Homebrew LaunchAgent I/O class — confirmed
 
-Two platform issues are in play; neither is fully closed:
+Homebrew's `brew services` installs a LaunchAgent (`sh.brew.postgresql@N`) that starts Postgres under launchd. On Apple Silicon that agent runs with a **QoS clamp of `THREAD_QOS_UTILITY`**, which also drops the process to **I/O throttle tier 1 (STANDARD)** instead of tier 0 (IMPORTANT). Disk reads from that postmaster are treated as background relative to interactive work. `taskinfo` on the postmaster shows the clamp; backends inherit it.
 
-- **Launchd QoS.** Homebrew's `brew services` LaunchAgent clamps Postgres to `THREAD_QOS_UTILITY` / I/O tier 1. Starting the same binary with `pg_ctl` from an ssh session (no clamp) raised cold `select-scatter` from about **53 → 68** TPS at c=1 and **1670 → 2580** at c=32 (restart + `purge` each pass). The published Abbey set **13** numbers above were under the clamped service.
-- **Block size / other Darwin I/O tuning.** APFS allocation is 4 KB while Postgres defaults to 8 KB; building with `--with-blocksize=16` to match Apple Silicon's 16 KB VM pages is a known experiment and is underway. Recent AI / NVMe work on Darwin (e.g. Flash-MoE style `pread` vs `mmap` studies) suggests trusting the unified buffer cache and avoiding `F_NOCACHE` / advisory hints; that still needs a Postgres-shaped confirmation.
+| how Postgres is started | QoS clamp | I/O tier | c=1 cold TPS | c=32 cold TPS |
+|---|---|---|---|---|
+| `brew services` (LaunchAgent) | `THREAD_QOS_UTILITY` | tier 1 STANDARD | ~52–53 | ~1670–1677 |
+| `pg_ctl` from an ssh/login shell | none | tier 0 IMPORTANT | ~68 | ~2577–2579 |
 
-With court's coalescing removed, Abbey's remaining gap to twilight is the larger open Darwin question.
+Same 8 KB Homebrew binary, same scale-17500 DB, restart + `purge` before each pass. Unclamping is about **+30% at c=1** and **+54% at c=32**. The published Abbey set **13** numbers above were under the clamped service. Intermittent “Darwin looks fine / then doesn’t” behavior in earlier OSM work is consistent with sometimes running under `brew services` and sometimes under a manual `pg_ctl`.
+
+**Recipe:** for database work on macOS, do not use `brew services` as the long-running server. Stop the LaunchAgent and start with `pg_ctl` (set `LC_ALL` to a real locale — Homebrew’s plist does that; a bare `pg_ctl` without it can fail with “postmaster became multithreaded during startup”). A custom LaunchDaemon/LaunchAgent without the utility clamp would also work; the stock Homebrew one does not.
+
+**Block size is not the lever here.** A from-source PG 18.6 build with `--with-blocksize=16` (matching Apple Silicon’s 16 KB VM pages) was A/B’d unclamped against the 8 KB Homebrew cluster on the same cold `select-scatter` protocol: ~71 vs ~68 TPS at c=1, ~2198 vs ~2160 at c=32 — flat. The spindle-era lore that larger pages half the I/O count does not show up on this NVMe miss path. You probably don't need your own recompile just to change the default 8 KB page size to 16; you should try fixing the I/O class instead.
+
+An unclamped durable OSM planet load is in progress on Abbey (set **15**) to see whether Relations picks up the ~50% class win. If it does, Darwin is solved enough for this release: document the LaunchAgent trap, run unclamped, done.
 
 ## Handoff
 
-The useful product is a **public reproduction** of a long-standing platform gap that OSM only shows on high-end hardware. Postgres isn't the place to fix it. On court, the main cause was a drive firmware default that any Postgres user on that hardware can switch off at boot; that default is a reasonable OEM choice for interrupt rate, just a bad match for this access pattern.
+The useful product is a **public reproduction** of a long-standing platform gap that OSM only shows on high-end hardware. Postgres isn't the place to fix it. On court, the main cause was a drive firmware default that any Postgres user on that hardware can switch off at boot; that default is a reasonable OEM choice for interrupt rate, just a bad match for this access pattern. On Darwin, the main cause was running the server as a Homebrew LaunchAgent with a utility I/O class.
 
 Natural next reproduction: **Graviton** or another server-class Linux ARM vendor. Hoping someone on `-hackers` will try the same `select-scatter` cold grid there, and check `nvme get-feature -f 8` while at it. The expected result is that Graviton keeps up with x86 hosts like twilight, which would confirm this is a desktop ARM platform issue rather than anything about ARM in general.
 
@@ -186,5 +194,6 @@ Natural next reproduction: **Graviton** or another server-class Linux ARM vendor
 
 - OSM planet load on court with coalescing off (set **24**, in progress) — how much of the 3.5× Relations gap closes.
 - Court's remaining ~1.6–1.7× gap after coalescing; not assumed to reach x86.
-- Darwin: finish the 16 KB `blocksize` A/B; document a non-clamped LaunchAgent recipe for Abbey.
+- Abbey OSM under unclamped I/O (set **15**, in progress) — whether Relations moves ~50%.
+- Twilight public `read_ahead_kb` ladder + OSM with RA=0 (in progress).
 - CPU and power cost of running with coalescing off (one interrupt per read).
