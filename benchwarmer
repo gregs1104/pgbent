@@ -373,6 +373,20 @@ if [ "$SUDODATA" -eq "1" ]; then
   POWERSTAT=$!
 fi
 
+# Optional block-layer latency sample (util/pgbent_blktrace).  One bounded capture of
+# BLKTRACE_SEC seconds starting BLKTRACE_DELAY seconds into the test, written to
+# results/$SERVERNAME/$TEST/blktrace/.  Needs a local server and the sudo rule.
+BLKTRACEPID=""
+if [ "${BLKTRACE:-0}" = "1" ] && [ -x /usr/local/bin/pgbent_blktrace ] ; then
+  BLKTRACE_DIR="$BASEDIR/results/$SERVERNAME/$TEST/blktrace"
+  BLKTRACE_DATA=`$TESTPSQL -Atc "SHOW data_directory" 2>/dev/null`
+  mkdir -p "$BLKTRACE_DIR"
+  ( sleep "${BLKTRACE_DELAY:-60}"
+    sudo -n /usr/local/bin/pgbent_blktrace capture "$BLKTRACE_DATA" "${BLKTRACE_SEC:-10}" "$BLKTRACE_DIR"
+  ) > "$BLKTRACE_DIR/capture.log" 2>&1 &
+  BLKTRACEPID=$!
+fi
+
 # This one should run even if osdata collectors are not available
 ./timed-os-stats $TESTPSQL -At -f $BASEDIR/util/metric-query.sql > results/$SERVERNAME/$TEST/psql.log &
 PSQLMET=$!
@@ -384,6 +398,12 @@ echo Script $SCRIPT executing for $CLIENTS concurrent users... 1>&2
 $BENCHBIN $SCRIPTOPT -s $SCALE $TESTHOSTPARAM -p $TESTPORT -U $TESTUSER $TESTDB > results.txt 2>&1 &
 P=$!
 wait $P
+if [ -n "$BLKTRACEPID" ] ; then
+  # A capture still waiting out its delay is skipped; one in progress must finish
+  # before the next test so it doesn't trace that test's cache drop.
+  pkill -P "$BLKTRACEPID" -x sleep 2>/dev/null
+  wait "$BLKTRACEPID" 2>/dev/null
+fi
 # Incomplete OSM (killed / thermal trip) has no overall line. Closing the
 # row here used to stamp end_time=now() and then art-import {} onto the
 # last good test when max(test) was reused.

@@ -24,6 +24,10 @@
 # Optional:
 #   OSMRELPROF_TAG=tree   → osm-rel-perf-tree.data / report (avoid clobber)
 #   OSMRELPROF_EXTRA_PIDS → comma/space PIDs merged into the target set
+#   OSMRELPROF_BLKTRACE=0 → skip the block-layer latency sample.  Default is one
+#                           OSMRELPROF_BLKTRACE_SEC (default 60) blktrace/btt capture
+#                           of the data directory's device when perf starts, written
+#                           to osm-rel-blktrace[-<TAG>]/ (needs util/pgbent_blktrace)
 #
 # Requires util/pgbent_perf installed under /usr/local/bin with a NOPASSWD
 # sudoers rule (same idiom as pgbent_powermon / pgbent_tune).  Artifacts
@@ -70,6 +74,14 @@ else
 fi
 PERF_PID=""
 STOPPING=0
+PGBENT_BLKTRACE=/usr/local/bin/pgbent_blktrace
+BLKTRACE_SEC="${OSMRELPROF_BLKTRACE_SEC:-60}"
+if [ -n "$OSMRELPROF_TAG" ]; then
+  BLKTRACE_DIR="$(pwd)/osm-rel-blktrace-${OSMRELPROF_TAG}"
+else
+  BLKTRACE_DIR="$(pwd)/osm-rel-blktrace"
+fi
+BLKTRACE_PID=""
 
 stop_perf() {
   local reason="$1"
@@ -98,6 +110,10 @@ stop_perf() {
 
 cleanup() {
   stop_perf "signal or exit"
+  if [ -n "$BLKTRACE_PID" ] && kill -0 "$BLKTRACE_PID" 2>/dev/null; then
+    sudo "$PGBENT_BLKTRACE" stop || true
+    wait "$BLKTRACE_PID" 2>/dev/null || true
+  fi
 }
 trap cleanup EXIT TERM INT
 
@@ -238,6 +254,14 @@ rm -f "$PERF_DATA" "$PERF_REPORT" "$PERF_PIDS"
 PID_LIST=$(build_perf_pid_list) || exit 1
 $PGBENT_PERF record -g -p "$PID_LIST" -o "$PERF_DATA" &
 PERF_PID=$!
+if [ "${OSMRELPROF_BLKTRACE:-1}" = "1" ] && [ -x "$PGBENT_BLKTRACE" ]; then
+  mkdir -p "$BLKTRACE_DIR"
+  DATA_DIR=$($TESTPSQL -c "SHOW data_directory")
+  echo "osm-rel-prof: blktrace ${BLKTRACE_SEC}s of $DATA_DIR device into $BLKTRACE_DIR"
+  sudo "$PGBENT_BLKTRACE" capture "$DATA_DIR" "$BLKTRACE_SEC" "$BLKTRACE_DIR" \
+    > "$BLKTRACE_DIR/capture.log" 2>&1 &
+  BLKTRACE_PID=$!
+fi
 STARTED_AT=$(date +%s)
 STOP_REASON="planet_osm_rels COPY gone"
 
@@ -268,6 +292,10 @@ while true; do
 done
 
 stop_perf "$STOP_REASON"
+if [ -n "$BLKTRACE_PID" ]; then
+  wait "$BLKTRACE_PID" 2>/dev/null || true
+  BLKTRACE_PID=""
+fi
 trap - EXIT TERM INT
 
 if [ -s "$PERF_DATA" ]; then

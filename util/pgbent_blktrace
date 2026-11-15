@@ -1,0 +1,101 @@
+#!/bin/bash
+
+# Capture a bounded blktrace of the block device holding a path, then reduce it
+# with btt into a small latency report.  Run as root through sudo.
+# Suggested install directory is /usr/local/bin
+#
+# Install idiom (same as pgbent_perf / pgbent_tune):
+#
+#    cp util/pgbent_blktrace /tmp
+#    logout
+#    sudo cp /tmp/pgbent_blktrace /usr/local/bin/
+#    sudo sh -c "echo \"postgres ALL = (ALL) NOPASSWD: /usr/local/bin/pgbent_blktrace\" >> /etc/sudoers.d/postgres"
+#
+# Requires blktrace (blktrace, blkparse, btt).  On Ubuntu: apt install blktrace
+#
+#    sudo /usr/local/bin/pgbent_blktrace capture PATH SECONDS OUTDIR
+#    sudo /usr/local/bin/pgbent_blktrace stop
+#
+# PATH is any file or directory on the device to trace, normally the Postgres
+# data_directory.  The partition is resolved to its parent disk.  OUTDIR must
+# already exist.  It receives:
+#   btt.txt          btt summary: Q2C / D2C averages and the per-stage split
+#   latency.txt      D2C and Q2C percentiles in microseconds
+#   blktrace.log     blktrace's own output, including any dropped-event warning
+#
+# Raw per-CPU trace files go to /dev/shm and are deleted after btt.  Writing
+# them to the traced device would perturb the measurement; at 400k IOPS they
+# grow by roughly 150MB/s.  Keep SECONDS short for high IOPS runs.
+
+usage() {
+  echo "usage: pgbent_blktrace capture PATH SECONDS OUTDIR | stop" >&2
+  exit 2
+}
+
+for b in blktrace blkparse btt; do
+  if ! command -v $b >/dev/null 2>&1; then
+    echo "pgbent_blktrace: $b not found" >&2
+    exit 1
+  fi
+done
+
+if [ "$1" = "stop" ]; then
+  pkill -INT -x blktrace 2>/dev/null || true
+  exit 0
+fi
+
+[ "$1" = "capture" ] || usage
+TARGET="$2"
+SECONDS_ARG="$3"
+OUTDIR="$4"
+[ -e "$TARGET" ] || { echo "pgbent_blktrace: no such path $TARGET" >&2; exit 1; }
+[ -d "$OUTDIR" ] || { echo "pgbent_blktrace: no such directory $OUTDIR" >&2; exit 1; }
+case "$SECONDS_ARG" in
+  ''|*[!0-9]*) usage ;;
+esac
+if [ "$SECONDS_ARG" -lt 1 ] || [ "$SECONDS_ARG" -gt 3600 ]; then
+  usage
+fi
+
+SRC=$(df --output=source "$TARGET" | tail -1)
+PARENT=$(lsblk -no PKNAME "$SRC" 2>/dev/null | head -1)
+if [ -n "$PARENT" ]; then
+  DEV="/dev/$PARENT"
+else
+  DEV="$SRC"
+fi
+[ -b "$DEV" ] || { echo "pgbent_blktrace: $DEV is not a block device" >&2; exit 1; }
+
+RAW=$(mktemp -d /dev/shm/pgbent-blktrace.XXXXXX)
+trap 'rm -rf "$RAW"' EXIT
+
+{
+  echo "# device $DEV for $TARGET, ${SECONDS_ARG}s, started $(date -Is)"
+  blktrace -d "$DEV" -w "$SECONDS_ARG" -b 2048 -n 16 -D "$RAW" -o trace 2>&1
+} > "$OUTDIR/blktrace.log"
+
+(
+  cd "$RAW" || exit 1
+  blkparse -q -i trace -d trace.bin -o /dev/null > /dev/null 2>&1
+  btt -i trace.bin -q q2c -l d2c > "$OUTDIR/btt.txt" 2>&1
+  {
+    echo "# $DEV ${SECONDS_ARG}s  percentiles in microseconds"
+    printf "%-4s %10s %8s %8s %8s %8s %8s %8s\n" stat n avg p50 p90 p99 p99.9 max
+    for s in d2c q2c; do
+      f=$(ls ${s}_*.dat 2>/dev/null | head -1)
+      [ -n "$f" ] || continue
+      awk '{print $2 * 1000000}' "$f" | sort -n | awk -v s=$s '
+        { v[NR] = $1; sum += $1 }
+        function pct(p,   i) { i = int(NR * p) + 1; if (i > NR) i = NR; return v[i] }
+        END {
+          if (NR == 0) exit
+          printf "%-4s %10d %8.1f %8.1f %8.1f %8.1f %8.1f %8.1f\n", s, NR, sum / NR,
+            pct(0.50), pct(0.90), pct(0.99), pct(0.999), v[NR]
+        }'
+    done
+  } > "$OUTDIR/latency.txt"
+)
+
+if [ -n "$SUDO_USER" ]; then
+  chown "$SUDO_USER:" "$OUTDIR/blktrace.log" "$OUTDIR/btt.txt" "$OUTDIR/latency.txt" 2>/dev/null || true
+fi

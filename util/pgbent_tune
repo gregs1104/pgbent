@@ -14,8 +14,24 @@
 # Read-ahead is fixed at 4096.  You may want to use higher values for large systems, benefits
 # reduce but continue to at least 16384.  This script might take an input for this value.
 # As a sudo script that needs some sanitization work yet to be written here first.
+#
+# NVMe interrupt coalescing is disabled when nvme-cli is installed.  Some OEM firmware
+# (DGX Spark's Samsung MZALC4T0HBL1) ships with 100us/threshold 8 coalescing, which holds
+# every low queue depth read for the full 100us timer:  ~5x QD1 read latency, and 2-3x
+# lower select-scatter TPS.  The timer's minimum nonzero value is 100us, so off is the
+# only useful setting.  See docs/studies/arm-random-read-vs-x86.  Not saved to the drive;
+# a power cycle restores the firmware default until this runs again.
 
 /usr/bin/cpupower frequency-set --governor=performance
 /usr/bin/lsblk --nodeps -n -o NAME | xargs -I{} --max-args=1 /usr/sbin/blockdev --setra 4096 /dev/{}
 /usr/sbin/blockdev --report | grep -v "/dev/loop"
+NVME=$(command -v nvme)
+if [ -n "$NVME" ] ; then
+  for c in $(ls /sys/class/nvme 2>/dev/null) ; do
+    before=$($NVME get-feature /dev/$c -f 8 2>/dev/null | tail -1 | sed 's/.*Current value://')
+    $NVME set-feature /dev/$c -f 8 -V 0 >/dev/null 2>&1
+    after=$($NVME get-feature /dev/$c -f 8 2>/dev/null | tail -1 | sed 's/.*Current value://')
+    echo "$c interrupt coalescing:$before ->$after"
+  done
+fi
 /usr/sbin/fstrim -av

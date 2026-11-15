@@ -1,5 +1,7 @@
 #!/bin/bash
 # ARM buffer-miss isolation series (durable face only).
+# Built as automation on top of the pgbent software.
+# Usage of pgbent is certainly not required for reproduction.
 #
 # Miniature of OSM Relations: cold, scattered index → heap fetches via
 # tests/select-scatter.sql on a pgbench DB that does not fit in RAM.
@@ -10,7 +12,9 @@
 #   2) court read_ahead_kb 128 then 0  (twilight stays 2048 unless #2 moves court)
 #   3) effective_io_concurrency=0  (CELL=eic0; restores prior value after run)
 #
-# Usage (from pgbent root):
+# Usage (from pgbent root, after a Postgres cluster is up):
+#   createdb results && psql -d results -f init/resultdb.sql
+#   createdb pgbench
 #   ./newset 'ARM miss isolation — select-scatter durable baseline'
 #   SKIPINIT=0 COLD=0 ./wl/arm-miss-isolation          # build scale
 #   SKIPINIT=1 COLD=1 ./wl/arm-miss-isolation          # cold baseline grid
@@ -30,6 +34,10 @@
 #   CLUSTER    default main
 #   CELL       baseline|sync|ra128|ra0|eic0
 #   RA_DEVICE  default nvme0n1 (Linux only)
+#   BLKTRACE   default 1 — one blktrace/btt latency sample per test (Linux only;
+#              needs util/pgbent_blktrace installed with its sudo rule, else skipped)
+#   BLKTRACE_DELAY default 60 — seconds into each test before the capture
+#   BLKTRACE_SEC   default 10 — capture length; raw trace grows ~150MB/s at 400k IOPS
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -46,6 +54,9 @@ PGVER="${PGVER:-19}"
 CLUSTER="${CLUSTER:-main}"
 PGBENT_DROP_CACHES="${PGBENT_DROP_CACHES:-/usr/local/bin/pgbent_drop_caches}"
 RA_DEVICE="${RA_DEVICE:-nvme0n1}"
+BLKTRACE="${BLKTRACE:-1}"
+BLKTRACE_DELAY="${BLKTRACE_DELAY:-60}"
+BLKTRACE_SEC="${BLKTRACE_SEC:-10}"
 UNAME_S="$(uname -s)"
 
 ts() { date '+%Y-%m-%dT%H:%M:%S%z'; }
@@ -61,6 +72,7 @@ _SAVE_SETTIMES=$SETTIMES
 _SAVE_MULTI=$MULTI
 _SAVE_SKIPINIT=$SKIPINIT
 _SAVE_COLD=$COLD
+_SAVE_BLKTRACE=$BLKTRACE
 
 if [ -f ./config ]; then
   # shellcheck source=/dev/null
@@ -74,6 +86,10 @@ SETTIMES=$_SAVE_SETTIMES
 MULTI=$_SAVE_MULTI
 SKIPINIT=$_SAVE_SKIPINIT
 COLD=$_SAVE_COLD
+BLKTRACE=$_SAVE_BLKTRACE
+if [ "$UNAME_S" != "Linux" ]; then
+  BLKTRACE=0
+fi
 
 # Sysinfo for comments only — do not let pgsysinfo SCALES/SETCLIENTS leak into params.
 {
@@ -84,6 +100,9 @@ COLD=$_SAVE_COLD
   echo "SCALES=\"$SCALES\""
   echo "SETCLIENTS=\"$SETCLIENTS\""
   echo "SKIPINIT=$SKIPINIT"
+  echo "BLKTRACE=$BLKTRACE"
+  echo "BLKTRACE_DELAY=$BLKTRACE_DELAY"
+  echo "BLKTRACE_SEC=$BLKTRACE_SEC"
   ./pgsysinfo 2>/dev/null | grep -E '^#' || true
 } > params
 
@@ -123,7 +142,7 @@ if [ "$UNAME_S" = "Linux" ]; then
 else
   echo "$(ts) CELL=$CELL (Darwin — skip Linux read_ahead_kb)"
 fi
-grep -E '^(SCRIPT|SCALES|SETCLIENTS|SKIPINIT|MULTI|RUNTIME|SETTIMES)=' params
+grep -E '^(SCRIPT|SCALES|SETCLIENTS|SKIPINIT|MULTI|RUNTIME|SETTIMES|BLKTRACE)=' params
 
 if [ "$COLD" = "1" ] && [ "$SKIPINIT" = "1" ]; then
   if [ "$UNAME_S" = "Darwin" ]; then
