@@ -8,7 +8,7 @@ has_children: true
 
 # Studies
 
-Longer lab write-ups that sit between release snapshots and the tuning model: isolation series, hardware surprises, and notes intended for upstream discussion.
+Longer lab write-ups that sit between release snapshots and the tuning model: isolation series, hardware surprises, and notes intended for upstream discussion. Durable platform advice distilled from these studies lands in [Platform guides]({{ '/platform/' | relative_url }}).
 
 | Study | Status |
 |-------|--------|

@@ -186,7 +186,7 @@ An unclamped durable OSM planet load is in progress on Abbey (set **15**) to see
 
 ## Handoff
 
-The useful product is a **public reproduction** of a long-standing platform gap that OSM only shows on high-end hardware. Postgres isn't the place to fix it. On court, the main cause was a drive firmware default that any Postgres user on that hardware can switch off at boot; that default is a reasonable OEM choice for interrupt rate, just a bad match for this access pattern. On Darwin, the main cause was running the server as a Homebrew LaunchAgent with a utility I/O class.
+The useful product is a **public reproduction** of a long-standing platform gap that OSM only shows on high-end hardware. Postgres isn't the place to fix it. On court, the main cause was a drive firmware default that any Postgres user on that hardware can switch off at boot; that default is a reasonable OEM choice for interrupt rate, just a bad match for this access pattern. On Darwin, the main cause was running the server as a Homebrew LaunchAgent with a utility I/O class. Distilled operator guidance from this study lives under [Platform guides]({{ '/platform/' | relative_url }}).
 
 Natural next reproduction: **Graviton** or another server-class Linux ARM vendor. Hoping someone on `-hackers` will try the same `select-scatter` cold grid there, and check `nvme get-feature -f 8` while at it. The expected result is that Graviton keeps up with x86 hosts like twilight, which would confirm this is a desktop ARM platform issue rather than anything about ARM in general.
 

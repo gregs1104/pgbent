@@ -26,6 +26,7 @@ Topics worth writing for [getbent.io](https://getbent.io) when there is time and
 | Workloads (pgbench, OSM, CBC) | `docs/workloads/` |
 | Comparing versions / conn_method | `docs/workloads/select.md` § Comparing versions |
 | Tuning studies | `docs/model/` |
+| Platform guides (Linux RA / coalescing, Darwin LaunchAgent) | `docs/platform/` |
 | Troubleshooting, versions | `docs/troubleshooting.md`, `docs/versions.md` |
 
 ---

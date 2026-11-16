@@ -7,7 +7,7 @@ layout: home
 **pgbent** provides PostgreSQL specific benchmarking tools to compare tuning settings, releases, CPUs, or disks.
 
 * Code: **[github.com/gregs1104/pgbent](https://github.com/gregs1104/pgbent)**.
-* Postgres OLTP [Tuning Model]({{ '/model/' | relative_url }}) guidance.
+* Postgres OLTP [Tuning Model]({{ '/model/' | relative_url }}) and [Platform guides]({{ '/platform/' | relative_url }}).
 * [Leaderboards]({{ '/leaderboards/' | relative_url }}) and [release summary snapshots]({{ '/results-summary/' | relative_url }}).
 
 pgbent's development runs a bare metal hardware Performance Farm lab for regression testing of new releases, as parallel work to the PostgreSQL Community [BuildFarm](https://buildfarm.postgresql.org/).
@@ -26,6 +26,8 @@ These results validate and extend the standard PostgreSQL [tuning guide](https:/
 - [max_wal_size]({{ '/model/max_wal_size' | relative_url }}) — WAL volume and checkpoint write smoothing
 - [checkpoint_timeout]({{ '/model/checkpoint_timeout' | relative_url }}) — checkpoint frequency trade-offs
 - [Linux dirty memory]({{ '/model/Linux_dirty_memory' | relative_url }}) and [pdflush / writeback]({{ '/model/Linux_pdflush' | relative_url }}) — OS-level writeback behavior during heavy loads
+
+[Platform guides]({{ '/platform/' | relative_url }}) cover the layer under those GUCs: Linux standard OS tuning (`pgbent_tune`), [NVMe interrupt coalescing]({{ '/platform/nvme-coalescing/' | relative_url }}), and [macOS LaunchAgent I/O class]({{ '/platform/darwin/' | relative_url }}).
 
 Reference tuning configurations for OSM workloads live in the [`conf/`](https://github.com/gregs1104/pgbent/tree/main/conf) directory.
 
