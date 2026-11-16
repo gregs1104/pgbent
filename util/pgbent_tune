@@ -11,9 +11,8 @@
 #    sudo cp /tmp/pgbent_tune /usr/local/bin/
 #    sudo sh -c "echo \"postgres ALL = (ALL) NOPASSWD: /usr/local/bin/pgbent_tune\" >> /etc/sudoers.d/postgres"
 #
-# Read-ahead is fixed at 4096.  You may want to use higher values for large systems, benefits
-# reduce but continue to at least 16384.  This script might take an input for this value.
-# As a sudo script that needs some sanitization work yet to be written here first.
+# Read-ahead defaults to 4096 sectors (= 2048 KiB via blockdev --setra).  For
+# per-experiment values use util/pgbent_setra (NOPASSWD sibling of this script).
 #
 # NVMe interrupt coalescing is disabled when nvme-cli is installed.  Some OEM firmware
 # (DGX Spark's Samsung MZALC4T0HBL1) ships with 100us/threshold 8 coalescing, which holds

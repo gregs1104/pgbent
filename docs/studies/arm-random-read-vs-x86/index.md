@@ -182,7 +182,7 @@ Same 8 KB Homebrew binary, same scale-17500 DB, restart + `purge` before each 
 
 **Block size is not the lever here.** A from-source PG 18.6 build with `--with-blocksize=16` (matching Apple Silicon’s 16 KB VM pages) was A/B’d unclamped against the 8 KB Homebrew cluster on the same cold `select-scatter` protocol: ~71 vs ~68 TPS at c=1, ~2198 vs ~2160 at c=32 — flat. The spindle-era lore that larger pages half the I/O count does not show up on this NVMe miss path. You probably don't need your own recompile just to change the default 8 KB page size to 16; you should try fixing the I/O class instead.
 
-An unclamped durable OSM planet load is in progress on Abbey (set **15**) to see whether Relations picks up the ~50% class win. If it does, Darwin is solved enough for this release: document the LaunchAgent trap, run unclamped, done.
+Abbey unclamped durable OSM (set **15**) moved Relations ~**1.43×** (**~10600 s → 7527 s**, **~1944**/s). Overall wall clock still worsened (indexes ~2× slower) — retry after the drive settles; do not treat “always unclamp” as free for the whole planet load.
 
 ## Handoff
 
@@ -192,8 +192,8 @@ Natural next reproduction: **Graviton** or another server-class Linux ARM vendor
 
 ### Open loose ends
 
-- OSM planet load on court with coalescing off (set **24**, in progress) — how much of the 3.5× Relations gap closes.
-- Court's remaining ~1.6–1.7× gap after coalescing; not assumed to reach x86.
-- Abbey OSM under unclamped I/O (set **15**, in progress) — whether Relations moves ~50%.
-- Twilight public `read_ahead_kb` ladder + OSM with RA=0 (in progress).
-- CPU and power cost of running with coalescing off (one interrupt per read).
+- Court OSM coalescing off (set **24** / test **217**): Relations **~1.74×** (**13251 s → 7614 s**), overall **6.48h**, OSM score **656** — on the public boards.
+- Court's remaining ~2× Relations gap vs a good x86 after coalescing; not assumed to reach parity.
+- Abbey unclamped OSM (set **15**): Relations win confirmed; index-phase regression needs a cool-disk retry.
+- Twilight `read_ahead_kb` ladder retry + OSM RA=0 (sets **134–146**) finished; awaiting upload.
+- CPU and power cost of coalescing off (court avg package ~24→34 W; Relations/watt still up).

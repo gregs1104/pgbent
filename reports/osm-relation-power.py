@@ -22,7 +22,6 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.ticker import AutoMinorLocator, ScalarFormatter
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from snapshot_table import load_snapshot_table
 from label_layout import LabelOffset, place_label_at_grid_bottom, place_point_labels
@@ -50,12 +49,15 @@ RELATION_SCATTER_LABEL_OVERRIDES: dict[str, LabelOffset] = {
 }
 
 PG19_RELATION_SCATTER_LABEL_OVERRIDES: dict[str, LabelOffset] = {
-    "Apple M4 Max Studio": LabelOffset(_marker_x_gap(), 8, ha="left", va="bottom"),
+    # Apple is placed separately as a two-line left-spine caption.
     "NVIDIA P4242": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
     "i5-13600K": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
     "R5 9600X": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
     "R9 9950X": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
 }
+
+# Multiline left-spine caption for the low-left Apple marker on PG19 scatter.
+APPLE_SCATTER_CAPTION = "Apple M4\nMax Studio"
 
 # Same points as the leaderboard score-vs-kJ chart; 9950X sits on the right edge.
 RELATION_JOULES_LABEL_OVERRIDES: dict[str, LabelOffset] = {
@@ -67,7 +69,8 @@ RELATION_JOULES_LABEL_OVERRIDES: dict[str, LabelOffset] = {
         ha="left",
         va="center",
     ),
-    "Apple M4 Max Studio": LabelOffset(_marker_x_gap(), 12, ha="left", va="bottom"),
+    # Long name + Spark at similar y: park Apple left of its marker toward
+    # the grid edge so it cannot run into NVIDIA P4242.
     "NVIDIA P4242": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
 }
 
@@ -265,33 +268,68 @@ def plot_relation_scatter(
     fig.tight_layout()
     ymin, ymax = ax.get_ylim()
     ax.set_ylim(ymin, ymax + (ymax - ymin) * 0.06)
-    label_df = df[df["cpu"] != "NVIDIA P4242"]
-    place_point_labels(
-        ax,
-        label_df["cpu"],
-        label_df["avg_watts"],
-        label_df["rel"],
-        [row_color(row) for _, row in label_df.iterrows()],
-        POINT_LABEL_FONTSIZE,
-        overrides=(
-            PG19_RELATION_SCATTER_LABEL_OVERRIDES
-            if pg != "18"
-            else RELATION_SCATTER_LABEL_OVERRIDES
-        ),
-    )
-    nvidia = df[df["cpu"] == "NVIDIA P4242"]
-    if not nvidia.empty:
-        row = nvidia.iloc[0]
-        place_label_at_grid_bottom(
+    if pg != "18":
+        # Two-line Apple caption on the left spine, one font-height above
+        # the marker — the only way the long name fits after Spark moved up.
+        apple = df[df["cpu"].astype(str) == "Apple M4 Max Studio"]
+        label_df = df[df["cpu"].astype(str) != "Apple M4 Max Studio"]
+        place_point_labels(
             ax,
-            row["avg_watts"],
-            row["rel"],
-            row["cpu"],
-            row_color(row),
+            label_df["cpu"],
+            label_df["avg_watts"],
+            label_df["rel"],
+            [row_color(row) for _, row in label_df.iterrows()],
             POINT_LABEL_FONTSIZE,
-            x_gap_points=_marker_x_gap(),
-            align_fraction=0.14,
+            overrides=PG19_RELATION_SCATTER_LABEL_OVERRIDES,
         )
+        if not apple.empty:
+            row = apple.iloc[0]
+            fig.canvas.draw()
+            px, py = ax.transData.transform(
+                (float(row["avg_watts"]), float(row["rel"]))
+            )
+            py += 1.0 * POINT_LABEL_FONTSIZE * fig.dpi / 72.0
+            _x, y_up = ax.transData.inverted().transform((px, py))
+            xmin, _ = ax.get_xlim()
+            px0, _ = ax.transData.transform((xmin, y_up))
+            px0 += 8 * fig.dpi / 72.0
+            x_left, _ = ax.transData.inverted().transform((px0, py))
+            ax.text(
+                x_left,
+                y_up,
+                APPLE_SCATTER_CAPTION,
+                fontsize=POINT_LABEL_FONTSIZE,
+                color=row_color(row),
+                ha="left",
+                va="bottom",
+                linespacing=1.15,
+                clip_on=True,
+                zorder=4,
+            )
+    else:
+        label_df = df[df["cpu"] != "NVIDIA P4242"]
+        place_point_labels(
+            ax,
+            label_df["cpu"],
+            label_df["avg_watts"],
+            label_df["rel"],
+            [row_color(row) for _, row in label_df.iterrows()],
+            POINT_LABEL_FONTSIZE,
+            overrides=RELATION_SCATTER_LABEL_OVERRIDES,
+        )
+        nvidia = df[df["cpu"] == "NVIDIA P4242"]
+        if not nvidia.empty:
+            row = nvidia.iloc[0]
+            place_label_at_grid_bottom(
+                ax,
+                row["avg_watts"],
+                row["rel"],
+                row["cpu"],
+                row_color(row),
+                POINT_LABEL_FONTSIZE,
+                x_gap_points=_marker_x_gap(),
+                align_fraction=0.14,
+            )
 
     output.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output, dpi=160, bbox_inches="tight")
@@ -329,15 +367,39 @@ def plot_relation_vs_joules(
     ax.grid(True, which="minor", linestyle=":", alpha=0.25)
     plain_axis(ax, y=True)
     fig.tight_layout()
+    # Apple's long name at ~276 kJ cannot sit left-of-dot inside the grid, and
+    # right-of-dot runs under Spark — pin it to the left spine at the marker row.
+    apple = pts[pts["cpu"].astype(str) == "Apple M4 Max Studio"]
+    others = pts[pts["cpu"].astype(str) != "Apple M4 Max Studio"]
+    other_colors = [row_color(row) for _, row in others.iterrows()]
     place_point_labels(
         ax,
-        pts["cpu"].astype(str),
-        pts["kj"],
-        pts["rel"],
-        colors,
+        others["cpu"].astype(str),
+        others["kj"],
+        others["rel"],
+        other_colors,
         16,
         overrides=RELATION_JOULES_LABEL_OVERRIDES,
     )
+    if not apple.empty:
+        row = apple.iloc[0]
+        # Left spine, one font-height above the marker. Full name is ~550 kJ
+        # wide so it cannot sit entirely left-of-dot; this keeps it off Spark.
+        fig.canvas.draw()
+        _px, py = ax.transData.transform((20.0, float(row["rel"])))
+        py += 16 * fig.dpi / 72.0  # one label font-height in points
+        _x, y_up = ax.transData.inverted().transform((_px, py))
+        ax.text(
+            20.0,
+            y_up,
+            str(row["cpu"]),
+            fontsize=16,
+            color=row_color(row),
+            ha="left",
+            va="bottom",
+            clip_on=True,
+            zorder=4,
+        )
     output.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output, dpi=160, bbox_inches="tight")
     print(f"Wrote {output} ({len(pts)} systems)")

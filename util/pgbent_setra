@@ -1,0 +1,34 @@
+#!/bin/bash
+# Set Linux block device read_ahead_kb (and matching blockdev --setra).
+# Suggested install: /usr/local/bin with NOPASSWD for the postgres user —
+# same idiom as pgbent_tune / pgbent_drop_caches.  Writing
+# /sys/block/*/queue/read_ahead_kb via `sudo tee` is not covered by those
+# rules; this wrapper is.
+#
+# Usage: pgbent_setra <read_ahead_kb> [device]
+#   device defaults to nvme0n1
+#   read_ahead_kb is KiB (sysfs units). blockdev --setra uses 512-byte
+#   sectors, so setra = 2 * read_ahead_kb.
+set -euo pipefail
+
+RA="${1:-}"
+DEV="${2:-nvme0n1}"
+
+if [ -z "$RA" ] || ! [[ "$RA" =~ ^[0-9]+$ ]]; then
+  echo "usage: pgbent_setra <read_ahead_kb> [device]" >&2
+  exit 1
+fi
+if ! [[ "$DEV" =~ ^[a-zA-Z0-9]+$ ]]; then
+  echo "pgbent_setra: bad device name '$DEV'" >&2
+  exit 1
+fi
+SYS="/sys/block/${DEV}/queue/read_ahead_kb"
+if [ ! -w "$SYS" ] && [ ! -e "$SYS" ]; then
+  echo "pgbent_setra: missing $SYS" >&2
+  exit 1
+fi
+
+echo "$RA" > "$SYS"
+# Keep --setra in sync for tools that read that path.
+/usr/sbin/blockdev --setra $((RA * 2)) "/dev/${DEV}"
+echo "${DEV} read_ahead_kb=$(cat "$SYS") setra=$((RA * 2))"

@@ -29,7 +29,7 @@ from matplotlib.ticker import ScalarFormatter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from snapshot_table import load_snapshot_table
-from label_layout import LabelOffset, place_label_at_grid_bottom, place_point_labels
+from label_layout import LabelOffset, place_point_labels
 from pg18_style import LEGEND_MARKER_SIZE, POINT_LABEL_FONTSIZE, use_pg18_style
 from release_paths import add_pg_argument, image_path, snapshot_path
 
@@ -255,30 +255,17 @@ def plot_single_throughput_vs_power(
         if pg != "18"
         else SINGLE_CHART_LABEL_OVERRIDES.get(metric_col)
     )
-    pin_nvidia_bottom = metric_col == "overall_kips"
-    label_df = df[df["cpu"] != "NVIDIA P4242"] if pin_nvidia_bottom else df
+    # Court coalescing-off moved Spark up on total (462 kN/s); keep the label
+    # beside the marker. Grid-bottom placement was for the old low-left cluster.
     place_point_labels(
         ax,
-        label_df["cpu"],
-        label_df["max_pkg"],
-        label_df[metric_col],
-        [row_color(row) for _, row in label_df.iterrows()],
+        df["cpu"],
+        df["max_pkg"],
+        df[metric_col],
+        [row_color(row) for _, row in df.iterrows()],
         POINT_LABEL_FONTSIZE,
         overrides=overrides,
     )
-    nvidia_rows = df[df["cpu"] == "NVIDIA P4242"]
-    if pin_nvidia_bottom and not nvidia_rows.empty:
-        nvidia = nvidia_rows.iloc[0]
-        place_label_at_grid_bottom(
-            ax,
-            nvidia["max_pkg"],
-            nvidia[metric_col],
-            nvidia["cpu"],
-            row_color(nvidia),
-            POINT_LABEL_FONTSIZE,
-            x_gap_points=_marker_x_gap(),
-            align_fraction=0.14,
-        )
 
     output.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output, dpi=160, bbox_inches="tight")

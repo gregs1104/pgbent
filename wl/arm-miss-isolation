@@ -63,6 +63,16 @@ UNAME_S="$(uname -s)"
 
 ts() { date '+%Y-%m-%dT%H:%M:%S%z'; }
 sudo_n() { sudo -n "$@"; }
+# Prefer the NOPASSWD helper; bare `sudo tee` fails for postgres on lab hosts.
+PGBENT_SETRA="${PGBENT_SETRA:-/usr/local/bin/pgbent_setra}"
+set_read_ahead_kb() {
+  local kb="$1"
+  if [ -x "$PGBENT_SETRA" ]; then
+    sudo_n "$PGBENT_SETRA" "$kb" "$RA_DEVICE"
+  else
+    echo "$kb" | sudo_n tee "/sys/block/${RA_DEVICE}/queue/read_ahead_kb" >/dev/null
+  fi
+}
 
 # Capture workload env before sourcing config — config defaults SKIPINIT=0 / SCALES /
 # SETCLIENTS and must not override the CELL invocation.
@@ -131,11 +141,11 @@ if [ "$UNAME_S" = "Linux" ]; then
   case "$CELL" in
     ra128)
       echo "$(ts) setting ${RA_DEVICE} read_ahead_kb=128"
-      echo 128 | sudo_n tee "/sys/block/${RA_DEVICE}/queue/read_ahead_kb" >/dev/null || true
+      set_read_ahead_kb 128
       ;;
     ra0)
       echo "$(ts) setting ${RA_DEVICE} read_ahead_kb=0"
-      echo 0 | sudo_n tee "/sys/block/${RA_DEVICE}/queue/read_ahead_kb" >/dev/null || true
+      set_read_ahead_kb 0
       ;;
     ra)
       if [ -z "$RA_KB" ]; then
@@ -143,11 +153,11 @@ if [ "$UNAME_S" = "Linux" ]; then
         exit 1
       fi
       echo "$(ts) setting ${RA_DEVICE} read_ahead_kb=$RA_KB"
-      echo "$RA_KB" | sudo_n tee "/sys/block/${RA_DEVICE}/queue/read_ahead_kb" >/dev/null || true
+      set_read_ahead_kb "$RA_KB"
       ;;
     baseline|sync|eic0)
       echo "$(ts) ensuring ${RA_DEVICE} read_ahead_kb=2048"
-      echo 2048 | sudo_n tee "/sys/block/${RA_DEVICE}/queue/read_ahead_kb" >/dev/null || true
+      set_read_ahead_kb 2048
       ;;
   esac
   echo "$(ts) CELL=$CELL RA=$(cat /sys/block/${RA_DEVICE}/queue/read_ahead_kb 2>/dev/null || echo '?')"
