@@ -3,7 +3,7 @@ layout: home
 title: NVMe interrupt coalescing
 permalink: /platform/nvme-coalescing/
 parent: Platform guides
-nav_order: 2
+nav_order: 4
 ---
 
 # NVMe interrupt coalescing

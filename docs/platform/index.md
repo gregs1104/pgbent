@@ -15,6 +15,8 @@ Think of vendor NAS runbooks (EMC and friends) that publish database-oriented st
 ## Start here
 
 - [Linux standard tuning]({{ '/platform/linux/' | relative_url }}) — what `pgbent_tune` applies after every boot, and why
+- [Linux pdflush / writeback]({{ '/platform/linux-pdflush/' | relative_url }}) — page-cache writeback theory (historical pdflush → flusher threads)
+- [Linux dirty memory]({{ '/platform/linux-dirty-memory/' | relative_url }}) — measured impact of `vm.dirty_*` on OSM load
 - [NVMe interrupt coalescing]({{ '/platform/nvme-coalescing/' | relative_url }}) — free latency win when OEM firmware left coalescing on
 - [macOS / Darwin]({{ '/platform/darwin/' | relative_url }}) — Homebrew `brew services` LaunchAgent I/O clamp
 

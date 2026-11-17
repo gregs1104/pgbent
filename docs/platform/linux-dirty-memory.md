@@ -1,14 +1,14 @@
 ---
 layout: home
 title: Linux dirty memory
-permalink: /model/Linux_dirty_memory
-parent: Tuning Model
-nav_order: 22
+permalink: /platform/linux-dirty-memory/
+parent: Platform guides
+nav_order: 3
 ---
 
 # Linux Dirty Memory:  testing
 
-Background on the kernel writeback path (historical pdflush and current flusher threads) is in [Linux pdflush / writeback](/model/Linux_pdflush).
+Background on the kernel writeback path (historical pdflush and current flusher threads) is in [Linux pdflush / writeback]({{ '/platform/linux-pdflush/' | relative_url }}).
 
 The primary write cache on a Linux PostgreSQL server is labeled Dirty memory.  Operations that can dirty a lot of memory include index building, vacuuming, CLUSTER, and heavy random UPDATE statements.  Dirty data eventually turns into Write-Back for a brief period, but the important metric to watch is the Dirty amount.
 

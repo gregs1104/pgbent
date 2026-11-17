@@ -1,9 +1,9 @@
 ---
 layout: home
 title: Linux pdflush / writeback
-permalink: /model/Linux_pdflush
-parent: Tuning Model
-nav_order: 23
+permalink: /platform/linux-pdflush/
+parent: Platform guides
+nav_order: 2
 ---
 
 # Linux page cache writeback
@@ -12,7 +12,7 @@ _Theory of operation and tuning for write-heavy loads_
 
 Linux caches filesystem writes in the page cache. Dirty pages sit in memory until the kernel writeback path pushes them to storage. 
 
-For measured impact of these settings for PostgreSQL batch loading, see [Linux dirty memory](/model/Linux_dirty_memory).
+For measured impact of these settings for PostgreSQL batch loading, see [Linux dirty memory]({{ '/platform/linux-dirty-memory/' | relative_url }}).
 
 This documentation has been around long enough to cover two implementations of this under Linux.  The same `/proc/meminfo` fields and most of the same `/proc/sys/vm/dirty_*` knobs still apply.  But the pdflush daemon that once did the work is gone, and large-memory systems now have better controls than percentage ratios alone.
 
@@ -89,7 +89,7 @@ The same values can be set with `sysctl` without writing `/proc` by hand:
 	sysctl -w vm.dirty_bytes=1000000000
 	sysctl -w vm.dirty_background_bytes=500000000
 
-pgbent’s OSM dirty-memory study walks through ratio and byte settings on a 128GB server: [Linux dirty memory](/model/Linux_dirty_memory).
+pgbent’s OSM dirty-memory study walks through ratio and byte settings on a 128GB server: [Linux dirty memory]({{ '/platform/linux-dirty-memory/' | relative_url }}).
 
 ## Persisting with sysctl
 
@@ -127,7 +127,7 @@ The usual problem is still too much dirty cache: long quiet periods while the pa
 * **`dirty_expire_centisecs`**: optional; test modest reductions. Very low values tend to hurt throughput.
 * **`dirty_writeback_centisecs`**: leave at default unless you have a specific reason.
 
-On fast SSDs, pgbent measurements show only small gains from large Dirty caches; a few GB of Dirty can still help keep the device fed, while multi-tens-of-GB Dirty mainly adds `fsync` risk. On slow disks, a larger write cache still amortizes I/O more usefully. Details: [Linux dirty memory](/model/Linux_dirty_memory).
+On fast SSDs, pgbent measurements show only small gains from large Dirty caches; a few GB of Dirty can still help keep the device fed, while multi-tens-of-GB Dirty mainly adds `fsync` risk. On slow disks, a larger write cache still amortizes I/O more usefully. Details: [Linux dirty memory]({{ '/platform/linux-dirty-memory/' | relative_url }}).
 
 # Swappiness (still related)
 
@@ -145,7 +145,7 @@ On fast SSDs, pgbent measurements show only small gains from large Dirty caches;
 * [715ea41](https://github.com/torvalds/linux/commit/715ea41e60277f28f84d6c937737350e00955d56) — 2013 rewrite of the `dirty_*_ratio` descriptions
 * Linux `mm/page-writeback.c` — dirtyable memory and limit logic
 * LWN: [Flushing out pdflush](https://lwn.net/Articles/326552/), [R.I.P. pdflush](https://lwn.net/Articles/508212/)
-* pgbent: [Linux dirty memory](/model/Linux_dirty_memory)
+* pgbent: [Linux dirty memory]({{ '/platform/linux-dirty-memory/' | relative_url }})
 
 ---
 

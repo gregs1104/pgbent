@@ -3,7 +3,7 @@ layout: home
 title: macOS / Darwin
 permalink: /platform/darwin/
 parent: Platform guides
-nav_order: 3
+nav_order: 5
 ---
 
 # macOS / Darwin

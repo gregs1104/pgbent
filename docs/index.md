@@ -25,9 +25,8 @@ These results validate and extend the standard PostgreSQL [tuning guide](https:/
 - [shared_buffers]({{ '/model/shared_buffers' | relative_url }}) — buffer cache sizing and the ¼-RAM recommendation
 - [max_wal_size]({{ '/model/max_wal_size' | relative_url }}) — WAL volume and checkpoint write smoothing
 - [checkpoint_timeout]({{ '/model/checkpoint_timeout' | relative_url }}) — checkpoint frequency trade-offs
-- [Linux dirty memory]({{ '/model/Linux_dirty_memory' | relative_url }}) and [pdflush / writeback]({{ '/model/Linux_pdflush' | relative_url }}) — OS-level writeback behavior during heavy loads
 
-[Platform guides]({{ '/platform/' | relative_url }}) cover the layer under those GUCs: Linux standard OS tuning (`pgbent_tune`), [NVMe interrupt coalescing]({{ '/platform/nvme-coalescing/' | relative_url }}), and [macOS LaunchAgent I/O class]({{ '/platform/darwin/' | relative_url }}).
+[Platform guides]({{ '/platform/' | relative_url }}) cover the layer under those GUCs: Linux standard OS tuning (`pgbent_tune`), [dirty memory]({{ '/platform/linux-dirty-memory/' | relative_url }}) and [pdflush / writeback]({{ '/platform/linux-pdflush/' | relative_url }}), [NVMe interrupt coalescing]({{ '/platform/nvme-coalescing/' | relative_url }}), and [macOS LaunchAgent I/O class]({{ '/platform/darwin/' | relative_url }}).
 
 Reference tuning configurations for OSM workloads live in the [`conf/`](https://github.com/gregs1104/pgbent/tree/main/conf) directory.
 

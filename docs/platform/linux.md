@@ -17,6 +17,8 @@ pgbent’s Linux hosts re-apply a small set of OS settings after every boot via 
 | NVMe interrupt coalescing | `nvme set-feature -f 8 -V 0` when `nvme-cli` is present | OEM defaults can hold every low-queue-depth read for 100 µs — see [NVMe coalescing]({{ '/platform/nvme-coalescing/' | relative_url }}) |
 | TRIM | `fstrim -av` | Keep SSD free space honest between OSM cycles (can take a long time on multi-TB drives) |
 
+Page-cache writeback (`vm.dirty_*`) is separate from this boot script — see [Linux pdflush / writeback]({{ '/platform/linux-pdflush/' | relative_url }}) and the measured [Linux dirty memory]({{ '/platform/linux-dirty-memory/' | relative_url }}) study.
+
 ## Read-ahead
 
 Classic Postgres lore ties readahead to **sequential scans**. That case was measured in Greg’s 9.0-era material; public comparative work has been thin since, partly thanks to the DeWitt clause climate. pgbent’s standard `setra 4096` has been the lab default for years.
