@@ -21,14 +21,23 @@ Page-cache writeback (`vm.dirty_*`) is separate from this boot script — see [L
 
 ## Read-ahead
 
-Classic Postgres lore ties readahead to **sequential scans**. That case was measured in Greg’s 9.0-era material; public comparative work has been thin since, partly thanks to the DeWitt clause climate. pgbent’s standard `setra 4096` has been the lab default for years.
+Classic Postgres lore ties readahead to **sequential scans**. That case was measured in Greg’s 9.0 PG book; public comparative work has been thin since. pgbent’s standard `setra 4096` has been the lab default since its 2010 start.
 
 Newer evidence on a **scattered** index→heap pattern (`select-scatter`, the Relations miniature):
 
 - On **court** (NVIDIA DGX Spark), `read_ahead_kb=0` roughly **halved** select-scatter throughput vs 128/2048, both cold and hot, before and after the coalescing fix. 128 vs 2048 was flat. So “some readahead” matters even when the access pattern does not look like a seqscan; **zero** is the dangerous setting.
-- On **twilight** (x86), a public `read_ahead_kb` ladder over select-scatter was largely **flat** from 0 through 16384. Platform-dependent. A contiguous `select-range` ladder and an OSM load with RA=0 are the follow-ups for the classic sequential / load story.
+- On **twilight** (x86), a public `read_ahead_kb` ladder (sets **134–139**) shows the same shape: RA=0 soft (~¾ of 128+); **128 through 16384 flat**. Contiguous `select-range` on the same host (sets **140–145**) is mostly flat across the ladder, with RA=0 only a mild dip at low concurrency.
 
-**Practical rule:** do not leave Postgres volumes at array- or desktop-defaults of RA=0 because NTFS or interactive clients preferred that. Prefer on the order of pgbent’s 2048 KB unless you have measured otherwise. Details and tables: [ARM random read vs x86]({{ '/studies/arm-random-read-vs-x86/' | relative_url }}).
+**OSM planet load (twilight, durable)** closes the classic sequential / bulk-write story. Same face as the PG19 durable cell, but with `read_ahead_kb=0` for the whole run (set **146**) vs the lab default **2048** (set **121**):
+
+| cell | hours | OSM score | overall kNodes/s | index kNodes/s | rel/s |
+|------|------:|----------:|-----------------:|---------------:|------:|
+| RA=2048 (121) | 5.43 | 1040 | 553 | 296 | 3849 |
+| RA=0 (146) | 5.84 | 686 | 513 | 187 | 3440 |
+
+Score drops by about a third. Most of the hit is **index build** (296→187); Relations only softens. On a fast NVMe x86 box, leaving RA at zero is not free for buffered Postgres loads.
+
+**Practical rule:** do not leave Postgres volumes at array- or desktop-defaults of RA=0 because NTFS or interactive clients preferred that. Prefer on the order of pgbent’s 2048 KB unless you have measured otherwise. Isolation tables: [ARM random read vs x86]({{ '/studies/arm-random-read-vs-x86/' | relative_url }}).
 
 ## CPU governor
 
