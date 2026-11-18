@@ -157,7 +157,7 @@ static getbent.io pages — not a hosted Streamlit app.
 ```
 Study: <topic>
 - [ ] Write down the question and the grid axes (GUC, node cache, scale, …)
-- [ ] Plan repeats per cell (OSM: 3–5 via repeat-gis / complete; CPU-bound SELECT: `SETTIMES=2` unless the two diverge; noisier pgbench: `SETTIMES` 3+)
+- [ ] Plan repeats per cell (OSM: 3–5 via repeat-gis / complete; CPU-bound SELECT: `SETTIMES=2` unless the two diverge; noisier pgbench: `SETTIMES` 3+). **Do not default to a ton of runs** — they take too long. Published SELECT ladders keep the **highest** TPS at a point when core-ratio artifacts or obvious trend-breaking noise show up; if a cell is in doubt, **pile more results onto that point** to raise confidence rather than grinding every client count equally.
 - [ ] Confirm the active set is still the right batch (same major version, same planet, same non-GUC context)
 - [ ] Choose the participating machines and the shared conf/<N> baseline
 - [ ] On each machine: apply the setting → reload/restart → run the workload (same set)
@@ -394,7 +394,11 @@ Other machines:
   rewrites them.
 - **court** — NVIDIA DGX Spark (ARM64). As of 2026-10-14: **DGX OS 7.6.0 /
   Ubuntu 24.04.5**, kernel **`7.0.0-1019-nvidia`**. Spbm power works (test 13+);
-  `DISKLIST="nvme0n1"` or `iostat.csv` is empty. **PG18 set 4:** fast 16/17
+  `DISKLIST="nvme0n1"` or `iostat.csv` is empty. **Done set 26 (2026-11-18):**
+  four-face SELECT scale-100 / 90s at clients **20** / **40** — sockets prepared
+  **~960k** @20 vs **~392k** @16 (set 7); confirms the mixed-core off-ratio dip.
+  **In flight set 27:** same four-face fill at clients **10** / **16** (re-check
+  the 16 dip; keep **highest** TPS when merging into the ladder). **PG18 set 4:** fast 16/17
   (7.81h/384, 7.74h/387) then durable 18 (8.68h/346) — about **+12% / −10%**
   vs abbey’s bundled **+49% / −33%**. **PG19 rc1 set 5** has enough to start
   with: durable **20/21/22** (8.73h/343, 8.78h/342, 8.50h/353) and fast **23**
@@ -625,7 +629,8 @@ OS cutover (hands-on; no agent SSH):
 2. **19rc2 durable OSM** (`fsync=on`, `wal_level=replica`, `max_wal_size=100GB`):
    stress the current RC and fill the old **two-durability-face** grid on
    9600X (fast already banked at **1354**; durable was missing — set **119**
-   was `on`/`minimal`, not full durable).
+   was `on`/`minimal`, not full durable). **2026-11-18 — in flight** (longest
+   outstanding wrap cell; Greg notified when done; hands-on, no agent SSH).
 3. **Geekbench 7** on the current OS (upload to the public profile
    [browser.geekbench.com/user/232126](https://browser.geekbench.com/user/232126)).
    That profile is the farm’s hardware detail report (older boxes are GB6;
@@ -634,7 +639,8 @@ OS cutover (hands-on; no agent SSH):
 
 Skip before upgrade: PG15–17 OSM, more AIO/RA on siren, anything that needs
 twilight’s disk headroom. Optional noise check (not upgrade-gated): 19rc2
-SELECT four-face if time allows.
+SELECT four-face if time allows. **SELECT PG15–18** may already be banked —
+confirm before starting more; durable OSM is the gate for this wrap.
 
 ### OS cutover (after the wrap)
 

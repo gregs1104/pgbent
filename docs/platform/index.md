@@ -19,6 +19,6 @@ Think of vendor NAS runbooks (EMC and friends) that publish database-oriented st
 - [Linux dirty memory]({{ '/platform/linux-dirty-memory/' | relative_url }}) — measured impact of `vm.dirty_*` on OSM load
 - [NVMe interrupt coalescing]({{ '/platform/nvme-coalescing/' | relative_url }}) — free latency win when OEM firmware left coalescing on
 - [macOS / Darwin]({{ '/platform/darwin/' | relative_url }}) — Homebrew `brew services` LaunchAgent I/O clamp
-- [NVIDIA DGX Spark]({{ '/platform/dgx-spark/' | relative_url }}) — court power (`spark_hwmon` / spbm), NIC EEE / ASPM notes, link to coalescing
+- [NVIDIA DGX Spark]({{ '/platform/dgx-spark/' | relative_url }}) — court: coalescing + mixed-core SELECT grid (two oddities), power (`spark_hwmon` / spbm), NIC EEE / ASPM
 
 The full ARM miss isolation case (select-scatter, Relations, court vs twilight vs Abbey) is the [ARM random read vs x86]({{ '/studies/arm-random-read-vs-x86/' | relative_url }}) study.

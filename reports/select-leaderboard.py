@@ -4,8 +4,9 @@ Starter pgbench SELECT leaderboard from siren PG19 rc1.
 
 Graphs TPS and transactions/joule vs clients for the four conn_method
 faces (sockets vs localhost TCP, prepared vs simple), a cross-platform
-energy comparison and TPS-vs-kJ scatter for the four reference systems,
-and writes them into docs/leaderboards/select-performance-power.md.
+energy comparison and TPS-vs-kJ scatter, plus a clients×TPS ladder of the
+fastest face on each reference CPU, and writes them into
+docs/leaderboards/select-performance-power.md.
 
 Usage:
     python3 reports/select-leaderboard.py --from-db
@@ -40,17 +41,21 @@ from release_paths import REPO_ROOT
 DEFAULT_CONN = "host=localhost dbname=results user=gsmith password=secret"
 SQL_PATH = REPO_ROOT / "reports" / "select-leaderboard.sql"
 PLATFORM_SQL_PATH = REPO_ROOT / "reports" / "select-platform.sql"
+FACES_SQL_PATH = REPO_ROOT / "reports" / "select-platform-faces.sql"
 POWER_PAGE = REPO_ROOT / "docs" / "leaderboards" / "select-performance-power.md"
 PUBLIC_IMAGE = REPO_ROOT / "docs" / "images" / "select-leaderboard.png"
 JOULES_IMAGE = REPO_ROOT / "docs" / "images" / "select-leaderboard-joules.png"
 COMPARE_IMAGE = REPO_ROOT / "docs" / "images" / "select-leaderboard-compare.png"
 SCATTER_IMAGE = REPO_ROOT / "docs" / "images" / "select-leaderboard-scatter.png"
+FACES_IMAGE = REPO_ROOT / "docs" / "images" / "select-leaderboard-faces.png"
 BLOCK_BEGIN = "<!-- select-leaderboard:begin -->"
 BLOCK_END = "<!-- select-leaderboard:end -->"
 COMPARE_BEGIN = "<!-- select-platform-compare:begin -->"
 COMPARE_END = "<!-- select-platform-compare:end -->"
 SCATTER_BEGIN = "<!-- select-platform-scatter:begin -->"
 SCATTER_END = "<!-- select-platform-scatter:end -->"
+FACES_BEGIN = "<!-- select-platform-faces:begin -->"
+FACES_END = "<!-- select-platform-faces:end -->"
 SCATTER_MARKER_SIZE = 90
 
 TPS_COLOR = "#e4572e"
@@ -84,6 +89,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--sql", type=Path, default=SQL_PATH)
     parser.add_argument("--platform-sql", type=Path, default=PLATFORM_SQL_PATH)
+    parser.add_argument("--faces-sql", type=Path, default=FACES_SQL_PATH)
     parser.add_argument("--page", type=Path, default=POWER_PAGE)
     parser.add_argument("--output", type=Path, default=PUBLIC_IMAGE)
     parser.add_argument("--conn", default=os.environ.get("RESULTS_CONN", DEFAULT_CONN))
@@ -565,6 +571,72 @@ def scatter_markdown(df: pd.DataFrame) -> str:
     )
 
 
+def plot_platform_faces(df: pd.DataFrame, output: Path, show: bool = False) -> None:
+    """Clients × sockets-prepared TPS, one series per CPU (efficiency-envelope colors)."""
+    pts = df.dropna(subset=["clients", "tps", "cpu"]).copy()
+    if pts.empty:
+        raise SystemExit("No platform-face SELECT rows to plot")
+    pts["clients"] = pd.to_numeric(pts["clients"])
+    pts["tps"] = pd.to_numeric(pts["tps"])
+    use_pg18_style()
+    fig, ax = plt.subplots(figsize=(11, 6.5))
+    # Legend order: peak TPS descending (fastest platform first).
+    peak = pts.groupby("cpu", sort=False)["tps"].max().sort_values(ascending=False)
+    for cpu in peak.index:
+        face = pts[pts["cpu"] == cpu].sort_values("clients")
+        ax.plot(
+            face["clients"],
+            face["tps"],
+            color=cpu_color(cpu),
+            linestyle="-",
+            marker="o",
+            linewidth=2.4,
+            markersize=8,
+            label=str(cpu),
+        )
+    ax.set_xscale("log", base=2)
+    ax.set_xticks(sorted(pts["clients"].unique()))
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{int(v)}"))
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{int(v):,}"))
+    ax.set_xlabel("Clients")
+    ax.set_ylabel("Best TPS")
+    ax.set_title("pgbench SELECT - top sockets/prepared by platform")
+    ax.grid(True, which="major", linestyle=":", alpha=0.5)
+    ax.legend(loc="upper left", fontsize=LEADERBOARD_LEGEND_FONTSIZE, framealpha=0.92)
+    fig.tight_layout()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output, dpi=160, bbox_inches="tight")
+    print(f"Wrote {output} ({len(peak)} platforms)")
+    if show:
+        plt.show()
+    plt.close(fig)
+
+
+def faces_markdown(df: pd.DataFrame) -> str:
+    n = df["cpu"].nunique() if not df.empty else 0
+    return (
+        f"{FACES_BEGIN}\n\n"
+        "**Sockets prepared** SELECT TPS at scale **100** (90s), one series per CPU "
+        "(best repeat at each client count). Colors match the OSM "
+        "[efficiency vs package power envelope]({{ '/results-summary/pg19/osm-power/' | relative_url }}) "
+        "chart.\n\n"
+        "![pgbench SELECT - top sockets/prepared by platform]"
+        "({{ '/images/select-leaderboard-faces.png' | relative_url }})\n\n"
+        f"{n} platforms: siren **R9 9950X** (PG19 rc1) and **R5 9600X** (set **118**), "
+        "twilight **i5-13600K**, court **NVIDIA P4242**, abbey **Apple M4 Max Studio** (PG18).\n\n"
+        "Mixed-core / big.LITTLE platforms can show a **classic off-ratio dip** at "
+        "some integer client counts that are a poor fit for the core mix — court’s "
+        "drop at **16** clients is the textbook case on this chart. "
+        "`pgsysinfo` already adds `nproc`, `2×`, and `4×` to `SETCLIENTS` for that "
+        "reason. Court (20 CPUs: 10×X925 + 10×A725) gets fair points at **20** and "
+        "**40** within the 1–64 window (set **26** four-face fill); Intel and Apple "
+        "show a milder version of the same edge, and more mature PG-on-Linux "
+        "platforms tend to sand it down. Spark is still a relatively raw CPU "
+        "platform here, so the power-of-two-only grid undersells it.\n\n"
+        f"{FACES_END}"
+    )
+
+
 def block_markdown(table_md: str, n_faces: int) -> str:
     # Chart-first layout matches docs/leaderboards/select-performance-power.md
     return (
@@ -622,6 +694,10 @@ def main() -> None:
     compare_inner = compare_markdown(platform_md, n_systems=len(platform))
     scatter_inner = scatter_markdown(platform)
 
+    faces = fetch_sql_table(args.faces_sql, args.conn)
+    plot_platform_faces(faces, FACES_IMAGE, show=args.show)
+    faces_inner = faces_markdown(faces)
+
     text = args.page.read_text(encoding="utf-8")
     text = replace_marked_block(text, BLOCK_BEGIN, BLOCK_END, block_markdown(table_md, n_faces=len(ranking)))
     text = replace_marked_block(text, COMPARE_BEGIN, COMPARE_END, compare_inner)
@@ -629,8 +705,15 @@ def main() -> None:
         text = replace_marked_block(text, SCATTER_BEGIN, SCATTER_END, scatter_inner)
     else:
         text = text.replace(COMPARE_END, f"{COMPARE_END}\n\n{scatter_inner}", 1)
+    if FACES_BEGIN in text and FACES_END in text:
+        text = replace_marked_block(text, FACES_BEGIN, FACES_END, faces_inner)
+    else:
+        text = text.replace(SCATTER_END, f"{SCATTER_END}\n\n{faces_inner}", 1)
     args.page.write_text(text, encoding="utf-8")
-    print(f"Wrote {len(ranking)} faces + {len(platform)} platforms into {args.page}")
+    print(
+        f"Wrote {len(ranking)} faces + {len(platform)} platforms + "
+        f"{faces['cpu'].nunique()} ladders into {args.page}"
+    )
 
 
 if __name__ == "__main__":

@@ -63,6 +63,18 @@ Speed vs energy for the best **sockets prepared** run on each machine at **32** 
 
 <!-- select-platform-scatter:end -->
 
+<!-- select-platform-faces:begin -->
+
+**Sockets prepared** SELECT TPS at scale **100** (90s), one series per CPU (best repeat at each client count). Colors match the OSM [efficiency vs package power envelope]({{ '/results-summary/pg19/osm-power/' | relative_url }}) chart.
+
+![pgbench SELECT - top sockets/prepared by platform]({{ '/images/select-leaderboard-faces.png' | relative_url }})
+
+5 platforms: siren **R9 9950X** (PG19 rc1) and **R5 9600X** (set **118**), twilight **i5-13600K**, court **NVIDIA P4242**, abbey **Apple M4 Max Studio** (PG18).
+
+Mixed-core / big.LITTLE platforms can show a **classic off-ratio dip** at some integer client counts that are a poor fit for the core mix — court’s drop at **16** clients is the textbook case on this chart. `pgsysinfo` already adds `nproc`, `2×`, and `4×` to `SETCLIENTS` for that reason. Court (20 CPUs: 10×X925 + 10×A725) gets fair points at **20** and **40** within the 1–64 window (set **26** four-face fill); Intel and Apple show a milder version of the same edge, and more mature PG-on-Linux platforms tend to sand it down. Spark is still a relatively raw CPU platform here, so the power-of-two-only grid undersells it.
+
+<!-- select-platform-faces:end -->
+
 `;` (`SCRIPT=nothing`) hits **280K TPS on a single client** (simple **281,019**, prepared **280,201**) and peaks at **4.05M** simple / **3.81M** prepared at 32 clients — the protocol ceiling. That's web scale. No query to plan, so preparation does not help; at many clients simple is a few percent ahead. Sockets `constant` (`SELECT 1`) at one client is **212,745** prepared (4.7 μs) / **179,635** simple (5.6 μs), and peaks at **2.96M** prepared / **2.48M** simple at 32. Execute of that query is +1.1 μs, planning it +0.9 μs, accounts lookup +2.9 μs on top. Unlike `;`, preparation helps `SELECT 1`. At one client the rates are just the inverse of the latency times. Breakdown: [1-client latency pieces]({{ '/workloads/select/#1-client-latency-pieces' | relative_url }}). Not on this ranking.
 
 ### Sockets
@@ -73,4 +85,4 @@ Unix-domain connections (`SOCKETS=1`). Clients run on the server. This is the po
 
 Localhost TCP (`host`) on this starter chart is protocol overhead on the same box, not a dedicated client. Unthrottled remote TCP is the face that can exceed on-box rates once the link is faster than ~10Gb/s. See [OSM Network Study]({{ '/results-summary/pg18/osm-network/' | relative_url }}) for link rate comparisons.
 
-Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/select-leaderboard.py --from-db` (runs `reports/select-leaderboard.sql` and `reports/select-platform.sql`; faces, compare bars, and TPS-vs-kJ scatter). Cross-major sockets-prepared trend: [Leaderboards § History]({{ '/leaderboards/#history-1' | relative_url }}). 19rc1 snapshot: [pgbench SELECT (PG19)]({{ '/results-summary/pg19/pgbench-select/' | relative_url }}). Older mixed-protocol grid: [pgbench SELECT (PG18 snapshot)]({{ '/results-summary/pg18/pgbench-select/' | relative_url }}). Workload notes: [pgbench SELECT]({{ '/workloads/select/' | relative_url }}).
+Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/select-leaderboard.py --from-db` (runs `reports/select-leaderboard.sql`, `reports/select-platform.sql`, and `reports/select-platform-faces.sql`; faces, compare bars, TPS-vs-kJ scatter, and platform client ladder). Cross-major sockets-prepared trend: [Leaderboards § History]({{ '/leaderboards/#history-1' | relative_url }}). 19rc1 snapshot: [pgbench SELECT (PG19)]({{ '/results-summary/pg19/pgbench-select/' | relative_url }}). Older mixed-protocol grid: [pgbench SELECT (PG18 snapshot)]({{ '/results-summary/pg18/pgbench-select/' | relative_url }}). Workload notes: [pgbench SELECT]({{ '/workloads/select/' | relative_url }}).

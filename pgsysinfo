@@ -323,9 +323,16 @@ def machine_summary():
 
 def core_sweep(cores):
     """
-    Output a list of interesting CPU counts to test, going to at
-    least 32 cores, or 4*cores if that's larger.  32 is highlighted
-    because many disk devices can queue 32 requests.
+    Output a list of interesting client counts to test, going to at
+    least 32, or 4*cores if that's larger.  32 is highlighted because
+    many disk devices can queue 32 requests.
+
+    Always include cores, 2*cores, and 4*cores alongside the power-of-two
+    ladder. On mixed-core / big.LITTLE platforms, some integer client
+    counts are worst-case scheduling ratios (classic off-ratio dips).
+    Pinning points to the actual processor count sands that edge so a
+    box is not judged only at an unlucky power of two (e.g. DGX Spark
+    at 16 clients on a 20-CPU Grace mix).
     """
     if cores>=6:
         l=[1,2,4,8,16,32]

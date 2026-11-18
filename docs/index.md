@@ -4,13 +4,13 @@ layout: home
 
 # pgbent
 
-**pgbent** provides PostgreSQL specific benchmarking tools to compare tuning settings, releases, CPUs, or disks.
+**pgbent** provides PostgreSQL specific benchmarking tools to compare tuning settings, releases, CPUs, or disks.  pgbent finds database platform regressions and documents the fixes.
 
 * Code: **[github.com/gregs1104/pgbent](https://github.com/gregs1104/pgbent)**.
 * Postgres OLTP [Tuning Model]({{ '/model/' | relative_url }}) and [Platform guides]({{ '/platform/' | relative_url }}).
 * [Leaderboards]({{ '/leaderboards/' | relative_url }}) and [release summary snapshots]({{ '/results-summary/' | relative_url }}).
 
-pgbent's development runs a bare metal hardware Performance Farm lab for regression testing of new releases, as parallel work to the PostgreSQL Community [BuildFarm](https://buildfarm.postgresql.org/). Public CPU detail for the farm is on Greg’s [Geekbench profile](https://browser.geekbench.com/user/232126) (historical GB6; GB7 from the OS wrap onward).
+pgbent's development runs a bare metal hardware Performance Farm lab for regression testing of new releases, as parallel work to the PostgreSQL Community [BuildFarm](https://buildfarm.postgresql.org/). Public hardware details for the farm are on [Geekbench](https://browser.geekbench.com/user/232126) (historical GB6; GB7 soon).
 
 ## Tuning research
 
@@ -18,21 +18,27 @@ pgbent’s workloads respond predictably to classic OLTP tuning knobs and show *
 
 ![OSM checkpoint write rate vs interval]({{ '/images/pg18-osm-checkpoint-write.png' | relative_url }})
 
-Stretch checkpoints and average write volume collapses—a **90%** IOPS reduction, here roughly **34** GB/h down to **3.5** GB/h on the same AMD box—while load throughput rises. That GB/h figure is easy to watch in Grafana or Datadog; this chart is why it is worth the panel. Details: [checkpoint_timeout]({{ '/model/checkpoint_timeout' | relative_url }}), [max_wal_size]({{ '/model/max_wal_size' | relative_url }}), [OSM Checkpoint]({{ '/results-summary/pg18/osm-checkpoint/' | relative_url }}).
+Stretch checkpoints and average write volume collapses—a **90%** IOPS reduction, here **34** GB/h to **3.5** GB/h—while load throughput rises. That GB/h figure is easy to watch in metrics; this chart shows why it is worth the panel. Details: [checkpoint_timeout]({{ '/model/checkpoint_timeout' | relative_url }}), [max_wal_size]({{ '/model/max_wal_size' | relative_url }}), [OSM Checkpoint]({{ '/results-summary/pg18/osm-checkpoint/' | relative_url }}).
 
-These results validate and extend the standard PostgreSQL [tuning guide](https://wiki.postgresql.org/wiki/Tuning_Your_PostgreSQL_Server). The [Tuning Model]({{ '/model/' | relative_url }}) section documents studies of parameters that respond predictably to pgbent workloads:
+pgbent results validate and extend the standard PostgreSQL [tuning guide](https://wiki.postgresql.org/wiki/Tuning_Your_PostgreSQL_Server). The [Tuning Model]({{ '/model/' | relative_url }}) section documents studies of parameters that respond predictably to pgbent workloads:
 
 - [shared_buffers]({{ '/model/shared_buffers' | relative_url }}) — buffer cache sizing and the ¼-RAM recommendation
 - [max_wal_size]({{ '/model/max_wal_size' | relative_url }}) — WAL volume and checkpoint write smoothing
 - [checkpoint_timeout]({{ '/model/checkpoint_timeout' | relative_url }}) — checkpoint frequency trade-offs
 
-[Platform guides]({{ '/platform/' | relative_url }}) cover the layer under those GUCs: Linux standard OS tuning (`pgbent_tune`), [dirty memory]({{ '/platform/linux-dirty-memory/' | relative_url }}) and [pdflush / writeback]({{ '/platform/linux-pdflush/' | relative_url }}), [NVMe interrupt coalescing]({{ '/platform/nvme-coalescing/' | relative_url }}), and [macOS LaunchAgent I/O class]({{ '/platform/darwin/' | relative_url }}).
+[Platform guides]({{ '/platform/' | relative_url }}) cover the layer under those GUCs:
+
+- [Linux standard OS tuning]({{ '/platform/linux/' | relative_url }})
+  - [dirty memory]({{ '/platform/linux-dirty-memory/' | relative_url }}) and [pdflush / writeback]({{ '/platform/linux-pdflush/' | relative_url }})
+- [NVIDIA DGX Spark]({{ '/platform/dgx-spark/' | relative_url }}) platform review
+  - [NVMe interrupt coalescing]({{ '/platform/nvme-coalescing/' | relative_url }})
+- [macOS LaunchAgent I/O class]({{ '/platform/darwin/' | relative_url }})
 
 Reference tuning configurations for OSM workloads live in the [`conf/`](https://github.com/gregs1104/pgbent/tree/main/conf) directory.
 
 ## Hardware and release comparisons
 
-**[Leaderboards]({{ '/leaderboards/' | relative_url }})** — OSM planet load and pgbench SELECT rankings. Initial [PostgreSQL 19rc1 report]({{ '/results-summary/pg19/' | relative_url }}): 19 took the top spots with a tiny delta over 18 (rc1 2026-10-15, catalog 20261006).
+**[Leaderboards]({{ '/leaderboards/' | relative_url }})** — OSM planet load and pgbench SELECT rankings. Initial [PostgreSQL 19rc1 report]({{ '/results-summary/pg19/' | relative_url }}): 19 took the top spots with clear improvement over 18 (rc1 2026-10-15, catalog 20261006).
 
 ![OSM score history by x86 CPU across PostgreSQL majors]({{ '/images/osm-history.png' | relative_url }})
 
@@ -46,7 +52,7 @@ pgbent includes a mix of fixed-size and automatically scaling workloads. Traces 
 
 | Workload | What it exercises |
 |----------|-------------------|
-| [pgbench SELECT]({{ '/workloads/select/' | relative_url }}) | SELECT, nothing (`;`), and constant (`SELECT 1`) across client × size grids; sockets vs TCP, simple vs prepared |
+| [pgbench SELECT]({{ '/workloads/select/' | relative_url }}) | SELECT, nothing (`;`), and constant (`SELECT 1`) across client × size grids; sockets vs TCP, simple vs prepared, point vs random |
 | [OpenStreetMap import]({{ '/workloads/osm' | relative_url }}) | Real-world bulk load via osm2pgsql—COPY, index builds, checkpoint pressure |
 | [Complete Block Check (CBC)]({{ '/workloads/cbc' | relative_url }}) | Short synthetic storage stress test (CTAS, VACUUM, CLUSTER, index scans) |
 
