@@ -88,7 +88,7 @@ _Query returned 23 rows._
 | NVIDIA P4242 | 119 | Samsung MZAL | 16 | off | minimal | 256 | host | 7.62 | 522 | 394 | 202 | 1182 | 131 | 7301 | 110 | 6594 |  | 24 | 71 | 663 | 7.3 | 5.5 | 2.8 | 10.9 |
 | NVIDIA P4242 | 119 | Samsung MZAL | 18 | on | replica | 100 | host | 8.68 | 454 | 346 | 195 | 1124 | 172 | 5262 | 105 | 9921 |  | 23 | 92 | 729 | 4.9 | 3.8 | 2.1 | 53 |
 | Apple M4 Max Studio | 128 | Apple AP2048 | 18 | off | replica | 100 | host | 8.75 | 407 | 343 | 123 | 1386 | 368 | 4230 | 368 | 4230 |  | 9 | 27 | 285 | 15.1 | 12.8 | 4.6 | 52.6 |
-| Apple M4 Max Studio | 128 | Apple AP2048 | 18 | on | replica | 100 | host | 10.45 | 279 | 287 | 67 | 1944 | 308 | 4507 | 308 | 4507 |  |  |  |  |  |  |  | 43.9 |
+| Apple M4 Max Studio | 128 | Apple AP2048 | 18 | on | replica | 100 | host | 10.41 | 279 | 288 | 67 | 1930 | 309 | 4393 | 309 | 4393 |  |  |  |  |  |  |  | 44.1 |
 
 <!-- osm-leaderboard-table:end -->
 

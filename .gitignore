@@ -9,3 +9,6 @@ docs/.bundle/
 __pycache__/
 # Local secrets (Slack webhook, etc.) — sourced after ./config when present
 /config.local
+
+# Local-only WIP staging (drafts, intros, notes) — never commit
+/private/
