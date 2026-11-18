@@ -12,11 +12,11 @@ OSM load throughput vs package power draw on the current Planet (**10.79 billion
 
 ![OSM total throughput vs maximum package power]({{ '/images/pg19-osm-power-total.png' | relative_url }})
 
-Each CPU is positioned by **maximum package watts** during the load. Servers are the **~128 GB RAM** class. **R9 9950X** leads on raw total throughput at **719** kNodes/s and **180 W** peak (PostgreSQL 19, `fsync=off`). **R5 9600X** is the mid AM5 point at **706** kNodes/s and **88 W** peak — almost the same total rate as the 9950X at half the package envelope. **i5-13600K** is next at **599** kNodes/s and **150 W**. **Apple M4 Max Studio** reaches **400** kNodes/s at **35 W**. **NVIDIA P4242** hardware-best is now durable **462** kNodes/s total (**656** OSM score, **6.48h**, coalescing off) at **94 W** peak — up from the earlier fast **392** / **570** / **7.65h** cell.
+Each CPU is positioned by **maximum package watts** during the load. Servers are the **~128 GB RAM** class. **R9 9950X** leads on raw total throughput at **719** kNodes/s and **180 W** peak (PostgreSQL 19, `fsync=off`). **R5 9600X** is the mid AM5 point at **706** kNodes/s and **88 W** peak — almost the same total rate as the 9950X at half the package envelope. **i5-13600K** is next at **599** kNodes/s and **150 W**. **Apple M4 Max Studio** reaches **400** kNodes/s at **35 W**. **NVIDIA P4242** hardware-best is fast **490** kNodes/s total (**780** OSM score, **6.12h**, coalescing off) at **91 W** peak — up from the earlier fast **392** / **570** / **7.65h** cell; durable coalescing-off is **462** / **656** / **6.48h**.
 
 ![OSM index throughput vs maximum package power]({{ '/images/pg19-osm-power-index.png' | relative_url }})
 
-Index build only—**R5 9600X** leads raw index throughput at **403** kNodes/s (**88 W**). **i5-13600K** is **383** kNodes/s at **150 W**. **NVIDIA Spark** is **230** kNodes/s at **94 W**; **Apple M4 Max Studio** is **171** kNodes/s at **35 W**.
+Index build only—**R5 9600X** leads raw index throughput at **403** kNodes/s (**88 W**). **i5-13600K** is **383** kNodes/s at **150 W**. **NVIDIA Spark** is **295** kNodes/s at **91 W**; **Apple M4 Max Studio** is **171** kNodes/s at **35 W**.
 
 ![OSM throughput per watt]({{ '/images/pg19-osm-power-efficiency.png' | relative_url }})
 
@@ -26,7 +26,7 @@ You can potentially triple the OSM score running on the fastest x86 instead of A
 
 Regenerate throughput charts: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/osm-power.py --pg 19` (reads the first table below). Query: `reports/osm-power.sql` (mem_gb ≤ 140). The table pins PostgreSQL 19 per CPU; Abbey is the PG18 stand-in. The live query still picks the best score on any major within the ~128 GB class.
 
-Sets: siren **117** (`PG19 on 9600X`); siren **108** (`PG19rc1 OSM` on 9950X); twilight **120** (`PG19 rc1 OSM mem=128G fast`); court **24** (coalescing-off durable); abbey 11 (`PG18`).
+Sets: siren **117** (`PG19 on 9600X`); siren **108** (`PG19rc1 OSM` on 9950X); twilight **120** (`PG19 rc1 OSM mem=128G fast`); court **25** (coalescing-off fast); abbey 11 (`PG18`).
 
 _Query returned 5 rows._
 
@@ -35,7 +35,7 @@ _Query returned 5 rows._
 | R9 9950X | 124 | 19 | 1480 | 719 | 364 | 3925 | 8225 | 3731 | 20555 | 4529 | 180 | 70 | 1046 | off | minimal | 20.4 | 79 | 7772 | 68 | 9748 |
 | R5 9600X | 124 | 19 | 1354 | 706 | 403 | 3456 | 7262 | 6774 | 19873 | 4356 | 88 | 58 | 889 | off | minimal | 20.0 | 80 | 5533 | 70 | 9505 |
 | i5-13600K | 125 | 19 | 1213 | 599 | 383 | 3067 | 5827 | 7142 | 14602 | 4146 | 150 | 46 | 833 | off | minimal | 52.8 | 58 | 7331 | 41 | 8970 |
-| NVIDIA P4242 | 119 | 19 | 656 | 462 | 230 | 2036 | 3054 | 5329 | 16276 | 1922 | 94 | 34 | 804 | on | replica | 64.9 | 214 | 5355 | 140 | 10141 |
+| NVIDIA P4242 | 119 | 19 | 780 | 490 | 295 | 2709 | 4351 | 5939 | 16082 | 1984 | 91 | 34 | 749 | off | minimal | 43.2 | 196 | 5921 | 149 | 9960 |
 | Apple M4 Max Studio | 128 | 18 | 561 | 400 | 171 | 1662 | 2699 | 2743 | 12519 | 1674 | 35 | 9 | 276 | off | minimal | 11.3 | 325 | 6125 | 325 | 6125 |
 
 ## Relation power efficiency
@@ -44,7 +44,7 @@ Relation-build throughput during OSM planet load, normalized by **average** pack
 
 ![OSM relation throughput per average watt]({{ '/images/pg19-osm-relation-power.png' | relative_url }})
 
-**Apple M4 Max Studio** leads at **186** relations per watt (**1674** rel/s at **9 W** average). **i5-13600K** is next among the desktops at **90** rel/W; **R5 9600X** is **75** rel/W (**4356** rel/s at **58 W**). **R9 9950X** moves the most relations overall (**4529** rel/s) at **70 W** average. Spark is **56** rel/W (**1922** rel/s at **34 W** average) after coalescing off — higher draw than the stalled **23 W** cell, but much higher Relations/s.
+**Apple M4 Max Studio** leads at **186** relations per watt (**1674** rel/s at **9 W** average). **i5-13600K** is next among the desktops at **90** rel/W; **R5 9600X** is **75** rel/W (**4356** rel/s at **58 W**). **R9 9950X** moves the most relations overall (**4529** rel/s) at **70 W** average. Spark is **58** rel/W (**1984** rel/s at **34 W** average) after coalescing off — higher draw than the stalled **23 W** cell, but much higher Relations/s.
 
 ![OSM relation throughput vs average power]({{ '/images/pg19-osm-relation-scatter.png' | relative_url }})
 
@@ -52,7 +52,7 @@ The scatter view shows the same data directly: the AM5 pair and Intel sit at **4
 
 ![OSM relations/second vs full-run package energy]({{ '/images/pg19-osm-relation-joules.png' | relative_url }})
 
-Same **full-run package energy** as the leaderboard score-vs-kJ chart, against **relations/second** instead of OSM score. Some of those joules went to nodes, ways, and indexes—this is a zoom-in, not a phase-isolated integral. **R9 9950X** leads relation rate (**4529** rel/s) at **1046 kJ**; **R5 9600X** is **4356** rel/s at **889 kJ**; **i5-13600K** is **4146** rel/s at **833 kJ**. Apple stays cheap (**276 kJ**, **1674** rel/s). Spark is **804 kJ** at **1922** rel/s.
+Same **full-run package energy** as the leaderboard score-vs-kJ chart, against **relations/second** instead of OSM score. Some of those joules went to nodes, ways, and indexes—this is a zoom-in, not a phase-isolated integral. **R9 9950X** leads relation rate (**4529** rel/s) at **1046 kJ**; **R5 9600X** is **4356** rel/s at **889 kJ**; **i5-13600K** is **4146** rel/s at **833 kJ**. Apple stays cheap (**276 kJ**, **1674** rel/s). Spark is **749 kJ** at **1984** rel/s.
 
 Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/osm-relation-power.py --pg 19` (reads the relation table below).
 
@@ -62,4 +62,4 @@ Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bi
 | i5-13600K | 19 | 4146 | 46 | 150 | 90 | 833 |
 | R5 9600X | 19 | 4356 | 58 | 88 | 75 | 889 |
 | R9 9950X | 19 | 4529 | 70 | 180 | 65 | 1046 |
-| NVIDIA P4242 | 19 | 1922 | 34 | 94 | 56 | 804 |
+| NVIDIA P4242 | 19 | 1984 | 34 | 91 | 58 | 749 |

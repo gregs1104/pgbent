@@ -255,8 +255,8 @@ def plot_single_throughput_vs_power(
         if pg != "18"
         else SINGLE_CHART_LABEL_OVERRIDES.get(metric_col)
     )
-    # Court coalescing-off moved Spark up on total (462 kN/s); keep the label
-    # beside the marker. Grid-bottom placement was for the old low-left cluster.
+    # Court coalescing-off moved Spark up on total (490 kN/s fast); keep the
+    # label beside the marker. Grid-bottom placement was for the old low-left cluster.
     place_point_labels(
         ax,
         df["cpu"],

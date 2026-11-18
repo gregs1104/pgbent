@@ -24,7 +24,7 @@ One chart for the same best-score run on each machine, sorted by OSM score. Bar 
 
 Speed vs energy for the best run on each machine at ~128GB RAM. **Score** is OSM kNodes/s; **kJ** is total package energy (joules, shown as kilojoules) from the 1-second power integral over the test window. NVIDIA DGX Spark package watts come from the open [spark_hwmon](https://github.com/antheas/spark_hwmon) module, not an NVIDIA-shipped sensor path.
 
-You can potentially triple the score running on the fastest x86 instead of ARM, but it costs 4–5× as much energy to juice up the processors to do it. **R9 9950X** scores **1480** at **1046 kJ**; **Apple M4 Max Studio** scores **578** at **224 kJ** (**2.6×** score, **4.7×** joules). Versus NVIDIA Grace the score ratio is **2.3×** (1480 vs 656). ARM’s “cheap” joules are partly stalls on scattered index→heap misses during Relations — see [ARM random read vs x86]({{ '/studies/arm-random-read-vs-x86/' | relative_url }}).
+You can potentially triple the score running on the fastest x86 instead of ARM, but it costs 4–5× as much energy to juice up the processors to do it. **R9 9950X** scores **1480** at **1046 kJ**; **Apple M4 Max Studio** scores **578** at **224 kJ** (**2.6×** score, **4.7×** joules). Versus NVIDIA Grace the score ratio is **1.9×** (1480 vs 780). ARM’s “cheap” joules are partly stalls on scattered index→heap misses during Relations — see [ARM random read vs x86]({{ '/studies/arm-random-read-vs-x86/' | relative_url }}).
 
 <!-- osm-leaderboard-joules:end -->
 
@@ -42,7 +42,7 @@ The power-efficiency leader is **Apple M4 Max Studio** (PostgreSQL 18, `fsync=of
 
 ![OSM efficiency-leader package power average vs 1-second maximum]({{ '/images/osm-leaderboard-efficiency-power.png' | relative_url }})
 
-**NVIDIA Spark** (court, **NVIDIA P4242**) rounds out the set (PostgreSQL 19, `fsync=on`, OSM score **656**, **462** kNodes/s total, **6.48h**). Disk is combined read+write on data volume `nvme0n1`.
+**NVIDIA Spark** (court, **NVIDIA P4242**) rounds out the set (PostgreSQL 19, `fsync=off`, OSM score **780**, **490** kNodes/s total, **6.12h**). Disk is combined read+write on data volume `nvme0n1`.
 
 ![OSM NVIDIA Spark disk average vs 1-second maximum]({{ '/images/osm-leaderboard-nvidia-disk.png' | relative_url }})
 

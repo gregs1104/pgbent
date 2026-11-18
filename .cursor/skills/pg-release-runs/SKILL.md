@@ -610,14 +610,42 @@ matrix on PG18. OS upgrades and Planet refresh sit in the same window.
 
 Mid-cycle work — do **not** start until the release-snapshot cells have wrapped
 (siren dump, twilight set 119 SELECT+OSM + 128G corners, abbey WAL/fsync 2×2, court set 8,
-OSM Power Spark cell as needed). Then:
+OSM Power Spark cell as needed).
+
+### Siren OS wrap (before the upgrade)
+
+9600X is on the boards for **19** only (SELECT set **118**, fast OSM set **117**).
+Older SELECT history on this host is still **9950X**. While siren can still
+install majors back to **PG15**, grab the irreplaceable cells **before** the
+OS cutover (hands-on; no agent SSH):
+
+1. **Four-face SELECT on PG15 → PG18** (same scale/runtime/`SETTIMES=2` as set
+   **118**): sockets / sockets prepared / host / host prepared. That puts a
+   mid-AM5 line on `select-history` instead of only 19.
+2. **19rc2 durable OSM** (`fsync=on`, `wal_level=replica`, `max_wal_size=100GB`):
+   stress the current RC and fill the old **two-durability-face** grid on
+   9600X (fast already banked at **1354**; durable was missing — set **119**
+   was `on`/`minimal`, not full durable).
+3. **Geekbench 7** on the current OS (upload to the public profile
+   [browser.geekbench.com/user/232126](https://browser.geekbench.com/user/232126)).
+   That profile is the farm’s hardware detail report (older boxes are GB6;
+   wrap and later pins use GB7 only). Pair with a post-upgrade run so
+   OS/kernel moves are visible outside Postgres.
+
+Skip before upgrade: PG15–17 OSM, more AIO/RA on siren, anything that needs
+twilight’s disk headroom. Optional noise check (not upgrade-gated): 19rc2
+SELECT four-face if time allows.
+
+### OS cutover (after the wrap)
 
 1. Upgrade **siren** and **twilight** to the new OS releases (Greg names
    the targets; do not guess Debian/Ubuntu versions).
-2. Re-test the main **SELECT faces** and **OSM** on the same 19 pin so an
+2. **Geekbench 7** again on the new OS; both GB7 runs should appear on the
+   same public profile for the hardware detail write-up.
+3. Re-test the main **SELECT faces** and **OSM** on the same 19 pin so an
    OS/kernel move cannot hide as a Postgres change. Usual pair: pgbench
    SELECT (small scale) + OSM (writes).
-3. `./newset` with an OS-vintage batch so assembly can split pre/post OS.
+4. `./newset` with an OS-vintage batch so assembly can split pre/post OS.
 
 Hands-on on siren (no agent SSH). Agent SSH twilight. Abbey and court
 are not in this cutover unless asked. `super` already showed a 24.04 vs

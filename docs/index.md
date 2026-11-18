@@ -10,7 +10,7 @@ layout: home
 * Postgres OLTP [Tuning Model]({{ '/model/' | relative_url }}) and [Platform guides]({{ '/platform/' | relative_url }}).
 * [Leaderboards]({{ '/leaderboards/' | relative_url }}) and [release summary snapshots]({{ '/results-summary/' | relative_url }}).
 
-pgbent's development runs a bare metal hardware Performance Farm lab for regression testing of new releases, as parallel work to the PostgreSQL Community [BuildFarm](https://buildfarm.postgresql.org/).
+pgbent's development runs a bare metal hardware Performance Farm lab for regression testing of new releases, as parallel work to the PostgreSQL Community [BuildFarm](https://buildfarm.postgresql.org/). Public CPU detail for the farm is on Greg’s [Geekbench profile](https://browser.geekbench.com/user/232126) (historical GB6; GB7 from the OS wrap onward).
 
 ## Tuning research
 

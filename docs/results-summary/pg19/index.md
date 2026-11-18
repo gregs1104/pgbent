@@ -13,7 +13,7 @@ Initial **19rc1** report. Package date **2026-10-15**, catalog **20261006**. The
 
 ![OSM load leaderboard — best run per server configuration]({{ '/images/osm-leaderboard.png' | relative_url }})
 
-19 took the top leaderboard spots, with a tiny delta over 18. That's how this lab judges a release; it's easier than tracking medians. CPU-bound SELECT is the canary; OSM barely moved. Siren 19rc1 OSM set **108** closed the 9950X pack: durable **4.49h**, alternate **4.14h**. Court’s Spark cell moved after NVMe interrupt coalescing was turned off: durable OSM score **656** / **6.48h** (set **24**, 19rc2). [OSM Power]({{ '/results-summary/pg19/osm-power/' | relative_url }}) uses that court cell for NVIDIA Spark and Abbey **PG18** for the Studio (no 19 during RC).
+19 took the top leaderboard spots, with a tiny delta over 18. That's how this lab judges a release; it's easier than tracking medians. CPU-bound SELECT is the canary; OSM barely moved. Siren 19rc1 OSM set **108** closed the 9950X pack: durable **4.49h**, alternate **4.14h**. Court’s Spark cell moved after NVMe interrupt coalescing was turned off: fast OSM score **780** / **6.12h** (set **25**, 19rc2); durable **656** / **6.48h** (set **24**). [OSM Power]({{ '/results-summary/pg19/osm-power/' | relative_url }}) uses the fast court cell for NVIDIA Spark and Abbey **PG18** for the Studio (no 19 during RC).
 
 ## Studies
 
@@ -26,15 +26,17 @@ Disk traces behind the OSM bars: [OSM Leaders: Performance vs. Power]({{ '/leade
 
 ## Not in this report
 
-Network Mbps, checkpoint timeout, and dirty-memory sweeps from PG18 have not been opened as PG19 studies. Abbey has not installed 19 during RC (Homebrew after GA). Siren is back on the **9600X**; that mid-AM5 cell is on the SELECT and OSM power boards. OS upgrades on siren and twilight come after this pin.
+Network Mbps, checkpoint timeout, and dirty-memory sweeps from PG18 have not been opened as PG19 studies. Abbey has not installed 19 during RC (Homebrew after GA). Siren is back on the **9600X**; that mid-AM5 cell is on the SELECT and OSM power boards. **Siren OS wrap (before upgrade):** four-face SELECT on PG15→18, 19rc2 durable OSM to finish the two-durability grid, and Geekbench 7 before/after the OS cutover (public hardware detail); OS upgrades on siren and twilight follow (see `pg-release-runs` § OS upgrades).
 
 ## Machines
+
+Public CPU detail is on Greg’s [Geekbench browser profile](https://browser.geekbench.com/user/232126) — historical **GB6** for these boxes and earlier swaps; **GB7** from the OS wrap onward (no more GB6).
 
 | Host | CPU | In this report |
 | --- | --- | --- |
 | siren | R5 9600X (was R9 9950X) | 9950X pack closed (SELECT four faces; OSM set **108**). **9600X** SELECT set **118** + OSM set **117** now on the power boards |
 | twilight | i5-13600K | SELECT four faces; OSM fast + durable (beta4) |
-| court | NVIDIA Spark | SELECT four faces + sockets `;` / `SELECT 1`; OSM durable coalescing-off (set **24**) |
+| court | NVIDIA Spark | SELECT four faces + sockets `;` / `SELECT 1`; OSM coalescing-off durable/fast (sets **24** / **25**) |
 | abbey | M4 Max Studio | PG18 OSM on the current Planet (OSM Power stand-in); no PG19 during RC |
 
 ## Pin

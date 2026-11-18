@@ -192,7 +192,7 @@ Natural next reproduction: **Graviton** or another server-class Linux ARM vendor
 
 ### Open loose ends
 
-- Court OSM coalescing off (set **24** / test **217**): Relations **~1.74×** (**13251 s → 7614 s**), overall **6.48h**, OSM score **656** — on the public boards.
+- Court OSM coalescing off: durable set **24** / test **217** Relations **~1.74×** (**13251 s → 7614 s**), **6.48h**, score **656**; fast set **25** / test **218** **6.12h**, score **780** — on the public boards.
 - Court's remaining ~2× Relations gap vs a good x86 after coalescing; not assumed to reach parity.
 - Abbey unclamped OSM (set **15**): Relations win confirmed; index-phase regression needs a cool-disk retry.
 - Twilight `read_ahead_kb` ladder retry + OSM RA=0 (sets **134–146**) uploaded; OSM RA=0 cost summarized under [Linux standard tuning]({{ '/platform/linux/' | relative_url }}) § Read-ahead.

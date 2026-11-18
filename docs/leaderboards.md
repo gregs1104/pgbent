@@ -8,7 +8,7 @@ has_children: true
 
 # Leaderboards
 
-Public pgbench SELECT and OSM planet-load rankings from the pgbent server farm personally run by Greg Smith. This page is updated when there are interesting new cells.  It is not a live dashboard.  It is not an open submission program--at least not yet anyway.
+Public pgbench SELECT and OSM planet-load rankings from the pgbent server farm personally run by Greg Smith. Hardware detail for those CPUs is on [browser.geekbench.com/user/232126](https://browser.geekbench.com/user/232126) (historical GB6; GB7 from the OS wrap onward). This page is updated when there are interesting new cells.  It is not a live dashboard.  It is not an open submission program--at least not yet anyway.
 
 Initial [PostgreSQL 19rc1 report]({{ '/results-summary/pg19/' | relative_url }}) shows PG19 (rc1 2026-10-15, catalog 20261006) took the top leaderboard spots with a tiny delta over 18.
 
@@ -79,16 +79,16 @@ _Query returned 23 rows._
 | i5-13600K | 188 | Fury G5 4TB | 19 | on | replica | 100 | host | 5.03 | 1099 | 596 | 313 | 4468 | 67 | 9151 | 40 | 9110 |  | 48 | 150 | 866 | 7.3 | 4 | 2.1 | 83.4 |
 | R9 9950X | 124 | SK51 2TB | 18 | on | replica | 256 | host | 4.54 | 1088 | 661 | 300 | 4398 | 103 | 6283 | 67 | 9457 |  |  |  |  |  |  |  | 93.2 |
 | i5-13600K | 125 | Fury G5 4TB | 19 | on | replica | 100 | host | 5.43 | 1040 | 553 | 296 | 3849 | 62 | 6576 | 39 | 8792 |  | 46 | 149 | 896 | 7 | 3.7 | 2 | 77.3 |
+| NVIDIA P4242 | 119 | Samsung MZAL | 19 | off | minimal | 100 | host | 6.12 | 780 | 490 | 295 | 1984 | 196 | 5921 | 149 | 9960 |  | 34 | 91 | 749 | 8.6 | 5.4 | 3.2 | 43.2 |
 | NVIDIA P4242 | 119 | Samsung MZAL | 19 | on | replica | 100 | host | 6.48 | 656 | 462 | 230 | 1922 | 214 | 5355 | 140 | 10141 |  | 34 | 94 | 804 | 7 | 4.9 | 2.5 | 64.9 |
 | Apple M4 Max Studio | 128 | Apple AP2048 | 17 | off | minimal | 256 | host | 7.75 | 578 | 387 | 250 | 1358 | 331 | 4159 | 331 | 4159 |  | 8 | 37 | 224 | 15.5 | 10.4 | 6.7 | 10.7 |
 | NVIDIA P4242 | 119 | Samsung MZAL | 19 | off | minimal | 256 | host | 7.65 | 570 | 392 | 210 | 1242 | 156 | 9303 | 119 | 9196 |  | 28 | 91 | 778 | 6.3 | 4.3 | 2.3 | 34.6 |
 | NVIDIA P4242 | 119 | Samsung MZAL | 18 | off | minimal | 100 | host | 7.81 | 567 | 384 | 236 | 1184 | 133 | 7135 | 117 | 9438 |  | 24 | 87 | 677 | 6.5 | 4.4 | 2.7 | 10.8 |
 | Apple M4 Max Studio | 128 | Apple AP2048 | 18 | off | minimal | 100 | host | 7.49 | 561 | 400 | 171 | 1674 | 325 | 6125 | 325 | 6125 |  | 9 | 35 | 276 | 16.1 | 11.5 | 4.9 | 11.3 |
 | NVIDIA P4242 | 119 | Samsung MZAL | 16 | off | minimal | 256 | host | 7.62 | 522 | 394 | 202 | 1182 | 131 | 7301 | 110 | 6594 |  | 24 | 71 | 663 | 7.3 | 5.5 | 2.8 | 10.9 |
-| NVIDIA P4242 | 119 | Samsung MZAL | 19 | off | minimal | 100 | host | 8.3 | 521 | 361 | 263 | 1095 | 124 | 6351 | 110 | 9627 |  | 23 | 89 | 701 | 5.9 | 4.1 | 3 | 10.3 |
 | NVIDIA P4242 | 119 | Samsung MZAL | 18 | on | replica | 100 | host | 8.68 | 454 | 346 | 195 | 1124 | 172 | 5262 | 105 | 9921 |  | 23 | 92 | 729 | 4.9 | 3.8 | 2.1 | 53 |
 | Apple M4 Max Studio | 128 | Apple AP2048 | 18 | off | replica | 100 | host | 8.75 | 407 | 343 | 123 | 1386 | 368 | 4230 | 368 | 4230 |  | 9 | 27 | 285 | 15.1 | 12.8 | 4.6 | 52.6 |
-| Apple M4 Max Studio | 128 | Apple AP2048 | 18 | on | replica | 100 | host | 11.1 | 265 | 270 | 69 | 1396 | 285 | 4578 | 285 | 4578 |  | 7 | 25 | 270 | 10.8 | 11 | 2.8 | 41.6 |
+| Apple M4 Max Studio | 128 | Apple AP2048 | 18 | on | replica | 100 | host | 10.45 | 279 | 287 | 67 | 1944 | 308 | 4507 | 308 | 4507 |  |  |  |  |  |  |  | 43.9 |
 
 <!-- osm-leaderboard-table:end -->
 
