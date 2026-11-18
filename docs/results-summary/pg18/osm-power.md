@@ -10,6 +10,8 @@ nav_order: 1
 
 OSM load throughput vs package power draw.
 
+**Note:** The **NVIDIA Spark** cell on this PG18 snapshot is slow because the drive still had [NVMe interrupt coalescing]({{ '/platform/nvme-coalescing/' | relative_url }}) on (OEM default). Turning that off later moved Relations ~**1.75×** and is what the PG19 court numbers reflect — see [OSM Power (PG19)]({{ '/results-summary/pg19/osm-power/' | relative_url }}).
+
 ![OSM total throughput vs maximum package power]({{ '/images/pg18-osm-power-total.png' | relative_url }})
 
 Each CPU is positioned by **maximum package watts** during the load. Desktop AMD (**R9 9950X**, **R5 9600X**) leads on raw **kNodes/s**; **NVIDIA Spark (P4242)** sits mid-chart at **425** kNodes/s and **64 W** peak; **Apple M4 Max** reaches **463** kNodes/s at only **23 W**. **R9 9950X** peaks at **758** kNodes/s total at **167 W**; **Apple M4 Max Studio** reaches **450** kNodes/s at **25 W**.
