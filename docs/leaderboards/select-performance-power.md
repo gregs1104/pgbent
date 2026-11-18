@@ -59,7 +59,7 @@ One chart for the best **sockets prepared** run on each machine at **1** and **3
 
 Speed vs energy for the best **sockets prepared** run on each machine at **32** clients. **TPS** is the SELECT rate; **kJ** is total package energy from the 1-second power integral over the 90s window. Same pin cells as the comparison bars above.
 
-You can potentially get 5× the TPS running on the fastest x86 instead of ARM, but it costs ~10× as much energy to juice up the processors to do it. **R9 9950X** does **2,059,359** TPS at **17.8 kJ**; **Apple M4 Max Studio** does **400,225** at **1.7 kJ** (**5.1×** TPS, **10.5×** joules). Versus NVIDIA Grace the TPS ratio is **3.9×** (2,059,359 vs 532,505).
+**R9 9950X** does **2,059,359** TPS at **17.8 kJ**; **Apple M4 Max Studio** does **400,225** at **1.7 kJ** (**5.1×** TPS, **10.5×** joules). Versus NVIDIA Spark the TPS ratio is **3.9×** (2,059,359 vs 532,505).
 
 <!-- select-platform-scatter:end -->
 

@@ -248,8 +248,6 @@ def joules_takeaway(df: pd.DataFrame) -> str:
     score_x = float(fast["score_kips"]) / float(arm["score_kips"])
     joule_x = float(fast["kj"]) / float(arm["kj"])
     bits = [
-        "You can potentially triple the score running on the fastest x86 instead of ARM, "
-        "but it costs 4–5× as much energy to juice up the processors to do it. "
         f"**{fast['cpu']}** scores **{format_markdown_cell(fast['score_kips'])}** at "
         f"**{format_markdown_cell(fast['kj'])} kJ**; **{arm['cpu']}** scores "
         f"**{format_markdown_cell(arm['score_kips'])}** at "
@@ -260,13 +258,13 @@ def joules_takeaway(df: pd.DataFrame) -> str:
         nv = nvidia.sort_values("score_kips", ascending=False).iloc[0]
         nv_x = float(fast["score_kips"]) / float(nv["score_kips"])
         bits.append(
-            f"Versus NVIDIA Grace the score ratio is **{nv_x:.1f}×** "
+            f"Versus NVIDIA Spark the score ratio is **{nv_x:.1f}×** "
             f"({format_markdown_cell(fast['score_kips'])} vs "
             f"{format_markdown_cell(nv['score_kips'])})."
         )
     bits.append(
-        "ARM’s “cheap” joules are partly stalls on scattered index→heap misses "
-        "during Relations — see "
+        "The wide Apple gap is mostly a Darwin desktop I/O-class clamp "
+        "(LaunchAgent), not the M4 — see "
         "[ARM random read vs x86]({{ '/studies/arm-random-read-vs-x86/' | relative_url }})."
     )
     return " ".join(bits)

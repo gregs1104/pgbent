@@ -506,8 +506,6 @@ def scatter_takeaway(df: pd.DataFrame) -> str:
     tps_x = float(fast["tps_32"]) / float(arm["tps_32"])
     joule_x = float(fast["kj_32"]) / float(arm["kj_32"])
     bits = [
-        "You can potentially get 5× the TPS running on the fastest x86 instead of ARM, "
-        "but it costs ~10× as much energy to juice up the processors to do it. "
         f"**{fast['cpu']}** does **{format_tps(fast['tps_32'])}** TPS at "
         f"**{format_kj(fast['kj_32'])} kJ**; **{arm['cpu']}** does "
         f"**{format_tps(arm['tps_32'])}** at "
@@ -518,7 +516,7 @@ def scatter_takeaway(df: pd.DataFrame) -> str:
         nv = nvidia.sort_values("tps_32", ascending=False).iloc[0]
         nv_x = float(fast["tps_32"]) / float(nv["tps_32"])
         bits.append(
-            f"Versus NVIDIA Grace the TPS ratio is **{nv_x:.1f}×** "
+            f"Versus NVIDIA Spark the TPS ratio is **{nv_x:.1f}×** "
             f"({format_tps(fast['tps_32'])} vs {format_tps(nv['tps_32'])})."
         )
     return " ".join(bits)
