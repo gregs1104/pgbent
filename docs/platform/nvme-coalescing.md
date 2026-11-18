@@ -27,13 +27,16 @@ pgbent does the clear in `pgbent_tune` when `nvme-cli` is installed. A power cyc
 
 Samsung `MZALC4T0HBL1`, firmware `NXHB202Q`, shipped with coalescing on. Twilight’s Kingston had it off. Same Postgres durable face, same select-scatter / OSM shape:
 
+![Court NVMe coalescing on vs off — select-scatter and OSM Relations]({{ '/images/nvme-coalescing-compare.png' | relative_url }})
+
 | | Coalescing on (shipped) | Coalescing off |
 |--|-------------------------|----------------|
 | select-scatter cold c=1 | ~35 TPS | ~100 TPS |
 | select-scatter hot c=32 | ~1870 TPS | ~3880 TPS |
 | OSM Relations | 13251 s (~1104/s) | 7614 s (~1921/s) |
-| OSM overall | 30871 s | 23343 s |
 
-Relations **~1.75×** faster; overall wall clock ~1.32×. Court still trails a similar-class x86 host by about 2× on Relations — not parity, and not claimed to be. Isolation ruled out AIO method, `effective_io_concurrency`, and IRQ pinning as the main lever.
+Relations **~1.75×** faster (overall wall clock also improved; not charted here). Court still trails a similar-class x86 host by about 2× on Relations — not parity, and not claimed to be. Isolation ruled out AIO method, `effective_io_concurrency`, and IRQ pinning as the main lever.
+
+Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/nvme-coalescing-compare.py`
 
 Full write-up: [ARM random read vs x86]({{ '/studies/arm-random-read-vs-x86/' | relative_url }}).
