@@ -23,9 +23,9 @@ Page-cache writeback (`vm.dirty_*`) is separate from this boot script — see [L
 
 Classic Postgres lore ties readahead to **sequential scans**. That case was measured in Greg’s 9.0 PG book; public comparative work has been thin since. pgbent’s standard `setra 4096` has been the lab default since its 2010 start.
 
-Newer evidence on a **scattered** index→heap pattern (`select-scatter`, the Relations miniature):
+Newer evidence on a **scattered** index→heap pattern (`select-scatter-64`, the Relations miniature):
 
-- On **court** (NVIDIA DGX Spark), `read_ahead_kb=0` roughly **halved** select-scatter throughput vs 128/2048, both cold and hot, before and after the coalescing fix. 128 vs 2048 was flat. So “some readahead” matters even when the access pattern does not look like a seqscan; **zero** is the dangerous setting.
+- On **court** (NVIDIA DGX Spark), `read_ahead_kb=0` roughly **halved** select-scatter-64 throughput vs 128/2048, both cold and hot, before and after the coalescing fix. 128 vs 2048 was flat. So “some readahead” matters even when the access pattern does not look like a seqscan; **zero** is the dangerous setting.
 - On **twilight** (x86), a public `read_ahead_kb` ladder (sets **134–139**) shows the same shape: RA=0 soft (~¾ of 128+); **128 through 16384 flat**. Contiguous `select-range` on the same host (sets **140–145**) is mostly flat across the ladder, with RA=0 only a mild dip at low concurrency.
 
 **OSM planet load (twilight, durable)** closes the classic sequential / bulk-write story. Same face as the PG19 durable cell, but with `read_ahead_kb=0` for the whole run (set **146**) vs the lab default **2048** (set **121**):

@@ -11,7 +11,7 @@ nav_order: 6
 Lab host **court**: NVIDIA DGX Spark (board **P4242**), Grace CPU, DGX OS (Ubuntu-derived). This page is the Spark-specific checklist. Two platform oddities showed up here — different layers, both farm catches:
 
 1. **[NVMe interrupt coalescing]({{ '/platform/nvme-coalescing/' | relative_url }})** — I/O: DGX OS turns feature 8 on at boot; clearing it was ~**1.75×** on OSM Relations.
-2. **SELECT client grid / mixed-core off-ratio** — CPU scheduling: a power-of-two-only ladder undersells the box (dip at **16**; fair points at **20** / **40**). See below.
+2. **SELECT client grid / mixed-core off-ratio** — CPU scheduling: a power-of-two-only ladder undersells the box (and mildly favors AMD chips that land on **16** / **32**); fair points at **20** / **40**. See below.
 
 Also apply the shared [Linux standard tuning]({{ '/platform/linux/' | relative_url }}) (`pgbent_tune`: governor, readahead, coalescing clear, TRIM). Set `DISKLIST="nvme0n1"` in `config` or `iostat.csv` stays empty.
 
@@ -55,9 +55,13 @@ Debian `watchdog` ping-to-gateway was left over from that hang era. Keep it **of
 
 ## SELECT client counts (mixed-core) — second oddity
 
-Court is **20** CPUs: 10× Cortex-X925 + 10× Cortex-A725. Separate from coalescing: a pure power-of-two client ladder (`… 8 16 32 64`) can hit a **classic off-ratio dip** on mixed-core hardware — the published sockets-prepared curve dipped at **16** for that reason. `pgsysinfo` already merges `nproc`, `2×`, and `4×` into `SETCLIENTS` (here **20 / 40 / 80**); the published SELECT ladder stays in the **1–64** window, so the fair fill points are **20** and **40** (set **26**; **10** / **16** re-check in set **27**). Treat a lonely 16-client valley as a scheduling-ratio artifact until the `nproc` points are on the chart — keep the **highest** TPS when piling repeats onto a doubtful cell.
+Court is **20** CPUs: 10× Cortex-X925 + 10× Cortex-A725. Separate from coalescing: a pure power-of-two client ladder (`… 8 16 32 64`) is not a fair cross-vendor grid on this farm — it gives a **mild advantage to the current AMD set** (9950X hits **16** / **32** cleanly) and can hit a **classic off-ratio dip** on mixed-core hardware. Filled sockets-prepared points (sets **26** / **27**, highest TPS): **~485k** at **10** and **16**, **~960k** at **20** (`nproc`), **~533k** at **32**, **~547k** at **40**. The cliff is matching the core count, not “16 is mysteriously slow.” `pgsysinfo` already merges `nproc`, `2×`, and `4×` into `SETCLIENTS` (here **20 / 40 / 80**); the published SELECT ladder stays in the **1–64** window with fair fills at **10 / 20 / 40**.
 
-Intel hybrid and Apple mixes show a milder version of the same edge; more mature PG-on-Linux platforms tend to sand it over. Spark is still a relatively raw CPU platform for this workload, so the dip stayed visible enough to catch.
+Twilight’s **13600K** shows a milder version of the same edge. Once other pending farm work finishes, its SELECT grid will add the `pgsysinfo` thread points (**20** / **40** / **80**) so pgbench can pin better to cores and threads — the same fairness fix court needed. Apple is milder still; more mature PG-on-Linux platforms tend to sand it over. After the **14900K** left the farm, AMD chips moved onto the top of the SELECT board. Spark is still a relatively raw CPU platform for this workload, so the dip stayed visible enough to catch.
+
+## Residual vs x86 (clock)
+
+After coalescing is off and the client grid is fair, court still sits behind the farm’s fast x86 boxes on SELECT / Relations-shaped work. The Grace parts here run around **2.8 GHz**; the desktop x86 SKUs sit in **~5.7 GHz** territory. That is roughly a **2×** clock gap, and the remaining platform gap looks **proportional to that** — a working hypothesis, not a claim that every residual is pure MHz. Full x86 parity is not expected on this clock envelope.
 
 ## See also
 

@@ -1,3 +1,5 @@
+-- Range length from MULTI / -Dmultiplier (one script suits all sizes).
+-- Contrast: select-scatter-N fixes batch size in the script name instead.
 \set range 67 * (:multiplier + 1)
 \set limit 100000 * :scale
 \set limit :limit - :range

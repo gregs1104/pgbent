@@ -42,6 +42,8 @@ pgbench client.  One known source of this problem is Linux kernels
 using the Completely Fair Scheduler introduced in 2.6.23,
 which does not schedule the pgbench program very well when it's connecting
 to the database using the default method, Unix-domain sockets.
+Main history: Greg’s [May 2008 LKML thread](https://lkml.iu.edu/hypermail/linux/kernel/0805.3/0797.html)
+on the pgbench performance regression in 2.6.23+.
 
 (Note that pgbench-tools doesn't suffer greatly from this problem itself, as
 it connects over TCP/IP using the "-H" parameter.  Manual pgbench runs that

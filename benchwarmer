@@ -3,6 +3,18 @@
 source ./config
 source ./params
 
+# select-scatter-N encodes batch size in the script name; record N in
+# tests.multi. select-pages instead varies MULTI on one script via
+# -Dmultiplier. Future scatter sizes are more scripts, not more MULTI values.
+case "$SCRIPT" in
+  select-scatter-*)
+    _scatter_n="${SCRIPT#select-scatter-}"
+    if [[ "$_scatter_n" =~ ^[0-9]+$ ]]; then
+      MULTI="$_scatter_n"
+    fi
+    ;;
+esac
+
 # Take clients and rate limit from command line if passed, use defaults
 # otherwise
 

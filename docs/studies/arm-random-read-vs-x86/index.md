@@ -33,7 +33,7 @@ The usual CPU suspects do not add up here. Missing wide AVX-class SIMD on ARM, o
 
 The OSM path is a poor first repro: too much hardware and too long a run. A small durable-face miniature with the same access shape is below.
 
-`pgbench` custom script **select-scatter**: **64 unsorted random `aid`s** → nested-loop index probes + heap fetches on `pgbench_accounts`. Planner forced to that access pattern:
+`pgbench` custom script **select-scatter-64**: **64 unsorted random `aid`s** → nested-loop index probes + heap fetches on `pgbench_accounts`. Size is in the script name; `wl/arm-miss-isolation` sets `MULTI=64` so `tests.multi` matches (unlike `select-pages`, which varies `MULTI` on one script). Planner forced to that access pattern:
 
 ```sql
 ALTER DATABASE pgbench SET enable_seqscan = off;
@@ -62,11 +62,11 @@ Database is sized to be about 2× RAM to trigger real cache misses. The Linux pa
 
 Two passes after a cold OS cache drop: **cold** = first pass, **hot** = second. Gaps are stable either way.
 
-Artifacts in this study directory, also wired into the live toolkit as `tests/select-scatter.sql` and `wl/arm-miss-isolation`:
+Artifacts in this study directory, also wired into the live toolkit as `tests/select-scatter-64.sql` and `wl/arm-miss-isolation`:
 
 | File | Role |
 |------|------|
-| [select-scatter.sql](select-scatter.sql) | pgbench script |
+| [select-scatter-64.sql](select-scatter-64.sql) | pgbench script |
 | [arm-miss-isolation](arm-miss-isolation) | run grid / cold start / RA cells |
 | [iso-io-worker.conf](iso-io-worker.conf) / [iso-io-sync.off](iso-io-sync.off) | flip `io_method` for the sync cell |
 
@@ -75,7 +75,7 @@ Artifacts in this study directory, also wired into the live toolkit as `tests/se
 The script gives additional setup detail, the basics are:
 
 ```bash
-./newset 'ARM miss isolation — select-scatter durable baseline'
+./newset 'ARM miss isolation — select-scatter-64 durable baseline'
 SKIPINIT=0 COLD=0 SCALES=17500 ./wl/arm-miss-isolation   # build DB
 SKIPINIT=1 COLD=1 CELL=baseline SCALES=17500 ./wl/arm-miss-isolation
 # then CELL=sync (after flipping io_method), CELL=ra128 / ra0 on Linux
@@ -136,16 +136,16 @@ Slow small random reads on desktop ARM appear to be a known platform problem, on
 
 Court's drive (Samsung `MZALC4T0HBL1`, OEM firmware `NXHB202Q`) ships with NVMe interrupt coalescing enabled on every I/O queue: **100 µs aggregation time, threshold 8 completions**. The drive raises a completion interrupt only after 8 completions pile up on a queue or 100 µs pass. A backend waiting on one synchronous `pread` never reaches 8, so every read waits out the timer. Twilight's Kingston has coalescing off. Nothing in court's OS configuration sets it; it is the firmware default.
 
-`blktrace`/`btt` on a cold c=1 `select-scatter` pass shows the whole gap is in D2C, the time from dispatch to the drive until the completion is handled. Kernel queueing and the I/O scheduler (`none` on both hosts) are under 1% of each read:
+`blktrace`/`btt` on a cold c=1 `select-scatter-64` pass shows the whole gap is in D2C, the time from dispatch to the drive until the completion is handled. Kernel queueing and the I/O scheduler (`none` on both hosts) are under 1% of each read:
 
 | cold c=1, 60 s | court as shipped | court coalescing off | twilight |
 |---|---|---|---|
-| `select-scatter` TPS | 32 | 92 | 141 |
+| `select-scatter-64` TPS | 32 | 92 | 141 |
 | reads completed | 238k | 644k | 969k |
 | avg D2C per read | 210 µs | 69 µs | 47 µs |
 | kernel queue + scheduler share | 0.7% | 0.6% | 0.2% |
 
-The timer's minimum nonzero value is 100 µs, so lowering the threshold can't help a lone synchronous reader; **off** is the only useful setting. At high queue depth the drive is fine — coalescing is a throughput / interrupt-rate trade that makes sense as a desktop OEM default, and is the wrong trade for Postgres buffer misses. That is court's **#1** problem for this workload. Full x86 parity is not expected after the fix; the investigation continues on the residual.
+The timer's minimum nonzero value is 100 µs, so lowering the threshold can't help a lone synchronous reader; **off** is the only useful setting. At high queue depth the drive is fine — coalescing is a throughput / interrupt-rate trade that makes sense as a desktop OEM default, and is the wrong trade for Postgres buffer misses. That is court's **#1** problem for this workload. Full x86 parity is not expected after the fix. The remaining gap vs farm x86 looks roughly proportional to clock — Grace here ~**2.8 GHz** vs desktop x86 in **~5.7 GHz** territory (~**2×**); see [DGX Spark § Residual vs x86]({{ '/platform/dgx-spark/#residual-vs-x86-clock' | relative_url }}).
 
 Repeating the full isolation grid with coalescing off (sets **19–23**, same 180 s cold/hot protocol as the shipped grid above):
 
@@ -180,7 +180,7 @@ Same 8 KB Homebrew binary, same scale-17500 DB, restart + `purge` before each 
 
 **Recipe:** for database work on macOS, do not use `brew services` as the long-running server. Stop the LaunchAgent and start with `pg_ctl` (set `LC_ALL` to a real locale — Homebrew’s plist does that; a bare `pg_ctl` without it can fail with “postmaster became multithreaded during startup”). A custom LaunchDaemon/LaunchAgent without the utility clamp would also work; the stock Homebrew one does not.
 
-**Block size is not the lever here.** A from-source PG 18.6 build with `--with-blocksize=16` (matching Apple Silicon’s 16 KB VM pages) was A/B’d unclamped against the 8 KB Homebrew cluster on the same cold `select-scatter` protocol: ~71 vs ~68 TPS at c=1, ~2198 vs ~2160 at c=32 — flat. The spindle-era lore that larger pages half the I/O count does not show up on this NVMe miss path. You probably don't need your own recompile just to change the default 8 KB page size to 16; you should try fixing the I/O class instead.
+**Block size is not the lever here.** A from-source PG 18.6 build with `--with-blocksize=16` (matching Apple Silicon’s 16 KB VM pages) was A/B’d unclamped against the 8 KB Homebrew cluster on the same cold `select-scatter-64` protocol: ~71 vs ~68 TPS at c=1, ~2198 vs ~2160 at c=32 — flat. The spindle-era lore that larger pages half the I/O count does not show up on this NVMe miss path. You probably don't need your own recompile just to change the default 8 KB page size to 16; you should try fixing the I/O class instead.
 
 Abbey unclamped durable OSM (set **15**) moved Relations ~**1.43×** (**~10600 s → 7527 s**, **~1944**/s). Cool-disk retry (set **16**) matched it (**~1930**/s Relations, **10.41h** overall, index **67** kNodes/s) — the index-phase regression is real, not a hot-disk artifact. Do not treat “always unclamp” as free for the whole planet load.
 
@@ -188,12 +188,12 @@ Abbey unclamped durable OSM (set **15**) moved Relations ~**1.43×** (**~10600�
 
 The useful product is a **public reproduction** of a long-standing platform gap that OSM only shows on high-end hardware. Postgres isn't the place to fix it. On court, the main cause was a drive firmware default that any Postgres user on that hardware can switch off at boot; that default is a reasonable OEM choice for interrupt rate, just a bad match for this access pattern. On Darwin, the main cause was running the server as a Homebrew LaunchAgent with a utility I/O class. Distilled operator guidance from this study lives under [Platform guides]({{ '/platform/' | relative_url }}).
 
-Natural next reproduction: **Graviton** or another server-class Linux ARM vendor. Hoping someone on `-hackers` will try the same `select-scatter` cold grid there, and check `nvme get-feature -f 8` while at it. The expected result is that Graviton keeps up with x86 hosts like twilight, which would confirm this is a desktop ARM platform issue rather than anything about ARM in general.
+Natural next reproduction: **Graviton** or another server-class Linux ARM vendor. Hoping someone on `-hackers` will try the same `select-scatter-64` cold grid there, and check `nvme get-feature -f 8` while at it. The expected result is that Graviton keeps up with x86 hosts like twilight, which would confirm this is a desktop ARM platform issue rather than anything about ARM in general.
 
 ### Open loose ends
 
 - Court OSM coalescing off: durable set **24** / test **217** Relations **~1.74×** (**13251 s → 7614 s**), **6.48h**, score **656**; fast set **25** / test **218** **6.12h**, score **780** — on the public boards.
-- Court's remaining ~2× Relations gap vs a good x86 after coalescing; not assumed to reach parity.
+- Court's remaining ~2× Relations gap vs a good x86 after coalescing — suspected mostly the ~2.8 vs ~5.7 GHz clock envelope; not assumed to reach parity.
 - Abbey unclamped OSM: Relations win on sets **15** / **16**; cool-disk **16** still ~**10.4h** overall (indexes stay slow) — on the public durable board (**279** score).
 - Twilight `read_ahead_kb` ladder + OSM RA=0 (sets **134–146**) and wrap fast OSM set **152** (**570** / **5.26h**, not board-best) banked; RA=0 cost under [Linux standard tuning]({{ '/platform/linux/' | relative_url }}) § Read-ahead.
 - CPU and power cost of coalescing off (court avg package ~24→34 W; Relations/watt still up).

@@ -4,7 +4,10 @@
 -- stays on index nested-loop heap fetches (see wl/arm-miss-isolation).
 --
 -- :scale is pgbench scale (rows ≈ scale * 100000).
--- Fixed 64-aid unsorted IN list (MULTI/multiplier recorded as 64 in the run).
+-- Fixed 64-aid unsorted list. Size lives in the script name (select-scatter-N);
+-- setup writes MULTI=N into tests.multi. Unlike select-pages (one script, vary
+-- MULTI / :multiplier), more scatter sizes are more scripts. benchwarmer also
+-- derives MULTI from the name when SCRIPT=select-scatter-N.
 
 \set limit 100000 * :scale
 \set a01 random(1, :limit)

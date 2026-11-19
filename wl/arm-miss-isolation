@@ -4,7 +4,7 @@
 # Usage of pgbent is certainly not required for reproduction.
 #
 # Miniature of OSM Relations: cold, scattered index → heap fetches via
-# tests/select-scatter.sql on a pgbench DB that does not fit in RAM.
+# tests/select-scatter-64.sql on a pgbench DB that does not fit in RAM.
 #
 # Cells (one durable wal/fsync face — replica + fsync on):
 #   0) baseline: io_method=worker, read_ahead_kb=2048
@@ -15,7 +15,7 @@
 # Usage (from pgbent root, after a Postgres cluster is up):
 #   createdb results && psql -d results -f init/resultdb.sql
 #   createdb pgbench
-#   ./newset 'ARM miss isolation — select-scatter durable baseline'
+#   ./newset 'ARM miss isolation — select-scatter-64 durable baseline'
 #   SKIPINIT=0 COLD=0 ./wl/arm-miss-isolation          # build scale
 #   SKIPINIT=1 COLD=1 ./wl/arm-miss-isolation          # cold baseline grid
 #   CELL=sync SKIPINIT=1 COLD=1 ./wl/arm-miss-isolation
@@ -26,7 +26,9 @@
 #   SETCLIENTS default "1 8 32"
 #   RUNTIME    default 180
 #   SETTIMES   default 2
-#   MULTI      recorded as 64 (script uses 64 aids)
+#   MULTI      always 64 here (matches select-scatter-64; tests.multi label).
+#              Unlike select-pages (one script, vary MULTI), scatter sizes are
+#              separate scripts; benchwarmer also derives MULTI from the name.
 #   SKIPINIT   default 1
 #   COLD       default 1 — drop OS caches before runset
 #              Linux: pgbent_drop_caches; Darwin: sudo purge
@@ -48,7 +50,6 @@ SCALES="${SCALES:-17500}"
 SETCLIENTS="${SETCLIENTS:-1 8 32}"
 RUNTIME="${RUNTIME:-180}"
 SETTIMES="${SETTIMES:-2}"
-MULTI="${MULTI:-64}"
 SKIPINIT="${SKIPINIT:-1}"
 COLD="${COLD:-1}"
 PGVER="${PGVER:-19}"
@@ -60,6 +61,8 @@ BLKTRACE="${BLKTRACE:-1}"
 BLKTRACE_DELAY="${BLKTRACE_DELAY:-60}"
 BLKTRACE_SEC="${BLKTRACE_SEC:-10}"
 UNAME_S="$(uname -s)"
+# Aid count for this script size; also written as tests.multi.
+MULTI=64
 
 ts() { date '+%Y-%m-%dT%H:%M:%S%z'; }
 sudo_n() { sudo -n "$@"; }
@@ -81,11 +84,11 @@ _SAVE_SCALES=$SCALES
 _SAVE_SETCLIENTS=$SETCLIENTS
 _SAVE_RUNTIME=$RUNTIME
 _SAVE_SETTIMES=$SETTIMES
-_SAVE_MULTI=$MULTI
 _SAVE_SKIPINIT=$SKIPINIT
 _SAVE_COLD=$COLD
 _SAVE_BLKTRACE=$BLKTRACE
 _SAVE_RA_KB=$RA_KB
+_SAVE_MULTI=$MULTI
 
 if [ -f ./config ]; then
   # shellcheck source=/dev/null
@@ -96,18 +99,18 @@ SCALES=$_SAVE_SCALES
 SETCLIENTS=$_SAVE_SETCLIENTS
 RUNTIME=$_SAVE_RUNTIME
 SETTIMES=$_SAVE_SETTIMES
-MULTI=$_SAVE_MULTI
 SKIPINIT=$_SAVE_SKIPINIT
 COLD=$_SAVE_COLD
 BLKTRACE=$_SAVE_BLKTRACE
 RA_KB=$_SAVE_RA_KB
+MULTI=$_SAVE_MULTI
 if [ "$UNAME_S" != "Linux" ]; then
   BLKTRACE=0
 fi
 
 # Sysinfo for comments only — do not let pgsysinfo SCALES/SETCLIENTS leak into params.
 {
-  echo "SCRIPT=select-scatter"
+  echo "SCRIPT=select-scatter-64"
   echo "SETTIMES=$SETTIMES"
   echo "RUNTIME=$RUNTIME"
   echo "MULTI=$MULTI"

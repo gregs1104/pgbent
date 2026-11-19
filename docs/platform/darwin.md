@@ -12,12 +12,12 @@ nav_order: 5
 
 Homebrew’s `brew services` installs a LaunchAgent (`sh.brew.postgresql@N`) that starts Postgres under launchd. On Apple Silicon that agent runs with a **QoS clamp of `THREAD_QOS_UTILITY`**, which drops the process to **I/O throttle tier 1 (STANDARD)** instead of tier 0 (IMPORTANT). Disk reads look like background work relative to the desktop.
 
-| How Postgres is started | QoS clamp | I/O tier | select-scatter c=1 cold | c=32 cold |
+| How Postgres is started | QoS clamp | I/O tier | select-scatter-64 c=1 cold | c=32 cold |
 |-------------------------|-----------|----------|-------------------------|-----------|
 | `brew services` | `THREAD_QOS_UTILITY` | tier 1 | ~52–53 TPS | ~1670–1677 |
 | `pg_ctl` from ssh/login | none | tier 0 | ~68 TPS | ~2577–2579 |
 
-About **+30% at c=1** and **+54% at c=32** when unclamped. Published Abbey select-scatter set 13 was under the clamped service — treat those numbers as soft. Intermittent “Darwin looks fine / then doesn’t” OSM behavior matches sometimes using `brew services` and sometimes a manual `pg_ctl`.
+About **+30% at c=1** and **+54% at c=32** when unclamped. Published Abbey select-scatter-64 set 13 was under the clamped service — treat those numbers as soft. Intermittent “Darwin looks fine / then doesn’t” OSM behavior matches sometimes using `brew services` and sometimes a manual `pg_ctl`.
 
 ### Startup: tier 1 (brew / LaunchAgent)
 
@@ -70,7 +70,7 @@ effective policy
 	eff qos clamp: THREAD_QOS_UTILITY
 ```
 
-**pg_ctl / tier 0** — no utility clamp; I/O stays IMPORTANT (from the select-scatter A/B log):
+**pg_ctl / tier 0** — no utility clamp; I/O stays IMPORTANT (from the select-scatter-64 A/B log):
 
 ```text
 eff iotier: THROTTLE_LEVEL_TIER0 (IMPORTANT)
@@ -96,7 +96,7 @@ If the ladder does not move with tier, next step is **`REINDEX`** on an already-
 
 ## Block size
 
-Rebuilding Postgres with `--with-blocksize=16` to match Apple Silicon’s 16 KB VM pages was A/B’d unclamped against 8 KB Homebrew on the same cold select-scatter protocol: **flat** (~71 vs ~68 at c=1, ~2198 vs ~2160 at c=32). Spindle-era lore that larger pages half the I/O count does not show up here. Prefer fixing the I/O class over a custom page size.
+Rebuilding Postgres with `--with-blocksize=16` to match Apple Silicon’s 16 KB VM pages was A/B’d unclamped against 8 KB Homebrew on the same cold select-scatter-64 protocol: **flat** (~71 vs ~68 at c=1, ~2198 vs ~2160 at c=32). Spindle-era lore that larger pages half the I/O count does not show up here. Prefer fixing the I/O class over a custom page size.
 
 ## OSM check
 

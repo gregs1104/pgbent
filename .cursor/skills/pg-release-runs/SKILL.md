@@ -371,7 +371,7 @@ temporary corporate inventory. Finish the OSM/PG19 cells on these boxes.
 | Host | CPU | Notes |
 |------|-----|--------|
 | **siren** | **9600X** (was **9950X**) | **2026-11-07 — 9600X back in** (9950X retirement pack closed; `server` row updated on box). **2026-10-18 — OSM probe finished in 4.07h** (clean hold through Ways; replacement for the wiped cell). **2026-10-18 — 32 clients is the max**: **2,011,141** then **2,016,484 TPS** (PG18, sockets SELECT, 90s). The two sets agree; halt after the second — CPU-bound SELECT is this tight, so **`SETTIMES=2`** is the default and a third only if they diverge. The missing rear vent had been capping this chip; ~2M is the 9950X unlocked. `newset` **`pgbench SELECT`** on **PG18**: **on-box UNIX vs localhost TCP** (overhead only; split on `conn_method`). Set **106** sockets prepared: PG18 **2,011,141** / **2,016,484** at 32 clients. Early 19beta4 **1.50M** cells in that `latest_set` were **host prepared** (method error, not asserts). **19rc1** covered the whole connection grid; sockets prepared **2.06M**. **2026-10-20 — 19rc1 SELECT+OSM done on the 9950X** (took the top leaderboard spots, tiny delta over 18; OSM import finished). Siren SELECT set is the **starter pgbench leaderboard**. **Retirement pack before 9600X:** empty `;` + `constant` + nothing 32/64 re-run (latency + watts, both configs) + one 4h OSM with `OSMRELPROF=1` (also re-tests rc1). Twilight already leads relations/s. Usual 18↔19 regression pair is **pgbench SELECT (small scale) + OSM (writes)**. True remote TCP at **128 clients** waits on the **new 2S**. `PREPARED=1` in params, `SUDODATA=1` already in `config`. Rear ST120 works **hard by the end of each 90s** and **harder during latency import** (`pgbench -l` at this TPS is a second heat spike). Thermal fix first was the right order. Rear **Lian Li ST120** exhaust is in; AIO pair also ST120s, **AIO cleaned of heavy dust**. Earlier heat had the new exhaust **maxed** (~**75°C**); it **chugged through Ways** (the old death phase) and in **Relation** the fan is at **medium** with **~60°C**. Chassis looks thermally fixed. **No agent SSH** — when a box is this fragile, Greg has to be hands-on to fix it; remote poking is how it gets worse. Data via `download`. **9950X SELECT** sockets grid is in (`wl/select-grid`, halt after two sets); then **9600X** for the OSM comparison SKU. The comparison / joules charts are done as graphics; they still have a **hole between high-power x86** (9950X **1046 kJ**, 13600K **824 kJ**) **and low-power ARM** (Apple **224 kJ**, NVIDIA **671 kJ**). **9600X** is that middle point — even better than the 9700X that was in the plan. OSM barely moved **9600X→9950X**. **2026-10-18 — Greg is looking for the 9600X** (the physical chip). PG19 sets 70/71 are enough for 18↔19. The **9600X** is the comparison SKU this box should publish: OSM barely used the 9950X’s second CCD (`Tccd2` ~43°C while Tctl/Tccd1 sat in the 80s), so the 16-core swap did not buy planet-load speed, only package watts (9950X **70 W** avg / **180 W** peak / **1046 kJ** vs Apple **8 W** / **37 W** / **224 kJ**). A 6-core **9600X** at nearly the same OSM score (~**47 W** avg / **89 W** peak on this board) is the bang-for-buck point on the system-comparison chart and a fairer fight against the Mac. **9950X** is still the short-pgbench / ~1M TPS chip; the 240mm AIO plus a missing rear fan could not hold OSM. Overhaul order: **1. rear airflow** done (Lian Li ST120 exhaust 2026-10-18, AIO ST120s cleaned). **1b. OSM probe** done: **4.07h**, held through Ways. Chassis is usable. **2. 19rc1 SELECT+OSM** done on the 9950X (2026-10-20). **3. retirement pack** (empty `;` + `constant` + nothing 32/64 re-run + 4h OSM with `OSMRELPROF=1`). **4. switch to 9600X** for the OSM / system-comparison SKU. Do not keep the 9950X here hoping AC will hold Ways. **2026-10-16 evening — parked.** Died in **Ways** again. Do **not** retry PG18 low-durability / thin-WAL on this chassis; that corner is what trips the board, and those cells get re-run after the WAL vs fsync split anyway. Downloaded set **70** (PG18.3 durable) vs set **71** (PG19 fast 2974/2975/3009/3010 and durable 3011–3013) is enough for the 18↔19 regression; twilight 117 vs 118 and abbey 11 fill the rest of the fleet. Rear case fan was the first fix (installed 2026-10-18); the 2026-10-16 Ways deaths were hot air staying in a chassis with none. Cooler is a **240mm AIO** (undersized for 9950X; 9600X was stable). **9600X→9950X barely moved OSM**, as expected (second CCD idle); the buy was for **short pgbench / ~1M TPS** (perceptually important). OSM *might* improve on a 9950X **after a larger heatsink**, not in this chassis. Workaround is the **room AC**, same as keeping the lab alive at **100°F** outside — not a CPU swap mid-grid. `wl/osm-import` `RECOVERY=3600` is an **informed** hour between planet loads (AIO/room heat dump); Greg expected another crash and wanted **`k10temp` live**. 2026-10-15 hard off; 2026-10-16 way ingest (`Node(10791148k …) Way(1133809k …) Relation(0)`); same-day restart still heat-soaked, `sensors` **Tctl 79°C / Tccd1 78.5 / Tccd2 42.6**, died in **Node** phase. Later the same day, cooled+AC **cleared Nodes at peak Tctl 87°C**; Ways sat ~**77°C** for a while with intake ~**68°F** (room normally **71°F**), then **still died in Ways** — 3°F of AC was not enough for the rest of that pass. Delete incomplete tests; thermal **starts as the host vanishing**. After the beta cells: rear fan (done), OSM probe (**4.07h**, done), then 9950X SELECT cells, then 9600X. Confirmed chip **`k10temp-pci-00c3`**: collect `sensors -u k10temp-*` (no sudo) → `Tctl_temp1_input` (package, vis 9) plus `Tccd1`/`Tccd2` (split, vis 5) — **do not average the CCDs**. The split is the teaching sample: **Tccd2 stayed ~43°C while Tccd1/Tctl sat in the 80s** — the second CCD is not on the OSM critical path, so extra cores on that die do not help a struggling load (and dump all the watts onto one hot chiplet). Live samples work; shutdown looks like the **motherboard cutting power near 90°C Tctl**, before the 9950X hits Tjmax throttle. Hands-on only — do not SSH. |
-| **twilight** | **13600K** (was **14900K**) | **188GB** RAM, **Fury G5 4TB**. Roles used to be reversed: the **14900K** made twilight the unstable box. Back on a cool-running **13600K** it is trouble-free again — preferred host for long PG19 matrices. **2026-10-22 — up, no expected downtime.** Unused majors **14/15/17/18** `start.conf` **manual** (they all come up `auto` each boot; stop them). Results **16:5432** stays. **19rc1** test cluster recreated on the Fury symlink (`/var/lib/postgresql/19/main` → `/fury1/19/main`, catalog **202610061**). Set **119** `PG19 rc1`: sockets prepared SELECT **done** (2610 init, 2611–2624; 64-client **838k** / **757k**). **2026-10-22 11:06 ET — boot `/` hit 100%** during 2624 post-process: leftover **PG15** logs (179G + stuck `logrotate` copying 128G onto `postgresql-15-main.log.1`). 15 is down and its datadir is gone. Killed logrotate 1056, truncated both files as postgres (`/` back to ~34% / 296G). Empty `params` made face 2 fly through 0-TPS host cells; wiped 2625–2662 junk; **do not wipe 2610–2624**. 2622–2624 have TPS but no latency import. Remaining three faces resumed 11:11 (`remaining-faces.sh`). **Four faces done 13:22** (14 ok cells each face, 0 blank TPS). **OSM started 13:35** `repeat-gis` on set **119** (durable; do not `wl/osm-import`). TRIM was short on the fresh cluster (`/fury1` 4.5 GiB); first loop skipped the 3600s recovery. Test **2706** `osm2pgsql-1.11` / 5 clients / scale 75000. Nodes done 13:48 (10791148k @ 14.6M/s). **Ways healthy 14:01** (~99M @ 126k/s); live iostat writes on **nvme0n1** `/fury1` (~90 MB/s), not boot **nvme3n1**; planet reads **nvme2n1**; nodes.db on **nvme1n1**. gis 104 GB, WAL 33 GB. Pins: 19rc1 catalog **202610061**, fsync on / `wal_level=replica`, 48GB buffers. Do not `touch complete` yet (first load). `pgbent_perf` still not installed — no `OSMRELPROF`. See **Twilight boot + Fury 19 recreate**. Abbey has not gotten PG19 yet. |
+| **twilight** | **13600K** (was **14900K**) | **188GB** RAM, **Fury G5 4TB**. Roles used to be reversed: the **14900K** made twilight the unstable box. Back on a cool-running **13600K** it is trouble-free again — preferred host for long PG19 matrices. Mild SELECT off-ratio vs power-of-two. **Fairness follow-up (after other pending farm work):** add `pgsysinfo` thread points (**20** / **40** / **80**) to the Intel SELECT grid so pgbench can pin better to cores/threads — same class of fix as court’s Spark fills. This scheduling-ratio problem is old: Greg’s 2008 CFS / pgbench regression thread on LKML ([May 2008](https://lkml.iu.edu/hypermail/linux/kernel/0805.3/0797.html)) is the main history; pgbench **workers** support was added so multi-client runs had a shot under that scheduler. **Want to try:** physical **14900KS** on hand — still looks like the top of Intel’s all-time desktop lineup and a fairer head-to-head vs siren’s **9950X** (**16c / 32t**) than the **13600K**; **14900KS** is **24c / 32t** (same thread count). Future farm pin when thermal/schedule allows (not an OS-upgrade blocker). **2026-10-22 — up, no expected downtime.** Unused majors **14/15/17/18** `start.conf` **manual** (they all come up `auto` each boot; stop them). Results **16:5432** stays. **19rc1** test cluster recreated on the Fury symlink (`/var/lib/postgresql/19/main` → `/fury1/19/main`, catalog **202610061**). Set **119** `PG19 rc1`: sockets prepared SELECT **done** (2610 init, 2611–2624; 64-client **838k** / **757k**). **2026-10-22 11:06 ET — boot `/` hit 100%** during 2624 post-process: leftover **PG15** logs (179G + stuck `logrotate` copying 128G onto `postgresql-15-main.log.1`). 15 is down and its datadir is gone. Killed logrotate 1056, truncated both files as postgres (`/` back to ~34% / 296G). Empty `params` made face 2 fly through 0-TPS host cells; wiped 2625–2662 junk; **do not wipe 2610–2624**. 2622–2624 have TPS but no latency import. Remaining three faces resumed 11:11 (`remaining-faces.sh`). **Four faces done 13:22** (14 ok cells each face, 0 blank TPS). **OSM started 13:35** `repeat-gis` on set **119** (durable; do not `wl/osm-import`). TRIM was short on the fresh cluster (`/fury1` 4.5 GiB); first loop skipped the 3600s recovery. Test **2706** `osm2pgsql-1.11` / 5 clients / scale 75000. Nodes done 13:48 (10791148k @ 14.6M/s). **Ways healthy 14:01** (~99M @ 126k/s); live iostat writes on **nvme0n1** `/fury1` (~90 MB/s), not boot **nvme3n1**; planet reads **nvme2n1**; nodes.db on **nvme1n1**. gis 104 GB, WAL 33 GB. Pins: 19rc1 catalog **202610061**, fsync on / `wal_level=replica`, 48GB buffers. Do not `touch complete` yet (first load). `pgbent_perf` still not installed — no `OSMRELPROF`. See **Twilight boot + Fury 19 recreate**. Abbey has not gotten PG19 yet. |
 
 Other machines:
 
@@ -394,11 +394,11 @@ Other machines:
   rewrites them.
 - **court** — NVIDIA DGX Spark (ARM64). As of 2026-10-14: **DGX OS 7.6.0 /
   Ubuntu 24.04.5**, kernel **`7.0.0-1019-nvidia`**. Spbm power works (test 13+);
-  `DISKLIST="nvme0n1"` or `iostat.csv` is empty. **Done set 26 (2026-11-18):**
-  four-face SELECT scale-100 / 90s at clients **20** / **40** — sockets prepared
-  **~960k** @20 vs **~392k** @16 (set 7); confirms the mixed-core off-ratio dip.
-  **In flight set 27:** same four-face fill at clients **10** / **16** (re-check
-  the 16 dip; keep **highest** TPS when merging into the ladder). **PG18 set 4:** fast 16/17
+  `DISKLIST="nvme0n1"` or `iostat.csv` is empty. **Done sets 26/27 (2026-11-18):**
+  four-face SELECT scale-100 / 90s fills — sockets prepared **~485k** @10/16,
+  **~960k** @20, **~533k** @32, **~547k** @40 (highest TPS; 16 beat set-7’s
+  ~392k on re-run but still half of `nproc`). Mixed-core off-ratio confirmed.
+  **PG18 set 4:** fast 16/17
   (7.81h/384, 7.74h/387) then durable 18 (8.68h/346) — about **+12% / −10%**
   vs abbey’s bundled **+49% / −33%**. **PG19 rc1 set 5** has enough to start
   with: durable **20/21/22** (8.73h/343, 8.78h/342, 8.50h/353) and fast **23**
@@ -618,31 +618,84 @@ OSM Power Spark cell as needed).
 
 ### Siren OS wrap (before the upgrade)
 
-9600X is on the boards for **19** only (SELECT set **118**, fast OSM set **117**).
-Older SELECT history on this host is still **9950X**. While siren can still
-install majors back to **PG15**, grab the irreplaceable cells **before** the
-OS cutover (hands-on; no agent SSH):
+9600X mid-AM5 line is **PG18 + PG19 only** — enough to establish a basic
+CPU regression line. Do **not** chase PG15–17 on this chip: that deep
+backfill was done on the **9950X** to show long-term SELECT history can
+mislead; repeating that time investment for the 9600X is not needed.
+Older SELECT history on this host is still **9950X**. Hands-on; no agent SSH.
 
-1. **Four-face SELECT on PG15 → PG18** (same scale/runtime/`SETTIMES=2` as set
-   **118**): sockets / sockets prepared / host / host prepared. That puts a
-   mid-AM5 line on `select-history` instead of only 19.
+1. **Four-face SELECT on PG18** (same scale/runtime/`SETTIMES=2` as set
+   **118**): sockets / sockets prepared / host / host prepared.
+   **2026-11-19 — set 121 local + `submission`.** Sockets prepared peak
+   **~887k** @32 (PG18) vs set **118** PG19 **~879k** @32 — basic 18+19
+   9600X SELECT line is in.
 2. **19rc2 durable OSM** (`fsync=on`, `wal_level=replica`, `max_wal_size=100GB`):
-   stress the current RC and fill the old **two-durability-face** grid on
-   9600X (fast already banked at **1354**; durable was missing — set **119**
-   was `on`/`minimal`, not full durable). **2026-11-18 — in flight** (longest
-   outstanding wrap cell; Greg notified when done; hands-on, no agent SSH).
-3. **Geekbench 7** on the current OS (upload to the public profile
-   [browser.geekbench.com/user/232126](https://browser.geekbench.com/user/232126)).
-   That profile is the farm’s hardware detail report (older boxes are GB6;
-   wrap and later pins use GB7 only). Pair with a post-upgrade run so
+   **2026-11-19 — set 120 local + `submission`**, face confirmed
+   (`fsync=on` / `wal_level=replica` / `synchronous_commit=on`). Tests
+   **3576**/**3577**: **~4.37h** / score **1154** and **~4.34h** / **1128**
+   (fast set **117** remains **1354**). Set **119** was `on`/`minimal`
+   (**1256**), not full durable.
+3. **Geekbench 7** on the current OS — **done** for siren (**915891**);
+   see farm roster under OS cutover. Pair with a post-upgrade run so
    OS/kernel moves are visible outside Postgres.
 
-Skip before upgrade: PG15–17 OSM, more AIO/RA on siren, anything that needs
-twilight’s disk headroom. Optional noise check (not upgrade-gated): 19rc2
-SELECT four-face if time allows. **SELECT PG15–18** may already be banked —
-confirm before starting more; durable OSM is the gate for this wrap.
+Skip before upgrade: PG15–17 SELECT or OSM on 9600X, more AIO/RA on siren,
+anything that needs twilight’s disk headroom. Archives
+`siren-20261119-083836` / `twilight-20261119-085437` ingested; siren wrap
+Postgres cells + twilight latest (incl. fast OSM **152** / score **1038**)
+are in `submission`. Pre-upgrade GB7 banked. **One twilight Postgres cell
+left before cutover:** PG18 sockets(-prepared) SELECT on the **13600K** so
+`select-history` has an 18→19 pair (PG19 **838k** already in from set **119**).
+Siren is clear; twilight runs that cell, then OS cutover.
 
 ### OS cutover (after the wrap)
+
+**Geekbench protocol:** three runs; keep the **best** (normally by **multi-core**
+score). If a run’s **single-core** is awful, discard that run instead and use
+the best remaining. If there is **no clear single winner** (e.g. one run leads
+multi, another leads single), keep the **two best**. Upload keepers to the
+public profile [browser.geekbench.com/user/232126](https://browser.geekbench.com/user/232126).
+**Licensed vs preview:** a licensed Geekbench install can skip uploading —
+Greg uses that for private testing. Preview builds are the other deal: you
+support the preview program by **uploading every result** (no private keep).
+**Court (DGX Spark / aarch64):** stock x86 builds do not apply — grab the
+**Linux/AArch64** preview from
+[geekbench.com/preview](https://www.geekbench.com/preview/) (unsupported /
+may mis-report system info; every run goes public). Preview builds are a
+little **less tightened down** than licensed releases — run-to-run scatter
+is wider, so “keep two best” shows up more often here.
+**Court GB7 preview banked (2026-11-18):** no clear best — kept both
+[914986](https://browser.geekbench.com/v7/cpu/914986) **2606**/**23501**
+(best multi) and [914966](https://browser.geekbench.com/v7/cpu/914966)
+**2639**/**23089** (best single); DGX Spark / ARMv8 / 20 cores /
+**~2.8 GHz**. Residual court vs farm x86 (after coalescing + fair client
+grid) is suspected **proportional to clock** — desktop x86 here is
+**~5.7 GHz** territory (~**2×**); not expected to reach parity on this
+envelope.
+GB scores are **hardware detail / OS-vintage pins**, not a Postgres predictor —
+correlation with pgbent SELECT/OSM is poor. Greg tried hunting a GB5 sub-test
+that tracked PG; none did. Their old **SQLite** sub-test was especially
+unreliable (smartly removed). Do not use GB to explain or rank PG cells.
+
+**Pre-upgrade GB7 farm roster (2026-11-18/19)** — profile
+[browser.geekbench.com/user/232126](https://browser.geekbench.com/user/232126).
+**Abbey skipped** (no OS upgrade planned). Keepers:
+
+| Host | CPU | Keeper | Single / Multi |
+|------|-----|--------|----------------|
+| **twilight** | i5-13600K | [914656](https://browser.geekbench.com/v7/cpu/914656) | **2506** / **17253** |
+| **court** | DGX Spark | [914986](https://browser.geekbench.com/v7/cpu/914986) + [914966](https://browser.geekbench.com/v7/cpu/914966) | **2606**/**23501** + **2639**/**23089** |
+| **siren** | R5 9600X | [915891](https://browser.geekbench.com/v7/cpu/915891) | **3055** / **14596** |
+
+Twilight trio (keeper **914656** best multi; singles all fine): also
+[914688](https://browser.geekbench.com/v7/cpu/914688) **2511**/**17243**,
+[914674](https://browser.geekbench.com/v7/cpu/914674) **2505**/**17223**.
+Beats the Geekbench Browser [i5-13600K reference](https://browser.geekbench.com/processors/intel-core-i5-13600k)
+(**2370** / **15969**) — likely AIO cooling vs air coolers pulling the
+average down. **Twilight before cutover:** one PG18 sockets(-prepared)
+SELECT face on the **13600K** (same scale/runtime/`SETTIMES=2` as set
+**119** peak cells) so `select-history.png` can plot 18→19 next to the
+9600X pair. PG19 sockets prepared peak is already **838k** @64.
 
 1. Upgrade **siren** and **twilight** to the new OS releases (Greg names
    the targets; do not guess Debian/Ubuntu versions).

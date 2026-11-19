@@ -17,7 +17,7 @@
 # NVMe interrupt coalescing is disabled when nvme-cli is installed.  Some OEM firmware
 # (DGX Spark's Samsung MZALC4T0HBL1) ships with 100us/threshold 8 coalescing, which holds
 # every low queue depth read for the full 100us timer:  ~5x QD1 read latency, and 2-3x
-# lower select-scatter TPS.  The timer's minimum nonzero value is 100us, so off is the
+# lower select-scatter-64 TPS.  The timer's minimum nonzero value is 100us, so off is the
 # only useful setting.  See docs/studies/arm-random-read-vs-x86.  Not saved to the drive;
 # a power cycle restores the firmware default until this runs again.
 

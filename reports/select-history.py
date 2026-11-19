@@ -68,7 +68,6 @@ SKIP_CPU_MAJOR: set[tuple[str, int]] = {
     ("R9 5950X", 15),  # log_min_duration_statement=0 false negative
     ("i9-14900K", 16),  # suspect archive
     ("i5-13600K", 15),  # orphan twilight; not a priority to four-face map
-    ("i5-13600K", 19),  # single rc1 face peak; wait for a 9950X-style series
 }
 
 

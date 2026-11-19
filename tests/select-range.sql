@@ -1,4 +1,4 @@
--- Contiguous heap range (readahead-friendly contrast to select-scatter).
+-- Contiguous heap range (readahead-friendly contrast to select-scatter-64).
 -- 64 consecutive aids starting at a random aligned offset → sequential
 -- index/heap reads rather than scattered NL fetches.
 -- Prefer with enable_seqscan=off so the planner stays on the aid index.

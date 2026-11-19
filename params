@@ -1,2 +1,12 @@
-# Parameter workspace file for workloads that automate multiple benchmark runs.
-# Expect that edits to this file will be overwritten.
+# Abbey Darwin I/O-tier vs pgbench build time.
+# Baseline: brew services → I/O tier 1 (STANDARD). After this set,
+# swap to pg_ctl start and re-run with MULTI=0 (tier 0 IMPORTANT).
+# NEWINIT/SERVERSIDE already on in config; init rows inherit MULTI.
+#
+# Scales ≈ 1/2, 1×, 2× of 128GB (15MB per scale unit).
+SCALES="4250 8500 17500"
+SETCLIENTS="1"
+SETTIMES=2
+SCRIPT=select
+RUNTIME=30
+MULTI=1

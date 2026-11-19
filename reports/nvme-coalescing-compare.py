@@ -15,8 +15,8 @@ OUT = REPO / "docs" / "images" / "nvme-coalescing-compare.png"
 
 # Evidence table on docs/platform/nvme-coalescing.md (ignore OSM overall).
 PANELS = (
-    ("select-scatter\ncold c=1", 35, 100),
-    ("select-scatter\nhot c=32", 1870, 3880),
+    ("select-scatter-64\ncold c=1", 35, 100),
+    ("select-scatter-64\nhot c=32", 1870, 3880),
     ("OSM Relations", 1104, 1921),
 )
 

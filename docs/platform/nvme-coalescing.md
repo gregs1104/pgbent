@@ -35,14 +35,14 @@ The **evanwtf/local-llm** project already measured the storage side on Spark (sa
 
 Host notes (power sensors, NIC EEE / ASPM): [NVIDIA DGX Spark]({{ '/platform/dgx-spark/' | relative_url }}).
 
-Samsung `MZALC4T0HBL1`, firmware `NXHB202Q`, with coalescing active (DGX OS boot service / shipped default). Twilight’s Kingston had it off. Same Postgres durable face, same select-scatter / OSM shape:
+Samsung `MZALC4T0HBL1`, firmware `NXHB202Q`, with coalescing active (DGX OS boot service / shipped default). Twilight’s Kingston had it off. Same Postgres durable face, same select-scatter-64 / OSM shape:
 
-![Court NVMe coalescing on vs off — select-scatter and OSM Relations]({{ '/images/nvme-coalescing-compare.png' | relative_url }})
+![Court NVMe coalescing on vs off — select-scatter-64 and OSM Relations]({{ '/images/nvme-coalescing-compare.png' | relative_url }})
 
 | | Coalescing on (shipped) | Coalescing off |
 |--|-------------------------|----------------|
-| select-scatter cold c=1 | ~35 TPS | ~100 TPS |
-| select-scatter hot c=32 | ~1870 TPS | ~3880 TPS |
+| select-scatter-64 cold c=1 | ~35 TPS | ~100 TPS |
+| select-scatter-64 hot c=32 | ~1870 TPS | ~3880 TPS |
 | OSM Relations | 13251 s (~1104/s) | 7614 s (~1921/s) |
 
 Relations **~1.75×** faster (overall wall clock also improved; not charted here). Court still trails a similar-class x86 host by about 2× on Relations — not parity, and not claimed to be. Isolation ruled out AIO method, `effective_io_concurrency`, and IRQ pinning as the main lever.

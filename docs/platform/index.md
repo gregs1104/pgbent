@@ -21,4 +21,4 @@ Think of vendor NAS runbooks (EMC and friends) that publish database-oriented st
 - [macOS / Darwin]({{ '/platform/darwin/' | relative_url }}) — Homebrew `brew services` LaunchAgent I/O clamp
 - [NVIDIA DGX Spark]({{ '/platform/dgx-spark/' | relative_url }}) — court: coalescing + mixed-core SELECT grid (two oddities), power (`spark_hwmon` / spbm), NIC EEE / ASPM
 
-The full ARM miss isolation case (select-scatter, Relations, court vs twilight vs Abbey) is the [ARM random read vs x86]({{ '/studies/arm-random-read-vs-x86/' | relative_url }}) study.
+The full ARM miss isolation case (select-scatter-64, Relations, court vs twilight vs Abbey) is the [ARM random read vs x86]({{ '/studies/arm-random-read-vs-x86/' | relative_url }}) study.
