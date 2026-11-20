@@ -147,6 +147,10 @@ Court's drive (Samsung `MZALC4T0HBL1`, OEM firmware `NXHB202Q`) ships with NVMe 
 
 The timer's minimum nonzero value is 100 µs, so lowering the threshold can't help a lone synchronous reader; **off** is the only useful setting. At high queue depth the drive is fine — coalescing is a throughput / interrupt-rate trade that makes sense as a desktop OEM default, and is the wrong trade for Postgres buffer misses. That is court's **#1** problem for this workload. Full x86 parity is not expected after the fix. The remaining gap vs farm x86 looks roughly proportional to clock — Grace here ~**2.8 GHz** vs desktop x86 in **~5.7 GHz** territory (~**2×**); see [DGX Spark § Residual vs x86]({{ '/platform/dgx-spark/#residual-vs-x86-clock' | relative_url }}).
 
+![Court NVMe coalescing on vs off — select-scatter-64 and OSM Relations]({{ '/images/nvme-coalescing-compare.png' | relative_url }})
+
+Operator recipe and numbers: [NVMe interrupt coalescing]({{ '/platform/nvme-coalescing/' | relative_url }}).
+
 Repeating the full isolation grid with coalescing off (sets **19–23**, same 180 s cold/hot protocol as the shipped grid above):
 
 | cell | court cold c=1 | court hot c=1 | court cold c=32 | court hot c=32 |
