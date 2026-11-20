@@ -644,12 +644,12 @@ anything that needs twilight’s disk headroom. Archives
 `siren-20261119-083836` / `twilight-20261119-085437` ingested; siren wrap
 Postgres cells + twilight latest (incl. fast OSM **152** / score **1038**)
 are in `submission`. Pre-upgrade GB7 banked. **Twilight PG18 SELECT faces
-done (2026-11-19):** set **153** `PG18 SELECT faces (pre-OS cutover)` —
-four faces rc=0 on **18:5436** (results **16:5432**). Sockets prepared
-peaks **774658** @32 / **826633** @64 (vs set **119** PG19 **838453** @64).
-`start.conf` still **18/16=auto**, **19=manual**. Local + `submission`
-ingested; `select-history` regenerated with 13600K **18→19** (**826633** /
-**838453** @64) next to 9600X. OS cutover next.
+done (2026-11-19):** set **153** — sockets prepared **826633** @64 (vs
+set **119** PG19 **838453**); `select-history` has 13600K 18→19.
+**2026-11-19 — pre-OS wrap closed for court / siren / twilight** (SELECT,
+OSM, GB7 as applicable). **Darwin / abbey is not part of this wrap** —
+I/O-class / btree / scatter-tier-0 work stays **WIP** on PG18 and does
+not gate the cutover. **OS cutover next** (siren + twilight only).
 
 ### OS cutover (after the wrap)
 
@@ -695,10 +695,9 @@ Twilight trio (keeper **914656** best multi; singles all fine): also
 [914674](https://browser.geekbench.com/v7/cpu/914674) **2505**/**17223**.
 Beats the Geekbench Browser [i5-13600K reference](https://browser.geekbench.com/processors/intel-core-i5-13600k)
 (**2370** / **15969**) — likely AIO cooling vs air coolers pulling the
-average down. **Twilight before cutover:** one PG18 sockets(-prepared)
-SELECT face on the **13600K** (same scale/runtime/`SETTIMES=2` as set
-**119** peak cells) so `select-history.png` can plot 18→19 next to the
-9600X pair. PG19 sockets prepared peak is already **838k** @64.
+average down. Twilight PG18 SELECT (set **153**) for `select-history` is
+in; no further Postgres cells required before cutover on the three Linux
+boxes.
 
 1. Upgrade **siren** and **twilight** to the new OS releases (Greg names
    the targets; do not guess Debian/Ubuntu versions).
@@ -709,8 +708,9 @@ SELECT face on the **13600K** (same scale/runtime/`SETTIMES=2` as set
    SELECT (small scale) + OSM (writes).
 4. `./newset` with an OS-vintage batch so assembly can split pre/post OS.
 
-Hands-on on siren (no agent SSH). Agent SSH twilight. Abbey and court
-are not in this cutover unless asked. `super` already showed a 24.04 vs
+Hands-on on siren (no agent SSH). Agent SSH twilight. **Court** is done
+for this wrap (no OS upgrade in this pass). **Abbey / Darwin** stays WIP
+outside the wrap — do not treat I/O-class follow-ups as cutover blockers. `super` already showed a 24.04 vs
 26.04 SELECT drop and then died — treat an OS retest as environment
 until a second host agrees.
 
