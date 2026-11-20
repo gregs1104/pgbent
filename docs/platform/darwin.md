@@ -98,7 +98,7 @@ Set **17** is the brew / `MULTI=1` half; set **18** is the `pg_ctl` / `MULTI=0` 
 | 8500 | 2677 | 2226 |
 | 17500 | 5382 | 5448 |
 
-Mostly flat at the ends; mid-scale ~17% faster unclamped. Does **not** clear the OSM index cliff. Set **17** may have seen **low free disk** — if that mid-scale gap looks unreliable, rerun the brew half. **Next (in flight):** set **20** cold `select-scatter-64` under tier 0 (`pg_ctl`, `purge` confirmed) — peer to clamped set **13**.
+Mostly flat at the ends; mid-scale ~17% faster unclamped. Does **not** clear the OSM index cliff. Set **17** may have seen **low free disk** — if that mid-scale gap looks unreliable, rerun the brew half. **Set 20 done (2026-11-19):** cold `select-scatter-64` under tier 0 (`pg_ctl`, `purge`). Peaks ~**86**/ **139** @1 and ~**3188**/ **3368** @32 (two reps) — clear lift vs clamped set **13** (~74–85 @1 / ~2330–2400 @32; ad-hoc clamp cold was ~52–53 / ~1670).
 
 Default `config` already enables `NEWINIT` / server-side init (`:-i -I dtGvp`); only `params` needs the overrides above. Compare init wall time and disk metrics on the `:-i%` rows, split by `multi`. This surveys ordinary btree PK/index build under each I/O class — not OSM GIST/GIN — so a flat result here does not clear the planet index cliff.
 
