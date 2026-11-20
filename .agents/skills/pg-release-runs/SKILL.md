@@ -647,9 +647,10 @@ are in `submission`. Pre-upgrade GB7 banked. **Twilight PG18 SELECT faces
 done (2026-11-19):** set **153** — sockets prepared **826633** @64 (vs
 set **119** PG19 **838453**); `select-history` has 13600K 18→19.
 **2026-11-19 — pre-OS wrap closed for court / siren / twilight** (SELECT,
-OSM, GB7 as applicable). **Darwin / abbey is not part of this wrap** —
-I/O-class / btree / scatter-tier-0 work stays **WIP** on PG18 and does
-not gate the cutover. **OS cutover next** (siren + twilight only).
+OSM, GB7 as applicable). **Darwin I/O-class investigation closed
+(2026-11-20):** unclamp helps Relations/scatter; **not** a free win for
+OSM indexes / overall score — do not chase further (set **21** may finish
+as confirmation only). **OS cutover next** (siren + twilight only).
 
 ### OS cutover (after the wrap)
 
@@ -709,8 +710,8 @@ boxes.
 4. `./newset` with an OS-vintage batch so assembly can split pre/post OS.
 
 Hands-on on siren (no agent SSH). Agent SSH twilight. **Court** is done
-for this wrap (no OS upgrade in this pass). **Abbey / Darwin** stays WIP
-outside the wrap — do not treat I/O-class follow-ups as cutover blockers. `super` already showed a 24.04 vs
+for this wrap (no OS upgrade in this pass). **Abbey / Darwin I/O-class
+closed** — not a cutover blocker; no further class/REINDEX matrix. `super` already showed a 24.04 vs
 26.04 SELECT drop and then died — treat an OS retest as environment
 until a second host agrees.
 

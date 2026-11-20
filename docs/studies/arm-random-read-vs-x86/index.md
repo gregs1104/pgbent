@@ -186,7 +186,7 @@ Same 8 KB Homebrew binary, same scale-17500 DB, restart + `purge` before each 
 
 **Block size is not the lever here.** A from-source PG 18.6 build with `--with-blocksize=16` (matching Apple Silicon’s 16 KB VM pages) was A/B’d unclamped against the 8 KB Homebrew cluster on the same cold `select-scatter-64` protocol: ~71 vs ~68 TPS at c=1, ~2198 vs ~2160 at c=32 — flat. The spindle-era lore that larger pages half the I/O count does not show up on this NVMe miss path. You probably don't need your own recompile just to change the default 8 KB page size to 16; you should try fixing the I/O class instead.
 
-Abbey unclamped durable OSM (set **15**) moved Relations ~**1.43×** (**~10600 s → 7527 s**, **~1944**/s). Cool-disk retry (set **16**) matched it (**~1930**/s Relations, **10.41h** overall, index **67** kNodes/s) — the index-phase regression is real, not a hot-disk artifact. Do not treat “always unclamp” as free for the whole planet load.
+Abbey unclamped durable OSM (set **15**) moved Relations ~**1.43×** (**~10600 s → 7527 s**, **~1944**/s). Cool-disk retry (set **16**) matched it (**~1930**/s Relations, **10.41h** overall, index **67** kNodes/s) — the index-phase regression is real, not a hot-disk artifact. **Investigation closed:** unclamping is the right operator fix for Relations-shaped reads / scatter, **not** a free win for planet indexes or overall OSM score. No further Darwin I/O-class chase.
 
 ## Handoff
 
@@ -198,7 +198,6 @@ Natural next reproduction: **Graviton** or another server-class Linux ARM vendor
 
 - Court OSM coalescing off: durable set **24** / test **217** Relations **~1.74×** (**13251 s → 7614 s**), **6.48h**, score **656**; fast set **25** / test **218** **6.12h**, score **780** — on the public boards.
 - Court's remaining ~2× Relations gap vs a good x86 after coalescing — suspected mostly the ~2.8 vs ~5.7 GHz clock envelope; not assumed to reach parity.
-- Abbey unclamped OSM: Relations win on sets **15** / **16**; cool-disk **16** still ~**10.4h** overall (indexes stay slow) — on the public durable board (**279** score).
-- Abbey **select-scatter-64 under tier 0** — set **20** done on `pg_ctl` (~**86–139** @1 / ~**3188–3368** @32); set **13** remains the brew/clamped published baseline.
+- Abbey Darwin I/O-class **closed**: Relations/scatter win when unclamped; indexes / ~10.4h overall stay slow (sets **15**/**16** board cell **279**; scatter tier-0 set **20**). Not chasing further.
 - Twilight `read_ahead_kb` ladder + OSM RA=0 (sets **134–146**) and wrap fast OSM set **152** (**570** / **5.26h**, not board-best) banked; RA=0 cost under [Linux standard tuning]({{ '/platform/linux/' | relative_url }}) § Read-ahead.
 - CPU and power cost of coalescing off (court avg package ~24→34 W; Relations/watt still up).

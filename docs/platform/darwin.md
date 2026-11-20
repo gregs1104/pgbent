@@ -79,37 +79,21 @@ eff qos clamp: THREAD_QOS_UNSPECIFIED
 
 Backends inherit the postmaster’s effective policy. Spot-check one with `pgrep -P $pm -f 'postgres: '` and the same `taskinfo` grep.
 
-## pgbench build-time experiment (Abbey)
+## Verdict (closed 2026-11-20)
 
-OSM index builds stayed slow even after unclamping Relations. A cheaper first pass is the instrumented pgbench init that `runset` already records when `NEWINIT=1` (`script` like `:-i%`).
+**Unclamping I/O class is not a free win for the whole OSM load.** Keep the operator recipe (prefer `pg_ctl` / tier 0 over stock `brew services`) for Relations-shaped random reads and SELECT scatter. Do **not** expect it to fix planet **index** wall time or board score by itself. No further Abbey I/O-class / REINDEX chase unless a new question opens.
 
-**Protocol:**
+| probe | result |
+|-------|--------|
+| Cold `select-scatter-64` clamp → unclamp (set **13** vs **20**) | Clear win (~86–139 @1 / ~3188–3368 @32 unclamped) |
+| Durable OSM unclamp (sets **15** / **16**) | Relations ~**1.43×**; overall still ~**10.4h** — indexes stay slow |
+| pgbench init btree ladder tier 1 vs 0 (sets **17** / **18**) | Mostly flat — no OSM-index-shaped free lunch |
+| Block size 8 KB vs 16 KB | Flat |
 
-1. Start via **brew** (tier 1). Stash the class in `MULTI` (`1` = tier 1, `0` = tier 0).
-2. Small scale ladder ≈ **½ / 1× / 2× RAM** on Abbey’s 128 GB: `SCALES="4250 8500 17500"`.
-3. One client, short SELECT spacer, two reps: `SETCLIENTS=1`, `RUNTIME=30`, `SETTIMES=2`.
-4. Repeat the same ladder after a **pg_ctl** restart with `MULTI=0`.
-
-Set **17** is the brew / `MULTI=1` half; set **18** is the `pg_ctl` / `MULTI=0` half (both done 2026-11-19). Init wall times (secs):
-
-| scale | tier 1 (17) | tier 0 (18) |
-|------:|------------:|------------:|
-| 4250 | 1688 | 1658 |
-| 8500 | 2677 | 2226 |
-| 17500 | 5382 | 5448 |
-
-Mostly flat at the ends; mid-scale ~17% faster unclamped. Does **not** clear the OSM index cliff. Set **17** may have seen **low free disk** — if that mid-scale gap looks unreliable, rerun the brew half. **Set 20 done (2026-11-19):** cold `select-scatter-64` under tier 0 (`pg_ctl`, `purge`). Peaks ~**86**/ **139** @1 and ~**3188**/ **3368** @32 (two reps) — clear lift vs clamped set **13** (~74–85 @1 / ~2330–2400 @32; ad-hoc clamp cold was ~52–53 / ~1670).
-
-Default `config` already enables `NEWINIT` / server-side init (`:-i -I dtGvp`); only `params` needs the overrides above. Compare init wall time and disk metrics on the `:-i%` rows, split by `multi`. This surveys ordinary btree PK/index build under each I/O class — not OSM GIST/GIN — so a flat result here does not clear the planet index cliff.
-
-If the ladder does not move with tier, next step is **`REINDEX`** on an already-loaded OSM database (same brew vs `pg_ctl` A/B). That still is not a perfect simulation: the real loader builds indexes **in parallel**, and the tier lever may only show up when several index builds (each multi-process) contend for I/O at once. A single `REINDEX` (or serial reindexes) can miss that interaction even on the same GIST/GIN shapes.
+Set **21** (clean-disk unclamped OSM retry, started 2026-11-20 with ~1.4 Ti free) may finish as a banked confirmation cell; it is **not** a gate and needs no follow-up matrix. Disk fill can spoil NVMe runs (leftover `gis`+`pgbench` left only ~393 Gi free before the cleanup) — keep headroom — but set **16** already had **1.5 Ti** free at start with slow indexes, so fill alone does not reopen the case.
 
 ## Block size
 
 Rebuilding Postgres with `--with-blocksize=16` to match Apple Silicon’s 16 KB VM pages was A/B’d unclamped against 8 KB Homebrew on the same cold select-scatter-64 protocol: **flat** (~71 vs ~68 at c=1, ~2198 vs ~2160 at c=32). Spindle-era lore that larger pages half the I/O count does not show up here. Prefer fixing the I/O class over a custom page size.
 
-## OSM check
-
-Unclamped durable OSM on Abbey confirms the Relations win (set **15** ~**1944**/s; cool-disk retry set **16** ~**1930**/s, **~1.43×** vs clamped). Overall wall clock still lands near **10.4h** because index builds stay slow — unclamping is not free for the whole planet load. Public durable board cell is set **16** (score **279**).
-
-Details: [ARM random read vs x86]({{ '/studies/arm-random-read-vs-x86/' | relative_url }}).
+Public durable board cell remains set **16** (score **279**). Details: [ARM random read vs x86]({{ '/studies/arm-random-read-vs-x86/' | relative_url }}).
