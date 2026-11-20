@@ -17,7 +17,7 @@ Homebrew’s `brew services` installs a LaunchAgent (`sh.brew.postgresql@N`) tha
 | `brew services` | `THREAD_QOS_UTILITY` | tier 1 | ~52–53 TPS | ~1670–1677 |
 | `pg_ctl` from ssh/login | none | tier 0 | ~68 TPS | ~2577–2579 |
 
-About **+30% at c=1** and **+54% at c=32** when unclamped. Published Abbey select-scatter-64 set 13 was under the clamped service — treat those numbers as soft. Intermittent “Darwin looks fine / then doesn’t” OSM behavior matches sometimes using `brew services` and sometimes a manual `pg_ctl`.
+About **+30% at c=1** and **+54% at c=32** when unclamped. Published Abbey select-scatter-64 set **13** was under the clamped service — treat those numbers as soft. The unclamped A/B lives in ad-hoc `results/logs/darwin-qos-ab/` logs, not as a results-DB set. **Loose end:** after the btree build ladder (sets **17**/**18**), re-run the cold `select-scatter-64` grid under **tier 0** (`pg_ctl`) into a proper `testset` so the study has a published unclamped peer to set 13. Intermittent “Darwin looks fine / then doesn’t” OSM behavior matches sometimes using `brew services` and sometimes a manual `pg_ctl`.
 
 ### Startup: tier 1 (brew / LaunchAgent)
 
@@ -83,12 +83,22 @@ Backends inherit the postmaster’s effective policy. Spot-check one with `pgrep
 
 OSM index builds stayed slow even after unclamping Relations. A cheaper first pass is the instrumented pgbench init that `runset` already records when `NEWINIT=1` (`script` like `:-i%`).
 
-**Protocol (in flight as set 17):**
+**Protocol:**
 
 1. Start via **brew** (tier 1). Stash the class in `MULTI` (`1` = tier 1, `0` = tier 0).
 2. Small scale ladder ≈ **½ / 1× / 2× RAM** on Abbey’s 128 GB: `SCALES="4250 8500 17500"`.
 3. One client, short SELECT spacer, two reps: `SETCLIENTS=1`, `RUNTIME=30`, `SETTIMES=2`.
 4. Repeat the same ladder after a **pg_ctl** restart with `MULTI=0`.
+
+Set **17** is the brew / `MULTI=1` half; set **18** is the `pg_ctl` / `MULTI=0` half (both done 2026-11-19). Init wall times (secs):
+
+| scale | tier 1 (17) | tier 0 (18) |
+|------:|------------:|------------:|
+| 4250 | 1688 | 1658 |
+| 8500 | 2677 | 2226 |
+| 17500 | 5382 | 5448 |
+
+Mostly flat at the ends; mid-scale ~17% faster unclamped. Does **not** clear the OSM index cliff. Set **17** may have seen **low free disk** — if that mid-scale gap looks unreliable, rerun the brew half. **Next (in flight):** set **20** cold `select-scatter-64` under tier 0 (`pg_ctl`, `purge` confirmed) — peer to clamped set **13**.
 
 Default `config` already enables `NEWINIT` / server-side init (`:-i -I dtGvp`); only `params` needs the overrides above. Compare init wall time and disk metrics on the `:-i%` rows, split by `multi`. This surveys ordinary btree PK/index build under each I/O class — not OSM GIST/GIN — so a flat result here does not clear the planet index cliff.
 

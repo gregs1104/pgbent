@@ -643,10 +643,13 @@ Skip before upgrade: PG15–17 SELECT or OSM on 9600X, more AIO/RA on siren,
 anything that needs twilight’s disk headroom. Archives
 `siren-20261119-083836` / `twilight-20261119-085437` ingested; siren wrap
 Postgres cells + twilight latest (incl. fast OSM **152** / score **1038**)
-are in `submission`. Pre-upgrade GB7 banked. **One twilight Postgres cell
-left before cutover:** PG18 sockets(-prepared) SELECT on the **13600K** so
-`select-history` has an 18→19 pair (PG19 **838k** already in from set **119**).
-Siren is clear; twilight runs that cell, then OS cutover.
+are in `submission`. Pre-upgrade GB7 banked. **Twilight PG18 SELECT faces
+done (2026-11-19):** set **153** `PG18 SELECT faces (pre-OS cutover)` —
+four faces rc=0 on **18:5436** (results **16:5432**). Sockets prepared
+peaks **774658** @32 / **826633** @64 (vs set **119** PG19 **838453** @64).
+`start.conf` still **18/16=auto**, **19=manual**. Local + `submission`
+ingested; `select-history` regenerated with 13600K **18→19** (**826633** /
+**838453** @64) next to 9600X. OS cutover next.
 
 ### OS cutover (after the wrap)
 

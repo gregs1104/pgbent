@@ -195,5 +195,6 @@ Natural next reproduction: **Graviton** or another server-class Linux ARM vendor
 - Court OSM coalescing off: durable set **24** / test **217** Relations **~1.74×** (**13251 s → 7614 s**), **6.48h**, score **656**; fast set **25** / test **218** **6.12h**, score **780** — on the public boards.
 - Court's remaining ~2× Relations gap vs a good x86 after coalescing — suspected mostly the ~2.8 vs ~5.7 GHz clock envelope; not assumed to reach parity.
 - Abbey unclamped OSM: Relations win on sets **15** / **16**; cool-disk **16** still ~**10.4h** overall (indexes stay slow) — on the public durable board (**279** score).
+- Abbey **select-scatter-64 under tier 0** — set **13** is brew/clamped; set **20** cold peer in flight on `pg_ctl` (after btree ladder **17**/**18**).
 - Twilight `read_ahead_kb` ladder + OSM RA=0 (sets **134–146**) and wrap fast OSM set **152** (**570** / **5.26h**, not board-best) banked; RA=0 cost under [Linux standard tuning]({{ '/platform/linux/' | relative_url }}) § Read-ahead.
 - CPU and power cost of coalescing off (court avg package ~24→34 W; Relations/watt still up).
