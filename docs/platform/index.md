@@ -14,6 +14,7 @@ Think of vendor NAS runbooks (EMC and friends) that publish database-oriented st
 
 ## Start here
 
+- [Farm disks]({{ '/platform/disks/' | relative_url }}) — PCIe generation and rated sequential speeds for drives used on the farm
 - [Linux standard OS tuning]({{ '/platform/linux/' | relative_url }}) — what `pgbent_tune` applies after every boot, and why
   - [dirty memory]({{ '/platform/linux-dirty-memory/' | relative_url }}) and [pdflush / writeback]({{ '/platform/linux-pdflush/' | relative_url }})
 - [NVIDIA DGX Spark]({{ '/platform/dgx-spark/' | relative_url }}) platform review — court: coalescing + mixed-core SELECT grid, power (`spark_hwmon` / spbm), NIC EEE / ASPM

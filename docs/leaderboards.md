@@ -54,6 +54,12 @@ Best peak disk **R/W** on those same loads — `max(max_write_mbps, max_read_mbp
 
 Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/osm-disk-history.py` (runs `reports/osm-disk-history.sql`).
 
+The chart above is **retrospective** (best peak even after the release write-up). The fork below is the **at-the-moment** rated ceiling for each major’s published-cycle drive — see [Farm disks]({{ '/platform/disks/' | relative_url }}) for the T705 / 14900K Gen5 story.
+
+![OSM peak disk R/W history with rated sequential ceiling]({{ '/images/osm-disk-history-rated.png' | relative_url }})
+
+Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/osm-disk-history.py --rated-ceiling`.
+
 ### OSM Detail Table
 
 The OSM table has one Planet extract (**10.79 billion** nodes), mixed PostgreSQL 16–19, ranked by OSM score. The [PostgreSQL 18]({{ '/results-summary/pg18/' | relative_url }}) snapshot remains the last frozen release cycle. Watts, durability (`fsync` / `wal_level`), and checkpoint columns travel with the OSM rows.

@@ -10,6 +10,7 @@ SELECT
   s.run,
   s.cpu,
   srv.server_cpu AS server_cpu,
+  coalesce(nullif(s.disk, ''), nullif(t.server_disk, ''), srv.server_disk) AS disk,
   s.server_ver,
   substring(s.server_ver FROM 'PostgreSQL ([0-9]+)')::int AS major,
   s.script,
@@ -22,6 +23,7 @@ SELECT
     coalesce(s.max_read_mbps, 0)
   ) AS max_rw_mbps
 FROM submission s
+LEFT JOIN tests t ON t.server = s.server AND t.test = s.test
 LEFT JOIN server srv ON srv.server = s.server
 WHERE
   s.script ILIKE '%osm%'
