@@ -37,7 +37,7 @@ Public CPU detail is on Greg’s [Geekbench browser profile](https://browser.gee
 | siren | R5 9600X (was R9 9950X) | 9950X pack closed (SELECT four faces; OSM set **108**). **9600X** SELECT set **118** + OSM set **117** now on the power boards |
 | twilight | i5-13600K | SELECT four faces; OSM fast + durable; RA ladder + wrap fast set **152** |
 | court | NVIDIA Spark | SELECT four faces + sockets `;` / `SELECT 1`; OSM coalescing-off durable/fast (sets **24** / **25**) |
-| abbey | M4 Max Studio | PG18 OSM stand-in; durable unclamped cool-disk set **16**; no PG19 during RC |
+| abbey | M4 Max Studio | PG18 OSM stand-in; durable unclamped set **16** (board); set **21** confirmation; disk-fill **67**/**68** ejected; no PG19 during RC |
 
 ## Pin
 

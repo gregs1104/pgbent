@@ -1,12 +1,13 @@
 ---
 layout: home
-title: Linux standard tuning
+title: Linux standard OS tuning
 permalink: /platform/linux/
 parent: Platform guides
 nav_order: 1
+has_children: true
 ---
 
-# Linux standard tuning
+# Linux standard OS tuning
 
 pgbent’s Linux hosts re-apply a small set of OS settings after every boot via [`util/pgbent_tune`](https://github.com/gregs1104/pgbent/blob/main/util/pgbent_tune), usually from `util/newgis`. None of these persist across reboot on their own (CPU governor and `read_ahead_kb` are runtime; NVMe coalescing is not saved to the drive). That is intentional: the same script is the checklist.
 

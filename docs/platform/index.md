@@ -14,11 +14,10 @@ Think of vendor NAS runbooks (EMC and friends) that publish database-oriented st
 
 ## Start here
 
-- [Linux standard tuning]({{ '/platform/linux/' | relative_url }}) — what `pgbent_tune` applies after every boot, and why
-- [Linux pdflush / writeback]({{ '/platform/linux-pdflush/' | relative_url }}) — page-cache writeback theory (historical pdflush → flusher threads)
-- [Linux dirty memory]({{ '/platform/linux-dirty-memory/' | relative_url }}) — measured impact of `vm.dirty_*` on OSM load
-- [NVMe interrupt coalescing]({{ '/platform/nvme-coalescing/' | relative_url }}) — free latency win when OEM firmware left coalescing on
-- [macOS / Darwin]({{ '/platform/darwin/' | relative_url }}) — Homebrew `brew services` LaunchAgent I/O clamp
-- [NVIDIA DGX Spark]({{ '/platform/dgx-spark/' | relative_url }}) — court: coalescing + mixed-core SELECT grid (two oddities), power (`spark_hwmon` / spbm), NIC EEE / ASPM
+- [Linux standard OS tuning]({{ '/platform/linux/' | relative_url }}) — what `pgbent_tune` applies after every boot, and why
+  - [dirty memory]({{ '/platform/linux-dirty-memory/' | relative_url }}) and [pdflush / writeback]({{ '/platform/linux-pdflush/' | relative_url }})
+- [NVIDIA DGX Spark]({{ '/platform/dgx-spark/' | relative_url }}) platform review — court: coalescing + mixed-core SELECT grid, power (`spark_hwmon` / spbm), NIC EEE / ASPM
+  - [NVMe interrupt coalescing]({{ '/platform/nvme-coalescing/' | relative_url }})
+- [macOS LaunchAgent I/O class]({{ '/platform/darwin/' | relative_url }}) — Homebrew `brew services` utility clamp
 
 The full ARM miss isolation case (select-scatter-64, Relations, court vs twilight vs Abbey) is the [ARM random read vs x86]({{ '/studies/arm-random-read-vs-x86/' | relative_url }}) study.

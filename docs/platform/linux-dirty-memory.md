@@ -2,8 +2,8 @@
 layout: home
 title: Linux dirty memory
 permalink: /platform/linux-dirty-memory/
-parent: Platform guides
-nav_order: 3
+parent: Linux standard OS tuning
+nav_order: 1
 ---
 
 # Linux Dirty Memory:  testing

@@ -2,8 +2,8 @@
 layout: home
 title: NVMe interrupt coalescing
 permalink: /platform/nvme-coalescing/
-parent: Platform guides
-nav_order: 4
+parent: NVIDIA DGX Spark
+nav_order: 1
 ---
 
 # NVMe interrupt coalescing
@@ -37,7 +37,7 @@ Host notes (power sensors, NIC EEE / ASPM): [NVIDIA DGX Spark]({{ '/platform/dgx
 
 Samsung `MZALC4T0HBL1`, firmware `NXHB202Q`, with coalescing active (DGX OS boot service / shipped default). Twilight’s Kingston had it off. Same Postgres durable face, same select-scatter-64 / OSM shape:
 
-![Court NVMe coalescing on vs off — select-scatter-64 and OSM Relations]({{ '/images/nvme-coalescing-compare.png' | relative_url }})
+![DGX Spark: NVMe interrupt coalescing on vs off (TPS) — select-scatter-64 and OSM Relations]({{ '/images/nvme-coalescing-compare.png' | relative_url }})
 
 | | Coalescing on (shipped) | Coalescing off |
 |--|-------------------------|----------------|

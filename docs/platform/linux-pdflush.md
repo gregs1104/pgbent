@@ -2,7 +2,7 @@
 layout: home
 title: Linux pdflush / writeback
 permalink: /platform/linux-pdflush/
-parent: Platform guides
+parent: Linux standard OS tuning
 nav_order: 2
 ---
 

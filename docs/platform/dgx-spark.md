@@ -3,7 +3,8 @@ layout: home
 title: NVIDIA DGX Spark
 permalink: /platform/dgx-spark/
 parent: Platform guides
-nav_order: 6
+nav_order: 2
+has_children: true
 ---
 
 # NVIDIA DGX Spark
@@ -13,7 +14,7 @@ Lab host **court**: NVIDIA DGX Spark (board **P4242**), Grace CPU, DGX OS (Ubunt
 1. **[NVMe interrupt coalescing]({{ '/platform/nvme-coalescing/' | relative_url }})** — I/O: DGX OS turns feature 8 on at boot; clearing it was ~**1.75×** on OSM Relations.
 2. **SELECT client grid / mixed-core off-ratio** — CPU scheduling: a power-of-two-only ladder undersells the box (and mildly favors AMD chips that land on **16** / **32**); fair points at **20** / **40**. See below.
 
-Also apply the shared [Linux standard tuning]({{ '/platform/linux/' | relative_url }}) (`pgbent_tune`: governor, readahead, coalescing clear, TRIM). Set `DISKLIST="nvme0n1"` in `config` or `iostat.csv` stays empty.
+Also apply the shared [Linux standard OS tuning]({{ '/platform/linux/' | relative_url }}) (`pgbent_tune`: governor, readahead, coalescing clear, TRIM). Set `DISKLIST="nvme0n1"` in `config` or `iostat.csv` stays empty.
 
 ## Package power measurement
 
@@ -67,5 +68,5 @@ After coalescing is off and the client grid is fair, court still sits behind the
 
 - [NVMe interrupt coalescing]({{ '/platform/nvme-coalescing/' | relative_url }}) — feature 8 / NVIDIA boot service / measured Relations win
 - [ARM random read vs x86]({{ '/studies/arm-random-read-vs-x86/' | relative_url }}) — full isolation write-up (court vs twilight vs Abbey)
-- [Linux standard tuning]({{ '/platform/linux/' | relative_url }}) — post-boot checklist including coalescing clear
+- [Linux standard OS tuning]({{ '/platform/linux/' | relative_url }}) — post-boot checklist including coalescing clear
 - [SELECT performance vs power]({{ '/leaderboards/select-performance-power/' | relative_url }}) — platform sockets/prepared ladder (notes the 16-client dip)

@@ -610,6 +610,21 @@ matrix on PG18. OS upgrades and Planet refresh sit in the same window.
 3. **Node cache vs `shared_buffers`** (48→32 on `osm-mem-128`; after durable baselines match)
 4. **`maintenance_work_mem` sweep** (after memory packing is settled)
 
+### Platform / workload knobs (not GUC studies; after court is predictable)
+
+Same one-parameter style as GUC work: fix the face, change one benchmark
+setting, record it (`SETCLIENTS` / `tests.multi`), compare. Does **not**
+gate OS cutover. See [ARM study § Next probes](../../../docs/studies/arm-random-read-vs-x86/index.md):
+
+1. **OSM process parallelism on ARM (court)** — ladder osm2pgsql
+   `--number-processes` / `SETCLIENTS` off the long-standing x86 **5**;
+   ARM mixed-core may want a different peak.
+2. **`select-scatter-N` ladder** — scripts for **2 / 4 / 8 / 16** (and
+   optionally **1**) beside **64**; cold/hot miss grid on **court +
+   twilight**. Standard single-row SELECT is the **select-1** end of the
+   family; scatter sizes are separate scripts with matching `MULTI=N`
+   (not `select-pages`-style MULTI on one file).
+
 ## After 19rc1 release snapshot: OS upgrades (siren, twilight)
 
 Mid-cycle work — do **not** start until the release-snapshot cells have wrapped

@@ -26,9 +26,10 @@
 #   SETCLIENTS default "1 8 32"
 #   RUNTIME    default 180
 #   SETTIMES   default 2
-#   MULTI      always 64 here (matches select-scatter-64; tests.multi label).
-#              Unlike select-pages (one script, vary MULTI), scatter sizes are
-#              separate scripts; benchwarmer also derives MULTI from the name.
+#   SCATTER    default 64 — runs tests/select-scatter-$SCATTER.sql (1 2 4 8 16 64)
+#   MULTI      always $SCATTER (tests.multi label). Unlike select-pages (one
+#              script, vary MULTI), scatter sizes are separate scripts;
+#              benchwarmer also derives MULTI from the name.
 #   SKIPINIT   default 1
 #   COLD       default 1 — drop OS caches before runset
 #              Linux: pgbent_drop_caches; Darwin: sudo purge
@@ -61,8 +62,13 @@ BLKTRACE="${BLKTRACE:-1}"
 BLKTRACE_DELAY="${BLKTRACE_DELAY:-60}"
 BLKTRACE_SEC="${BLKTRACE_SEC:-10}"
 UNAME_S="$(uname -s)"
+SCATTER="${SCATTER:-64}"
+if [ ! -f "tests/select-scatter-${SCATTER}.sql" ]; then
+  echo "no tests/select-scatter-${SCATTER}.sql" >&2
+  exit 1
+fi
 # Aid count for this script size; also written as tests.multi.
-MULTI=64
+MULTI=$SCATTER
 
 ts() { date '+%Y-%m-%dT%H:%M:%S%z'; }
 sudo_n() { sudo -n "$@"; }
@@ -70,6 +76,9 @@ sudo_n() { sudo -n "$@"; }
 PGBENT_SETRA="${PGBENT_SETRA:-/usr/local/bin/pgbent_setra}"
 set_read_ahead_kb() {
   local kb="$1"
+  if [ "$(cat "/sys/block/${RA_DEVICE}/queue/read_ahead_kb" 2>/dev/null)" = "$kb" ]; then
+    return 0
+  fi
   if [ -x "$PGBENT_SETRA" ]; then
     sudo_n "$PGBENT_SETRA" "$kb" "$RA_DEVICE"
   else
@@ -110,7 +119,7 @@ fi
 
 # Sysinfo for comments only — do not let pgsysinfo SCALES/SETCLIENTS leak into params.
 {
-  echo "SCRIPT=select-scatter-64"
+  echo "SCRIPT=select-scatter-$SCATTER"
   echo "SETTIMES=$SETTIMES"
   echo "RUNTIME=$RUNTIME"
   echo "MULTI=$MULTI"

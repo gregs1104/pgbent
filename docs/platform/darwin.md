@@ -1,23 +1,23 @@
 ---
 layout: home
-title: macOS / Darwin
+title: macOS LaunchAgent I/O class
 permalink: /platform/darwin/
 parent: Platform guides
-nav_order: 5
+nav_order: 3
 ---
 
-# macOS / Darwin
+# macOS LaunchAgent I/O class
 
 ## Homebrew `brew services` I/O class
 
 Homebrew’s `brew services` installs a LaunchAgent (`sh.brew.postgresql@N`) that starts Postgres under launchd. On Apple Silicon that agent runs with a **QoS clamp of `THREAD_QOS_UTILITY`**, which drops the process to **I/O throttle tier 1 (STANDARD)** instead of tier 0 (IMPORTANT). Disk reads look like background work relative to the desktop.
 
-| How Postgres is started | QoS clamp | I/O tier | select-scatter-64 c=1 cold | c=32 cold |
-|-------------------------|-----------|----------|-------------------------|-----------|
-| `brew services` | `THREAD_QOS_UTILITY` | tier 1 | ~52–53 TPS | ~1670–1677 |
-| `pg_ctl` from ssh/login | none | tier 0 | ~68 TPS | ~2577–2579 |
+| How Postgres is started | QoS clamp | I/O tier | select-scatter-64 set | c=1 | c=32 |
+|-------------------------|-----------|----------|----------------------|-----|------|
+| `brew services` | `THREAD_QOS_UTILITY` | tier 1 | **13** (clamped) | 85–115 | 2331–2400 |
+| `pg_ctl` from ssh/login | none | tier 0 | **20** (unclamped) | 86–139 | 3188–3368 |
 
-About **+30% at c=1** and **+54% at c=32** when unclamped. Published Abbey select-scatter-64 set **13** was under the clamped service — treat those numbers as soft. The unclamped A/B lives in ad-hoc `results/logs/darwin-qos-ab/` logs, not as a results-DB set. **Loose end:** after the btree build ladder (sets **17**/**18**), re-run the cold `select-scatter-64` grid under **tier 0** (`pg_ctl`) into a proper `testset` so the study has a published unclamped peer to set 13. Intermittent “Darwin looks fine / then doesn’t” OSM behavior matches sometimes using `brew services` and sometimes a manual `pg_ctl`.
+Published cold/hot grids (scale 17500, durable face). Unclamping is about **+20% at c=1 hot** and **+40% at c=32** versus the clamped set. An earlier ad-hoc restart A/B (`results/logs/darwin-qos-ab/`) saw a similar direction at lower absolute TPS. Intermittent “Darwin looks fine / then doesn’t” OSM behavior matches sometimes using `brew services` and sometimes a manual `pg_ctl`.
 
 ### Startup: tier 1 (brew / LaunchAgent)
 
@@ -79,21 +79,22 @@ eff qos clamp: THREAD_QOS_UNSPECIFIED
 
 Backends inherit the postmaster’s effective policy. Spot-check one with `pgrep -P $pm -f 'postgres: '` and the same `taskinfo` grep.
 
-## Verdict (closed 2026-11-20)
+## Verdict (closed 2026-11-21)
 
 **Unclamping I/O class is not a free win for the whole OSM load.** Keep the operator recipe (prefer `pg_ctl` / tier 0 over stock `brew services`) for Relations-shaped random reads and SELECT scatter. Do **not** expect it to fix planet **index** wall time or board score by itself. No further Abbey I/O-class / REINDEX chase unless a new question opens.
 
 | probe | result |
 |-------|--------|
-| Cold `select-scatter-64` clamp → unclamp (set **13** vs **20**) | Clear win (~86–139 @1 / ~3188–3368 @32 unclamped) |
+| Cold `select-scatter-64` clamp → unclamp (set **13** vs **20**) | Clear win (set **20**: 86–139 @1 / 3188–3368 @32) |
 | Durable OSM unclamp (sets **15** / **16**) | Relations ~**1.43×**; overall still ~**10.4h** — indexes stay slow |
+| Clean-disk confirmation (set **21**, ~1.4 Ti free) | Indexes match **15**/**16** (~40k s); overall **10.86h** / score **276** — banked, not a board cell |
 | pgbench init btree ladder tier 1 vs 0 (sets **17** / **18**) | Mostly flat — no OSM-index-shaped free lunch |
 | Block size 8 KB vs 16 KB | Flat |
 
-Set **21** (clean-disk unclamped OSM retry, started 2026-11-20 with ~1.4 Ti free) may finish as a banked confirmation cell; it is **not** a gate and needs no follow-up matrix. Disk fill can spoil NVMe runs (leftover `gis`+`pgbench` left only ~393 Gi free before the cleanup) — keep headroom — but set **16** already had **1.5 Ti** free at start with slow indexes, so fill alone does not reopen the case.
+**Disk fill is a separate flaw.** When the Data volume is short on free space, Abbey OSM index builds can collapse into **>11 h** runs that are not fair comparisons. Set **11** tests **67** and **68** (~11.1 h, scores 268/270) were that pattern and have been **ejected** from the results DB. Keep headroom before a planet load. Slow indexes on the durable unclamped face (~40k s on **15**/**16**/**21**, including cool-disk and clean-disk retries) are **not** that fill cliff — they are the real cost of this face on Darwin.
 
 ## Block size
 
 Rebuilding Postgres with `--with-blocksize=16` to match Apple Silicon’s 16 KB VM pages was A/B’d unclamped against 8 KB Homebrew on the same cold select-scatter-64 protocol: **flat** (~71 vs ~68 at c=1, ~2198 vs ~2160 at c=32). Spindle-era lore that larger pages half the I/O count does not show up here. Prefer fixing the I/O class over a custom page size.
 
-Public durable board cell remains set **16** (score **279**). Details: [ARM random read vs x86]({{ '/studies/arm-random-read-vs-x86/' | relative_url }}).
+Public durable board cell remains set **16** (score **279**, **10.41h**). Details: [ARM random read vs x86]({{ '/studies/arm-random-read-vs-x86/' | relative_url }}).

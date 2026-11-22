@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Court NVMe coalescing on/off comparison bars for the platform guide."""
+"""NVMe coalescing on/off comparison bars (TPS) for the platform / ARM study."""
 
 from __future__ import annotations
 
@@ -59,7 +59,7 @@ def main() -> int:
 
     # One blank line under the figure title; give the rest to the bars.
     fig.suptitle(
-        "Court (DGX Spark): NVMe interrupt coalescing on vs off",
+        "DGX Spark: NVMe interrupt coalescing on vs off (TPS)",
         fontsize=22,
         y=0.98,
     )
