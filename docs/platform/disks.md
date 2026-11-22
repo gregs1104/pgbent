@@ -14,12 +14,18 @@ NVMe (and one RAID) devices that appear in `tests.server_disk` / set names on th
 
 **First / last** are `min` / `max` of `tests.start_time` for that label (aliases folded — e.g. Remote SK41 with SK41, all T705 stamps together).
 
+## Published disk chapters
+
+Predecessor — **PG13 / Inland Gen4** ([Crunchy, Sep 2020](https://www.crunchydata.com/blog/postgresql-13-upgrade-and-performance-check-on-ubuntu)): first farm results on the Inland Performance 2TB (rising, 3950X), ~1.6 GB/s random reads and the drive’s 5 GB/s sequential claim. Also notes a mild PG13-vs-12 SELECT dip above 32 clients as typical noise — often the Linux scheduler fighting `pgbench`, not a core regression to chase.
+
+Later — **PG17 / T705 Gen5** ([Crunchy, Nov 2024](https://www.crunchydata.com/blog/loading-the-world-openstreetmap-import-in-under-4-hours)): OSM under four hours and the first published Gen5 disk chapter on the farm.
+
 ## OSM disk history charts
 
 Two leaderboard graphs share the same CPU peak series but differ in what the storage axis means:
 
 - **Retrospective** ([osm-disk-history.png]({{ '/images/osm-disk-history.png' | relative_url }})) — best peak each CPU eventually reached on that PostgreSQL major, including hardware that arrived after the release write-up.
-- **At-the-moment** ([osm-disk-history-rated.png]({{ '/images/osm-disk-history-rated.png' | relative_url }})) — overlays the manufacturer-rated sequential read of the drive that owned each major’s published cycle (`reports/osm-disk-history.py --rated-ceiling`). PG17 pins to the Crucial T705 from the [Crunchy write-up](https://www.crunchydata.com/blog/loading-the-world-openstreetmap-import-in-under-4-hours); Fury G5 only arrived late and belongs on 18–19 with SK51.
+- **At-the-moment** ([osm-disk-history-rated.png]({{ '/images/osm-disk-history-rated.png' | relative_url }})) — overlays the manufacturer-rated sequential read of the drive that owned each major’s published cycle (`reports/osm-disk-history.py --rated-ceiling`). PG17 pins to the Crucial T705 from the write-up above; Fury G5 only arrived late and belongs on 18–19 with SK51.
 
 That Gen5 handoff was messy. The blog’s ~11 GB/s spike was the **i9-14900K** on T705 — then the chip’s voltage failure hit just as PCIe 5.0 drives arrived, when those clocks mattered most. The 14900K left the farm mid-evaluation and is omitted from the x86 history series. The nearby PG17 peak still drawn on the charts is the **i5-13600K** just under 11 GB/s: close for shape, not the same run, and a weaker host for pushing Gen5.
 
@@ -28,7 +34,7 @@ That Gen5 handoff was messy. The blog’s ~11 GB/s spike was the **i9-14900K**
 | Farm label | Product | PCIe | Rated seq. read / write | First | Last | Notes |
 |------------|---------|------|-------------------------|-------|------|-------|
 | **Intel 750p** | Intel SSD 750 Series **AIC** 1.2 TB | **3.0** ×4 | **2,500 / 1,200** MB/s | 2020-08-25 | 2021-03-08 | Early rising card (HHHL AIC, not U.2). Every “Intel” / “Intel 750” set is this drive. |
-| **Inland Performance 2TB** | Inland Performance / “Inland 4.0” (Phison E16 + DRAM; dmirow `EGFM11.0`) | **4.0** ×4 | **5,000 / 4,300** MB/s ([Hardware Corner](https://www.hardware-corner.net/ssd-database/Inland-Performance/)) | 2020-09-05 | 2023-06-08 | Rising workhorse. First PCIe **4.0** drive on the farm — set names sometimes say **Inland 4.0** for that reason. Same physical drive as “Inland Perf” / “Inland 4.0 2TB”. Not the retail **Inland Platinum** Gen3 QLC SKU (~3.4/3.0 GB/s). |
+| **Inland Performance 2TB** | Inland Performance / “Inland 4.0” (Phison E16 + DRAM; dmirow `EGFM11.0`) | **4.0** ×4 | **5,000 / 4,300** MB/s ([Hardware Corner](https://www.hardware-corner.net/ssd-database/Inland-Performance/)) | 2020-09-05 | 2023-06-08 | Rising workhorse; first PCIe **4.0** on the farm (“Inland 4.0” in set names). First published results: [PG13 on Ubuntu](https://www.crunchydata.com/blog/postgresql-13-upgrade-and-performance-check-on-ubuntu). Not the retail **Inland Platinum** Gen3 QLC SKU. |
 | **Sabrent Rocket 4 Plus 2TB** | Sabrent Rocket 4 Plus 2 TB | **4.0** ×4 | **7,100 / 6,600** MB/s | 2022-02-24 | 2022-08-25 | Rising. Set names say Rocket / Rocket Plus / Rocket 4 Plus / Rocket 2TB — all this drive, not an original Rocket. |
 | **SK41 2TB** | SK hynix Platinum **P41** 2 TB | **4.0** ×4 | **7,000 / 6,500** MB/s | 2022-10-30 | 2025-07-08 | Siren and twilight (and a few friday remote labels). |
 | **Crucial T705 2TB** | Crucial T705 2 TB | **5.0** ×4 | **14,500 / 12,700** MB/s | 2024-08-16 | 2025-10-09 | First Gen5; published PG17 disk story ([Crunchy](https://www.crunchydata.com/blog/loading-the-world-openstreetmap-import-in-under-4-hours)). See Gen5 / 14900K note above. |
