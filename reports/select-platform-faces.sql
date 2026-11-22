@@ -1,6 +1,8 @@
--- Sockets prepared SELECT per CPU × clients at scale 100 (90s pin cells).
+-- Sockets prepared SELECT per CPU × clients at scale 100.
 -- Best TPS among repeats. Pin sets match select-platform.sql / the SELECT
 -- power page. Sockets prepared is the top face on every current pin cell.
+-- Court dense fill (set 31) is 180s; other pin cells are 90s — shape matters
+-- more than absolute rate for the mixed-core band.
 
 WITH runs AS (
   SELECT
@@ -18,14 +20,19 @@ WITH runs AS (
     -- Include nproc / 2× points in the 1–64 window (pgsysinfo core_sweep)
     -- so mixed-core boxes are not judged only at unlucky powers of two
     -- (court: 10, 20, 40). Skip 4× (80) — this chart stays visually 1–64.
+    -- Court dense fill adds every integer 12–24 to show the off-ratio cliff.
     -- Max TPS across sets/repeats at each point (highest-only when piling on).
-    AND t.clients IN (1, 2, 4, 8, 10, 16, 20, 32, 40, 64)
+    AND (
+      t.clients IN (1, 2, 4, 8, 10, 16, 20, 32, 40, 64)
+      OR t.clients BETWEEN 12 AND 24
+    )
     AND (
       (t.server = 'siren' AND s.info IN ('PG19 rc1', '9600X SELECT'))
       OR (t.server = 'twilight' AND s.info = 'PG19 rc1')
       OR (t.server = 'court' AND (
             s.info = 'PG19 rc1 SELECT four faces'
             OR s.info LIKE 'SELECT four faces fill — clients %'
+            OR s.info LIKE 'SELECT sockets prepared dense fill%'
           ))
       OR (t.server = 'abbey' AND s.info = 'PG18 SELECT four faces')
     )

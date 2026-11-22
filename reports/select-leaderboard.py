@@ -595,7 +595,11 @@ def plot_platform_faces(df: pd.DataFrame, output: Path, show: bool = False) -> N
             label=str(cpu),
         )
     ax.set_xscale("log", base=2)
-    ax.set_xticks(sorted(pts["clients"].unique()))
+    # Plot every measured client (court dense 12–24), but label only the usual
+    # sparse grid: powers of two plus nproc / 2× companions.
+    present = {int(c) for c in pts["clients"].unique()}
+    xticks = [c for c in (1, 2, 4, 8, 10, 16, 20, 32, 40, 64) if c in present]
+    ax.set_xticks(xticks)
     ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{int(v)}"))
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{int(v):,}"))
     ax.set_xlabel("Clients")
@@ -616,8 +620,9 @@ def faces_markdown(df: pd.DataFrame) -> str:
     n = df["cpu"].nunique() if not df.empty else 0
     return (
         f"{FACES_BEGIN}\n\n"
-        "**Sockets prepared** SELECT TPS at scale **100** (90s), one series per CPU "
-        "(best repeat at each client count). Colors match the OSM "
+        "**Sockets prepared** SELECT TPS at scale **100** (90s pin cells; court dense "
+        "fill **180s**), one series per CPU (best repeat at each client count). "
+        "Colors match the OSM "
         "[efficiency vs package power envelope]({{ '/results-summary/pg19/osm-power/' | relative_url }}) "
         "chart.\n\n"
         "![pgbench SELECT - top sockets/prepared by platform]"
@@ -628,17 +633,23 @@ def faces_markdown(df: pd.DataFrame) -> str:
         "gives a mild advantage to the current AMD set (e.g. **9950X** lands cleanly "
         "on **16** / **32**), while mixed-core / big.LITTLE boxes need `nproc` points "
         "or they look artificially soft. Court’s sockets-prepared ladder is the "
-        "textbook case: **~485k** at **10** / **16**, then **~960k** at **20** "
-        "(`nproc`), with **32** falling back to **~533k**. `pgsysinfo` already adds "
-        "`nproc`, `2×`, and `4×` to `SETCLIENTS` for that reason. Court fills (sets "
-        "**26** / **27**) put **10 / 16 / 20 / 40** on this 1–64 chart (highest TPS "
-        "when piling repeats). Twilight’s **13600K** shows a milder version of the "
-        "same edge; once other pending farm work finishes, its SELECT grid will "
-        "pick up the `pgsysinfo` thread points (**20** / **40** / **80**) so "
-        "pgbench can pin better to cores and threads — same fairness fix as "
-        "court. Apple is milder still. After the **14900K** left the farm, AMD "
-        "chips moved onto the top of this board. Spark is still a relatively "
-        "raw CPU platform here, so the power-of-two-only grid undersells it.\n\n"
+        "textbook case: **~485k** at **10** / **16**, then **~979k** at **20** "
+        "(`nproc`), with **32** falling back to **~533k**. Dense fill set **31** "
+        "(every client **12–24**, three 180s repeats, best TPS) makes the cliff "
+        "obvious: climb through **19** (**~702k**), spike at **20**, then collapse "
+        "to **~475k @21** / **~299k @23** before a partial bounce at **24**. Max "
+        "latency explodes at **21–22** (~100–160 ms) while the slow **23** cell "
+        "stays milder (~40 ms) — a different scheduling regime, not just “worse "
+        "of the same.” `pgsysinfo` already adds `nproc`, `2×`, and `4×` to "
+        "`SETCLIENTS` for that reason. Earlier fills (sets **26** / **27**) put "
+        "**10 / 16 / 20 / 40** on the chart; **31** densifies the ragged band. "
+        "Twilight’s **13600K** shows a milder version of the same edge; once "
+        "other pending farm work finishes, its SELECT grid will pick up the "
+        "`pgsysinfo` thread points (**20** / **40** / **80**) so pgbench can pin "
+        "better to cores and threads — same fairness fix as court. Apple is "
+        "milder still. After the **14900K** left the farm, AMD chips moved onto "
+        "the top of this board. Spark is still a relatively raw CPU platform "
+        "here, so the power-of-two-only grid undersells it.\n\n"
         f"{FACES_END}"
     )
 
