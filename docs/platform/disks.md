@@ -8,6 +8,14 @@ nav_order: 0
 
 # Farm disks
 
+![OSM peak disk R/W with rated sequential ceiling]({{ '/images/osm-disk-history-rated.png' | relative_url }})
+
+One-time history summary (not kept current): OSM peak disk R/W by x86 CPU across PostgreSQL majors, with the dashed line showing the manufacturer-rated sequential read of the drive that owned each major’s **published** cycle. PG17 pins to Crucial T705; Fury G5 arrived late and belongs with SK51 on 18–19. The live [leaderboard disk chart]({{ '/leaderboards/' | relative_url }}) stays retrospective — best peaks even after release write-ups. Built once via `reports/osm-disk-history.py --rated-ceiling`.
+
+That Gen5 handoff was messy. The [PG17 write-up](https://www.crunchydata.com/blog/loading-the-world-openstreetmap-import-in-under-4-hours)’s ~11 GB/s spike was the **i9-14900K** on T705 — then the chip’s voltage failure hit just as PCIe 5.0 drives arrived, when those clocks mattered most. The 14900K left the farm mid-evaluation and is omitted from the x86 series. The nearby PG17 peak still drawn here is the **i5-13600K** just under 11 GB/s: close for shape, not the same run, and a weaker host for pushing Gen5.
+
+## Catalog
+
 NVMe (and one RAID) devices that appear in `tests.server_disk` / set names on the pgbent farm. **Rated** speeds are manufacturer sequential claims for the capacity used here — marketing ceilings, not Postgres throughput. Labels in the results DB are short report names; `dmirow` sometimes stamps a longer string that gets trimmed.
 
 `server_disk` is copied from the `server` row at run time (or set intentionally for remote client/server studies). Rising’s blank history was backfilled from set names in `regress/rising-disk-backfill.sql`.
@@ -20,15 +28,6 @@ Predecessor — **PG13 / Inland Gen4** ([Crunchy, Sep 2020](https://www.crunchyd
 
 Later — **PG17 / T705 Gen5** ([Crunchy, Nov 2024](https://www.crunchydata.com/blog/loading-the-world-openstreetmap-import-in-under-4-hours)): OSM under four hours and the first published Gen5 disk chapter on the farm.
 
-## OSM disk history charts
-
-Two leaderboard graphs share the same CPU peak series but differ in what the storage axis means:
-
-- **Retrospective** ([osm-disk-history.png]({{ '/images/osm-disk-history.png' | relative_url }})) — best peak each CPU eventually reached on that PostgreSQL major, including hardware that arrived after the release write-up.
-- **At-the-moment** ([osm-disk-history-rated.png]({{ '/images/osm-disk-history-rated.png' | relative_url }})) — overlays the manufacturer-rated sequential read of the drive that owned each major’s published cycle (`reports/osm-disk-history.py --rated-ceiling`). PG17 pins to the Crucial T705 from the write-up above; Fury G5 only arrived late and belongs on 18–19 with SK51.
-
-That Gen5 handoff was messy. The blog’s ~11 GB/s spike was the **i9-14900K** on T705 — then the chip’s voltage failure hit just as PCIe 5.0 drives arrived, when those clocks mattered most. The 14900K left the farm mid-evaluation and is omitted from the x86 history series. The nearby PG17 peak still drawn on the charts is the **i5-13600K** just under 11 GB/s: close for shape, not the same run, and a weaker host for pushing Gen5.
-
 ## Lab NVMe (chronological)
 
 | Farm label | Product | PCIe | Rated seq. read / write | First | Last | Notes |
@@ -37,7 +36,7 @@ That Gen5 handoff was messy. The blog’s ~11 GB/s spike was the **i9-14900K**
 | **Inland Performance 2TB** | Inland Performance / “Inland 4.0” (Phison E16 + DRAM; dmirow `EGFM11.0`) | **4.0** ×4 | **5,000 / 4,300** MB/s ([Hardware Corner](https://www.hardware-corner.net/ssd-database/Inland-Performance/)) | 2020-09-05 | 2023-06-08 | Rising workhorse; first PCIe **4.0** on the farm (“Inland 4.0” in set names). First published results: [PG13 on Ubuntu](https://www.crunchydata.com/blog/postgresql-13-upgrade-and-performance-check-on-ubuntu). Not the retail **Inland Platinum** Gen3 QLC SKU. |
 | **Sabrent Rocket 4 Plus 2TB** | Sabrent Rocket 4 Plus 2 TB | **4.0** ×4 | **7,100 / 6,600** MB/s | 2022-02-24 | 2022-08-25 | Rising. Set names say Rocket / Rocket Plus / Rocket 4 Plus / Rocket 2TB — all this drive, not an original Rocket. |
 | **SK41 2TB** | SK hynix Platinum **P41** 2 TB | **4.0** ×4 | **7,000 / 6,500** MB/s | 2022-10-30 | 2025-07-08 | Siren and twilight (and a few friday remote labels). |
-| **Crucial T705 2TB** | Crucial T705 2 TB | **5.0** ×4 | **14,500 / 12,700** MB/s | 2024-08-16 | 2025-10-09 | First Gen5; published PG17 disk story ([Crunchy](https://www.crunchydata.com/blog/loading-the-world-openstreetmap-import-in-under-4-hours)). See Gen5 / 14900K note above. |
+| **Crucial T705 2TB** | Crucial T705 2 TB | **5.0** ×4 | **14,500 / 12,700** MB/s | 2024-08-16 | 2025-10-09 | First Gen5; published PG17 disk story ([Crunchy](https://www.crunchydata.com/blog/loading-the-world-openstreetmap-import-in-under-4-hours)). See chart note above. |
 | **FireCuda 530 4TB** | Seagate FireCuda 530 4 TB | **4.0** ×4 | **~7,300** MB/s read (farm note) | 2025-03-26 | 2025-06-25 | Short siren era (2025). |
 | **SK51 2TB** | SK hynix Platinum **P51** 2 TB | **5.0** ×4 | **14,700 / 13,400** MB/s | 2025-06-28 | 2026-11-18 | Current siren disk. |
 | **Fury G5 4TB** | Kingston FURY Renegade **G5** 4 TB | **5.0** ×4 | **14,800 / 14,000** MB/s | 2025-10-15 | 2026-11-19 | Current twilight disk. |
