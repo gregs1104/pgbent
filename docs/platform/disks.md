@@ -48,7 +48,7 @@ Later — **PG17 / T705 Gen5** ([Crunchy, Nov 2024](https://www.crunchydata.com/
 | **IronWolf 510x4** | 4× ~512 GB Seagate IronWolf **510** on a PCIe passthrough RAID controller (**2 TB** total). Single 480 GB IronWolf 510: up to **~2,650 / 600** MB/s; aggregate depends on the RAID card. | **3.0** ×4 per drive | short rising window | 2021-05-13 | 2021-05-17 |
 | **Apple AP1024R** | decade internal Apple SSD (dmirow sometimes `APPLE SSD … - AppleAPFSMedia`) | Apple fabric | not a PCIe-generation story in the Linux sense | 2021-10-29 | 2025-12-02 |
 | **Apple AP2048Z** | abbey / friday (and occasional remote stamps) | Apple fabric | same | 2025-01-23 | 2026-11-20 |
-| **Samsung MZALC4T0HBL1-00B07** | Court / DGX Spark OEM 3.7 TB NVMe — see [NVMe interrupt coalescing]({{ '/platform/nvme-coalescing/' | relative_url }}) | OEM (Spark platform) | firmware default coalescing, not Gen rating, was the Relations story | 2026-04-12 | 2026-11-22 |
+| **Samsung MZALC4T0HBL1-00B07** | Court / DGX Spark OEM 3.7 TB NVMe — see [NVMe interrupt coalescing]({{ '/platform/nvme-coalescing/' | relative_url }}) | **5.0** ×4 | firmware default coalescing, not Gen rating, was the Relations story | 2026-04-12 | 2026-11-22 |
 
 ## Label aliases
 
