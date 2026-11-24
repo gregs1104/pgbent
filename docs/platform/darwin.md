@@ -12,12 +12,12 @@ nav_order: 3
 
 Homebrew’s `brew services` installs a LaunchAgent (`sh.brew.postgresql@N`) that starts Postgres under launchd. On Apple Silicon that agent runs with a **QoS clamp of `THREAD_QOS_UTILITY`**, which drops the process to **I/O throttle tier 1 (STANDARD)** instead of tier 0 (IMPORTANT). Disk reads look like background work relative to the desktop.
 
-| How Postgres is started | QoS clamp | I/O tier | select-scatter-64 set | c=1 | c=32 |
-|-------------------------|-----------|----------|----------------------|-----|------|
-| `brew services` | `THREAD_QOS_UTILITY` | tier 1 | **13** (clamped) | 85–115 | 2331–2400 |
-| `pg_ctl` from ssh/login | none | tier 0 | **20** (unclamped) | 86–139 | 3188–3368 |
+| How Postgres is started | QoS clamp | I/O tier | c=1 | c=32 | OSM Relations/s |
+|-------------------------|-----------|----------|-----|------|-----------------|
+| `brew services` | `THREAD_QOS_UTILITY` | tier 1 | 85–115 | 2331–2400 | **~1,360** |
+| `pg_ctl` from ssh/login | none | tier 0 | 86–139 | 3188–3368 | **~1,930** |
 
-Published cold/hot grids (scale 17500, durable face). Unclamping is about **+20% at c=1 hot** and **+40% at c=32** versus the clamped set. An earlier ad-hoc restart A/B (`results/logs/darwin-qos-ab/`) saw a similar direction at lower absolute TPS. Intermittent “Darwin looks fine / then doesn’t” OSM behavior matches sometimes using `brew services` and sometimes a manual `pg_ctl`.
+Published cold/hot select-scatter-64 grids (scale 17500, durable face) plus durable OSM Relations on the same I/O classes. Unclamping is about **+20% at c=1 hot**, **+40% at c=32**, and **~1.43×** Relations/s (~10 600 s → ~7 500 s). An earlier ad-hoc restart A/B (`results/logs/darwin-qos-ab/`) saw a similar direction at lower absolute TPS. Intermittent “Darwin looks fine / then doesn’t” OSM behavior matches sometimes using `brew services` and sometimes a manual `pg_ctl`.
 
 ### Startup: tier 1 (brew / LaunchAgent)
 
