@@ -12,8 +12,8 @@ nav_order: 3
 
 Homebrew’s `brew services` installs a LaunchAgent (`sh.brew.postgresql@N`) that starts Postgres under launchd. On Apple Silicon that agent runs with a **QoS clamp of `THREAD_QOS_UTILITY`**, which drops the process to **I/O throttle tier 1 (STANDARD)** instead of tier 0 (IMPORTANT). Disk reads look like background work relative to the desktop.
 
-| How Postgres is started | QoS clamp | I/O tier | c=1 | c=32 | OSM Relations/s |
-|-------------------------|-----------|----------|-----|------|-----------------|
+| How Postgres is started | QoS clamp | I/O tier | select-64 c=1 | select-64 c=32 | OSM Relations/s |
+|-------------------------|-----------|----------|---------------|----------------|-----------------|
 | `brew services` | `THREAD_QOS_UTILITY` | tier 1 | 85–115 | 2331–2400 | **~1,360** |
 | `pg_ctl` from ssh/login | none | tier 0 | 86–139 | 3188–3368 | **~1,930** |
 
