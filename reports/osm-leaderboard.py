@@ -158,11 +158,13 @@ def _marker_x_gap(gap: float = 12) -> float:
 
 
 JOULES_LABEL_OVERRIDES = {
-    # ~128 Gi board: 9950X high-right; 9600X / i5 share the mid band.
-    "i5-13600K": LabelOffset(-_marker_x_gap(), -8, ha="right", va="top"),
-    "R9 9950X": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
+    # ~128 Gi board: 9950X above, nudged left of center for the right edge;
+    # M4 under the dot, marched right from center so the long string clears
+    # the left grid; i5 left of dot, vertically centered.
+    "i5-13600K": LabelOffset(-_marker_x_gap(), 0, ha="right", va="center"),
+    "R9 9950X": LabelOffset(-10, 12, ha="center", va="bottom"),
     "R5 9600X": LabelOffset(_marker_x_gap(), 8, ha="left", va="bottom"),
-    "Apple M4 Max Studio": LabelOffset(0, 12, ha="center", va="bottom"),
+    "Apple M4 Max Studio": LabelOffset(28, -16, ha="center", va="top"),
     "NVIDIA P4242": LabelOffset(_marker_x_gap(), 0, ha="left", va="center"),
 }
 
