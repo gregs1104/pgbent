@@ -2,6 +2,17 @@
 # ClickBench workload for pgbench-tools automation (pgbent 2.0).
 # SQL/dataset stay under CLICKBENCH_DIR (default ~/sources/clickbench);
 # util/clickbench fetches them — not vendored (CC BY-NC-SA 4.0).
+#
+# Split like NEWINIT + SELECT: load and query are separate tests so metview
+# and parallel-worker studies can target each phase.
+#   SCRIPT=clickbench-load  — COPY + VACUUM (maintenance workers)
+#   SCRIPT=clickbench       — 43 queries (gather workers)
+#
+# Prepare:
+#   wl/clickbench
+# Then either one-shot pair:
+#   wl/clickbench-pair
+# or flip SCRIPT in params and ./runset per phase.
 
 . ./config
 
@@ -16,11 +27,13 @@ SETTIMES=1
 SCALES="1"
 SCALE="1"
 BENCHBIN=$BASEDIR/util/clickbench
-SCRIPT="clickbench"
 TESTDB="clickbench"
 SKIPINIT=1
 CLICKBENCH_DIR=${CLICKBENCH_DIR}
 EOF
+
+# Default SCRIPT for a lone ./runset is query; pair driver sets load first.
+echo 'SCRIPT="clickbench"' >> params
 
 mkdir -p "$CLICKBENCH_DIR"
 CLICKBENCH_DIR="$CLICKBENCH_DIR" "$BASEDIR/util/clickbench" install
@@ -28,3 +41,4 @@ CLICKBENCH_DIR="$CLICKBENCH_DIR" "$BASEDIR/util/clickbench" fetch
 
 ./newset "ClickBench"
 #./runset
+# wl/clickbench-pair

@@ -1,5 +1,5 @@
 #!/bin/bash
-# ClickBench helper for pgbent: install (SQL), fetch (dataset), run (load+queries).
+# ClickBench helper for pgbent: install / fetch / load / query / run.
 #
 # Does not redistribute ClickBench. install pulls create.sql / queries.sql from a
 # pinned upstream commit. ClickBench is CC BY-NC-SA 4.0 (Alexey Milovidov /
@@ -7,10 +7,17 @@
 #
 # Layout (V2): ~/sources/clickbench/  — symlink-friendly next to ~/sources/osm
 #
+# Phases (NEWINIT-style split for metrics graphs + parallel studies):
+#   load   — drop/create DB, COPY, VACUUM ANALYZE → Load time / Data size
+#            (stresses max_parallel_maintenance_workers)
+#   query  — 43× timed queries on existing hits → [t1,t2,t3], lines
+#            (stresses max_parallel_workers_per_gather)
+#   run    — load then query (one-shot; prefer split cells for studies)
+#
+# benchwarmer as BENCHBIN: SCRIPT=clickbench-load → load; SCRIPT=clickbench → query.
+#
 # Usage:
-#   util/clickbench install
-#   util/clickbench fetch
-#   util/clickbench run
+#   util/clickbench install|fetch|load|query|run
 #
 # Env overrides:
 #   CLICKBENCH_DIR      default $HOME/sources/clickbench
@@ -32,11 +39,13 @@ HITS_URL="https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz"
 
 usage() {
   cat <<EOF
-Usage: $0 {install|fetch|run}
+Usage: $0 {install|fetch|load|query|run}
 
   install  Fetch postgresql/create.sql and queries.sql into CLICKBENCH_DIR
   fetch    Download and decompress hits.tsv into CLICKBENCH_DIR
-  run      Load hits + run queries; print ClickBench-shaped timing lines
+  load     Drop/create TESTDB, COPY hits, VACUUM ANALYZE (own tests row)
+  query    Run 43 queries × tries on existing hits (own tests row)
+  run      load then query (one-shot; studies should split)
 
 CLICKBENCH_DIR=${CLICKBENCH_DIR}
 CLICKBENCH_COMMIT=${CLICKBENCH_COMMIT}
@@ -98,6 +107,24 @@ load_pg_config() {
   else
     TESTPSQL=(psql -h "$TESTHOST" -U "$TESTUSER" -p "$TESTPORT" -d "$TESTDB")
     TESTPSQL_MAINT=(psql -h "$TESTHOST" -U "$TESTUSER" -p "$TESTPORT" -d postgres)
+  fi
+}
+
+require_sources() {
+  local need_queries=${1:-1}
+  local create="$CLICKBENCH_DIR/create.sql"
+  local queries="$CLICKBENCH_DIR/queries.sql"
+  local hits="$CLICKBENCH_DIR/hits.tsv"
+  local f
+  for f in "$create" "$hits"; do
+    if [ ! -f "$f" ]; then
+      echo "error: missing $f — run install and fetch first" >&2
+      exit 1
+    fi
+  done
+  if [ "$need_queries" -eq 1 ] && [ ! -f "$queries" ]; then
+    echo "error: missing $queries — run install first" >&2
+    exit 1
   fi
 }
 
@@ -164,22 +191,15 @@ psql_time_seconds() {
   awk -v ms="$time_ms" 'BEGIN { printf "%.3f\n", ms / 1000 }'
 }
 
-cmd_run() {
+cmd_load() {
   need_cmd psql
-  need_cmd awk
   load_pg_config
+  require_sources 0
 
   local create="$CLICKBENCH_DIR/create.sql"
-  local queries="$CLICKBENCH_DIR/queries.sql"
   local hits="$CLICKBENCH_DIR/hits.tsv"
-  for f in "$create" "$queries" "$hits"; do
-    if [ ! -f "$f" ]; then
-      echo "error: missing $f — run install and fetch first" >&2
-      exit 1
-    fi
-  done
 
-  echo "ClickBench run: db=${TESTDB} host=${TESTHOST} dir=${CLICKBENCH_DIR}" >&2
+  echo "ClickBench load: db=${TESTDB} host=${TESTHOST} dir=${CLICKBENCH_DIR}" >&2
   echo "commit $(cat "$CLICKBENCH_DIR/COMMIT" 2>/dev/null || echo unknown)" >&2
 
   # Full drop/create is intentional: kicks metric collectors off TESTDB (they
@@ -195,7 +215,6 @@ cmd_run() {
     "${TESTPSQL_MAINT[@]}" -v ON_ERROR_STOP=1 -c \
       "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '${TESTDB}' AND pid <> pg_backend_pid()" \
       >/dev/null
-    # Brief pause so terminated backends release locks before dropdb.
     sleep 1
     dropdb "${dropdb_args[@]}"
   fi
@@ -224,10 +243,27 @@ EOF
   local data_bytes
   data_bytes=$("${TESTPSQL[@]}" -Atqc "SELECT pg_database_size(current_database())")
   echo "Data size: ${data_bytes}"
+  echo "load ok" >&2
+}
+
+cmd_query() {
+  need_cmd psql
+  need_cmd awk
+  load_pg_config
+  require_sources 1
+
+  local queries="$CLICKBENCH_DIR/queries.sql"
+
+  echo "ClickBench query: db=${TESTDB} host=${TESTHOST} dir=${CLICKBENCH_DIR}" >&2
+  echo "commit $(cat "$CLICKBENCH_DIR/COMMIT" 2>/dev/null || echo unknown)" >&2
+
+  if ! "${TESTPSQL[@]}" -Atqc "SELECT 1 FROM hits LIMIT 1" >/dev/null 2>&1; then
+    echo "error: hits table missing/empty — run load (SCRIPT=clickbench-load) first" >&2
+    exit 1
+  fi
 
   local qn=0
   local line sql t i times
-  # One query per line in upstream queries.sql
   while IFS= read -r line || [ -n "$line" ]; do
     [ -z "$line" ] && continue
     sql=$line
@@ -237,7 +273,6 @@ EOF
       t=$(psql_time_seconds "$sql")
       times+=("$t")
     done
-    # ClickBench report line: [try1, try2, try3],
     printf '['
     for i in "${!times[@]}"; do
       if [ "$i" -gt 0 ]; then printf ', '; fi
@@ -246,20 +281,44 @@ EOF
     printf '],\n'
   done <"$queries"
 
-  echo "run ok (${qn} queries × ${CLICKBENCH_TRIES} tries)" >&2
+  echo "query ok (${qn} queries × ${CLICKBENCH_TRIES} tries)" >&2
+}
+
+cmd_run() {
+  cmd_load
+  cmd_query
+  echo "run ok (load + query)" >&2
+}
+
+# When benchwarmer passes -f …, pick phase from SCRIPT in params.
+benchwarmer_phase() {
+  load_pg_config
+  case "${SCRIPT:-}" in
+    clickbench-load*) cmd_load ;;
+    clickbench-all*|clickbench-run*) cmd_run ;;
+    clickbench*) cmd_query ;;
+    *)
+      # No SCRIPT yet (manual CLI with stray args) — full run.
+      cmd_run
+      ;;
+  esac
 }
 
 main() {
-  # benchwarmer invokes BENCHBIN with pgbench-style args; treat that as run.
-  local cmd=${1:-run}
+  local cmd=${1:-}
   case "$cmd" in
     install) cmd_install ;;
     fetch) cmd_fetch ;;
+    load) cmd_load ;;
+    query) cmd_query ;;
     run) cmd_run ;;
     -h|--help|help) usage; exit 0 ;;
+    "" )
+      usage
+      exit 1
+      ;;
     -*)
-      # e.g. -f tests/clickbench.sql … from benchwarmer
-      cmd_run
+      benchwarmer_phase
       ;;
     *)
       echo "error: unknown command: $cmd" >&2

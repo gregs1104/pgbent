@@ -1,0 +1,23 @@
+#!/bin/bash -ex
+# ClickBench load then query as two tests in the current set (NEWINIT pattern).
+# Expects params already prepared by wl/clickbench (BENCHBIN, TESTDB, …).
+
+. ./config
+. ./params
+
+if [ -z "${BENCHBIN}" ] || [ ! -x "${BENCHBIN}" ]; then
+  echo "error: run wl/clickbench first (BENCHBIN not set)" >&2
+  exit 1
+fi
+
+cp params params.orig
+
+echo 'SCRIPT="clickbench-load"' >> params
+./runset
+
+cp params.orig params
+echo 'SCRIPT="clickbench"' >> params
+./runset
+
+cp params.orig params
+echo "clickbench-pair: load + query finished"

@@ -1133,7 +1133,7 @@ Aim for **at least three finished runs** on a given config before judging the re
 |----------|------------|------------------------|
 | OSM planet load (loop) | `wl/osm-import`, then `nohup util/repeat-gis &` | `osm2pgsql%` |
 | OSM one-shot | `util/newgis` (if needed), then `nohup ./runset &` — not `repeat-gis` + `complete` | `osm2pgsql%` |
-| ClickBench | `wl/clickbench`, then `./runset` (SQL/data under `~/sources/clickbench`) | `clickbench` |
+| ClickBench | `wl/clickbench`, then `wl/clickbench-pair` (or per-phase `./runset`) | `clickbench-load` / `clickbench` |
 | pgbench SELECT grid | `wl/select-grid && ./runset` | `select` |
 | pgbench init (build time) | Recorded automatically by `runset` before each scale when `NEWINIT=1` | `:-i%` |
 | Single point | `./benchwarmer <clients>` | as configured |
@@ -1153,41 +1153,49 @@ still land in `tests` + `artifacts` like OSM. First example: **ClickBench**
    (e.g. `~/sources/clickbench`, `~/sources/osm`). During cutover, keep
    `~/osm` working via symlink (`sources/osm` → old tree) so `rel-1` and
    current `PLANET_FILE` defaults still work.
-3. **`util/<name>` helper** with `install` / `fetch` / `run`. When
+3. **`util/<name>` helper** with `install` / `fetch` / phase commands. When
    `benchwarmer` invokes it as `BENCHBIN`, first args look like `-f …` —
-   treat that as **`run`**, ignore pgbench-shaped flags. Source
-   `../../../config` + `../../../params` from `results/<server>/<test>/`
+   ignore pgbench-shaped flags and pick the phase from `SCRIPT` in params.
+   Source `../../../config` + `../../../params` from `results/<server>/<test>/`
    (same as `osm-importer`).
-4. **`run` must own the DB lifecycle for package testing.** Intentional
-   `dropdb`/`createdb` of `TESTDB` (not in-place table rebuild):
-   - `pg_terminate_backend` on that DB first so metric collectors are
-     kicked off — they must reconnect cleanly (collector cleanup test).
-   - Fresh `CREATE EXTENSION …` after `createdb` (no `IF NOT EXISTS`) so
-     rc→final / major package breaks in extensions show up.
-   - Emit a stable, parseable log: ClickBench uses `Load time:`, `Data size:`,
-     then 43× `[t1, t2, t3],` lines (stdout/stderr both land in `results.txt`).
+4. **Split load vs query into two tests (NEWINIT pattern).** pgbench already
+   records init as its own `:-i` row so metview can show the build; do the
+   same for external kits:
+   - **`clickbench-load`** — intentional `dropdb`/`createdb` of `TESTDB`,
+     `pg_terminate_backend` first (collector reconnect test), fresh
+     `CREATE EXTENSION` (package smoke), COPY + `VACUUM ANALYZE`. Emit
+     `Load time:` / `Data size:`. Stresses
+     `max_parallel_maintenance_workers` (and indexes if using an indexed face).
+   - **`clickbench`** — queries only on existing `hits`; emit 43×
+     `[t1, t2, t3],`. Stresses `max_parallel_workers_per_gather`.
+   - CLI `run` still does both for smoke; **studies use the split**.
+   - Driver: `wl/clickbench` prepares sources + `newset`; `wl/clickbench-pair`
+     runs load then query in the same set (like `NEWINIT=1` then SELECT).
 5. **`util/results-parse`** (renamed from `pgbench-init-parse`; old name is a
-   shim). Add a third path keyed on `script` prefix (`clickbench*`) → JSON
-   for `tests.artifacts` (`load_time`, `data_size`, `query_count`, `queries`).
-   `benchwarmer` already calls `results-parse` + `art-import`.
-6. **Incomplete-run gate in `benchwarmer`.** Mirror OSM: do not stamp
-   `end_time` / import artifacts unless a success marker is present
-   (`Load time:` for ClickBench; `osm2pgsql took … overall` for OSM).
-7. **`wl/<name>`** writes `params` (`BENCHBIN`, `SCRIPT`, `TESTDB`,
-   `SKIPINIT=1`, `CLICKBENCH_DIR=…`), runs `install`/`fetch`, `./newset '…'`.
-   Leave `./runset` commented or run it explicitly for one-shot cells.
+   shim). Path keyed on `script` prefix (`clickbench*`) → JSON
+   (`load_time` / `data_size` and/or `queries` + `query_count`).
+6. **Incomplete-run gate in `benchwarmer`.** `clickbench-load*` needs
+   `Load time:`; other `clickbench*` needs a timing-array line. OSM still
+   needs `osm2pgsql took … overall`.
+7. **Parallel-worker study (first real use of the split).** One named set;
+   ladder pool + ops knobs (`max_parallel_workers`,
+   `max_parallel_workers_per_gather`, `max_parallel_maintenance_workers`)
+   against the conf snippets that currently hard-code **8** without a study.
+   Read **load** cells for maintenance parallel; **query** cells for gather.
+   Pair with OSM index/overall on the same GUC steps when the matrix is open.
+   Keep Study 3 packing / `maintenance_work_mem` fixed while doing this.
 8. **Ship via git, then farm pull.** Commit `util/` + `wl/` + parser +
    `benchwarmer` bits on `main`; on the box
    `git stash && git pull && git stash apply` (resolve `config`/`params`
    toward the host). Do not leave scp’d one-off copies as the source of truth.
-9. **Validate.** Confirm `tests.artifacts` keys and `query_count` (or OSM
-   equivalents). Wipe aborted debug cells with `./cleanup_singlevalue <test>`
-   (delete `timing` first if the FK blocks). Court discarded ClickBench
-   tests **329** (dropdb vs collectors) and **330** (in-place experiment);
-   keeper is **331**.
+9. **Validate.** Confirm `tests.artifacts` keys per phase. Wipe aborted debug
+   cells with `./cleanup_singlevalue <test>` (delete `timing` first if the FK
+   blocks). Court discarded ClickBench tests **329**/**330**; combined-run
+   keeper is **331** (pre-split).
 
 When adding the next kit (same pattern): new `util/` + `wl/` + `results-parse`
-branch + incomplete marker + sources dir; reuse collectors/`art-import`.
+branch + incomplete marker + sources dir + load/query split when build vs
+runtime stress different knobs; reuse collectors/`art-import`.
 
 ### Wiping bad tests
 

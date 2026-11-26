@@ -4,7 +4,7 @@
 # Paths:
 #   :-i*          — pgbench -i init timing (PG13+)
 #   osm2pgsql*    — osm2pgsql load summary
-#   clickbench*   — ClickBench-shaped Load time / Data size / [t1, t2, t3], lines
+#   clickbench*   — ClickBench load and/or query lines (Load time / Data size / [t1,t2,t3],)
 #
 # Sample pgbench -i input:
 #   done in 17.24 s (drop tables 0.03 s, create tables 0.00 s, client-side generate 11.68 s, primary keys 5.52 s).
