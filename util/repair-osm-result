@@ -9,7 +9,7 @@
 # summary ("osm2pgsql took … overall").  Does not re-run the load.
 #
 # Steps:
-#   1. Parse results.txt → results.json (util/pgbench-init-parse)
+#   1. Parse results.txt → results.json (util/results-parse)
 #   2. UPDATE tests.artifacts for that exact server/test (art-import will
 #      not replace a populated cell; this is the fill-from-results.txt path)
 #   3. Recompute OSM TPS (kNodes/s) when tps is null/0
@@ -61,7 +61,7 @@ fi
 echo "Repairing ${SERVER}/${TESTNUM} script=${SCRIPT}"
 pushd "$DIR" >/dev/null
 
-"$BASEDIR/util/pgbench-init-parse" results.txt "$SCRIPT" > results.json
+"$BASEDIR/util/results-parse" results.txt "$SCRIPT" > results.json
 if [ ! -s results.json ] || [ "$(cat results.json)" = "{}" ]; then
   echo "Parse produced empty JSON — check script name vs log format" >&2
   popd >/dev/null

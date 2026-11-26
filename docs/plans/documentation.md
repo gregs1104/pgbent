@@ -108,7 +108,7 @@ End-to-end guide for Postgres-side metrics collection.
 
 - [ ] **Capture scripts** — periodic SQL attached to a run (`pg_stat_*`, `pg_buffercache`, custom)
 - [ ] **Parsing scripts** — shell/Python that normalizes collector output
-  - Existing: `metrics2csv`, `util/pgbench-init-parse`, `util/power-sensors-parse`
+  - Existing: `metrics2csv`, `util/results-parse`, `util/power-sensors-parse`
 - [ ] **Intermediate storage**
   - [ ] Multi-column vs single-value metric formats (`test_stat_database` wide rows vs `test_metrics_data` name/value pairs)
   - Existing: `init/resultdb.sql` (`test_stat_database`, `test_statio`, `test_bgwriter`, `test_metrics_data`)

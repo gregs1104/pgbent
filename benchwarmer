@@ -494,10 +494,10 @@ $RESULTPSQL -c "\copy test_statio FROM 'statio.csv' WITH DELIMITER ',' CSV HEADE
 $TESTPSQL   -c "\copy (SELECT '$SERVERNAME' AS server,'$TEST' AS test, N.nspname AS schemaname,c.relname,8192 * count(*) AS bytes, round(avg(usagecount)::numeric,2) AS avg_usage,max(usagecount) AS max_usage,isdirty FROM pg_class c LEFT JOIN pg_namespace N ON (N.oid = C.relnamespace) INNER JOIN pg_buffercache b ON b.relfilenode = c.relfilenode INNER JOIN pg_database d ON (b.reldatabase = d.oid AND d.datname = current_database()) WHERE NOT N.nspname IN ('pg_catalog','pg_toast','information_schema') GROUP BY N.nspname,c.relname,isdirty UNION ALL SELECT '$SERVERNAME','$TEST',NULL::text,NULL::text,8192 * count(*),NULL::numeric,NULL::smallint,NULL::boolean FROM pg_buffercache WHERE relfilenode IS NULL) TO 'buffercache.csv' WITH DELIMITER ',' CSV HEADER"
 $RESULTPSQL -c "\copy test_buffercache FROM 'buffercache.csv' WITH DELIMITER ',' CSV HEADER"
 
-# Import test artifacts from results.  So far this only gives useful output
-# for the pgbench init case and osm2pgsql.
+# Import test artifacts from results.  Useful for pgbench init, osm2pgsql,
+# and clickbench (util/results-parse).
 
-$BASEDIR/util/pgbench-init-parse results.txt "${SCRIPT}" > results.json
+$BASEDIR/util/results-parse results.txt "${SCRIPT}" > results.json
 if [ "$OSM_DONE" -eq 1 ] && [ -s results.json ] && [ "$(cat results.json)" != "{}" ]; then
   $RESULTPSQL -v server="${SERVERNAME}" -v test="${TEST}" -f $BASEDIR/util/art-import.sql
 else

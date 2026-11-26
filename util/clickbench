@@ -1,0 +1,246 @@
+#!/bin/bash
+# ClickBench helper for pgbent: install (SQL), fetch (dataset), run (load+queries).
+#
+# Does not redistribute ClickBench. install pulls create.sql / queries.sql from a
+# pinned upstream commit. ClickBench is CC BY-NC-SA 4.0 (Alexey Milovidov /
+# ClickHouse); attribution: https://github.com/ClickHouse/ClickBench
+#
+# Layout (V2): ~/sources/clickbench/  — symlink-friendly next to ~/sources/osm
+#
+# Usage:
+#   util/clickbench install
+#   util/clickbench fetch
+#   util/clickbench run
+#
+# Env overrides:
+#   CLICKBENCH_DIR      default $HOME/sources/clickbench
+#   CLICKBENCH_COMMIT   default pinned SHA below
+#   CLICKBENCH_TRIES    query repeats (default 3)
+#   TESTHOST TESTPORT TESTUSER TESTDB  — or source ./config from repo cwd
+
+set -euo pipefail
+
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
+
+# Pin so farm runs stay comparable; bump deliberately when re-basing SQL.
+CLICKBENCH_COMMIT="${CLICKBENCH_COMMIT:-90900787a97c25afc01559ccdc3487d2c81791c5}"
+CLICKBENCH_DIR="${CLICKBENCH_DIR:-$HOME/sources/clickbench}"
+CLICKBENCH_TRIES="${CLICKBENCH_TRIES:-3}"
+UPSTREAM_RAW="https://raw.githubusercontent.com/ClickHouse/ClickBench/${CLICKBENCH_COMMIT}"
+HITS_URL="https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz"
+
+usage() {
+  cat <<EOF
+Usage: $0 {install|fetch|run}
+
+  install  Fetch postgresql/create.sql and queries.sql into CLICKBENCH_DIR
+  fetch    Download and decompress hits.tsv into CLICKBENCH_DIR
+  run      Load hits + run queries; print ClickBench-shaped timing lines
+
+CLICKBENCH_DIR=${CLICKBENCH_DIR}
+CLICKBENCH_COMMIT=${CLICKBENCH_COMMIT}
+EOF
+}
+
+need_cmd() {
+  command -v "$1" >/dev/null 2>&1 || {
+    echo "error: required command not found: $1" >&2
+    exit 1
+  }
+}
+
+download() {
+  # $1=url $2=dest
+  if command -v curl >/dev/null 2>&1; then
+    curl -fL --continue-at - -o "$2" "$1"
+  elif command -v wget >/dev/null 2>&1; then
+    wget --continue --progress=dot:giga -O "$2" "$1"
+  else
+    echo "error: need curl or wget" >&2
+    exit 1
+  fi
+}
+
+load_pg_config() {
+  # Prefer cwd config (benchwarmer / farm), else repo-root config defaults.
+  # Env TESTDB/TESTPORT/... set before invoke win over config — do not drop pgbench.
+  local env_host="${TESTHOST-}"
+  local env_port="${TESTPORT-}"
+  local env_user="${TESTUSER-}"
+  local env_db="${TESTDB-}"
+  local env_sockets="${SOCKETS-}"
+  if [ -f ./config ]; then
+    # shellcheck disable=SC1091
+    . ./config
+  elif [ -f "$REPO_ROOT/config" ]; then
+    # shellcheck disable=SC1091
+    . "$REPO_ROOT/config"
+  fi
+  TESTHOST="${env_host:-${TESTHOST:-localhost}}"
+  TESTPORT="${env_port:-${TESTPORT:-5432}}"
+  TESTUSER="${env_user:-${TESTUSER:-$USER}}"
+  # Default away from config's pgbench so run is safe on a farm box.
+  TESTDB="${env_db:-clickbench}"
+  SOCKETS="${env_sockets:-${SOCKETS:-0}}"
+  if [ "${SOCKETS}" = "1" ]; then
+    TESTPSQL=(psql -U "$TESTUSER" -d "$TESTDB")
+    TESTPSQL_MAINT=(psql -U "$TESTUSER" -d postgres)
+  else
+    TESTPSQL=(psql -h "$TESTHOST" -U "$TESTUSER" -p "$TESTPORT" -d "$TESTDB")
+    TESTPSQL_MAINT=(psql -h "$TESTHOST" -U "$TESTUSER" -p "$TESTPORT" -d postgres)
+  fi
+}
+
+cmd_install() {
+  need_cmd curl
+  mkdir -p "$CLICKBENCH_DIR"
+  echo "Fetching ClickBench SQL @ ${CLICKBENCH_COMMIT} → ${CLICKBENCH_DIR}"
+  download "${UPSTREAM_RAW}/postgresql/create.sql" "$CLICKBENCH_DIR/create.sql"
+  download "${UPSTREAM_RAW}/postgresql/queries.sql" "$CLICKBENCH_DIR/queries.sql"
+  cat >"$CLICKBENCH_DIR/NOTICE" <<EOF
+ClickBench SQL files (create.sql, queries.sql) fetched from:
+  https://github.com/ClickHouse/ClickBench
+  commit ${CLICKBENCH_COMMIT}
+  path   postgresql/
+
+Licensed under Creative Commons Attribution-NonCommercial-ShareAlike 4.0
+International (CC BY-NC-SA 4.0). Not redistributed as part of pgbent's
+BSD-3-Clause tree; kept under ${CLICKBENCH_DIR} for local use with attribution.
+EOF
+  printf '%s\n' "$CLICKBENCH_COMMIT" >"$CLICKBENCH_DIR/COMMIT"
+  wc -l "$CLICKBENCH_DIR/create.sql" "$CLICKBENCH_DIR/queries.sql"
+  echo "install ok"
+}
+
+cmd_fetch() {
+  mkdir -p "$CLICKBENCH_DIR"
+  cd "$CLICKBENCH_DIR"
+  if [ -f hits.tsv ]; then
+    echo "hits.tsv already present in ${CLICKBENCH_DIR} ($(du -h hits.tsv | awk '{print $1}'))"
+    echo "fetch ok (skipped download)"
+    return 0
+  fi
+  echo "Downloading hits.tsv.gz → ${CLICKBENCH_DIR}"
+  download "$HITS_URL" hits.tsv.gz
+  if command -v pigz >/dev/null 2>&1; then
+    pigz -d -f hits.tsv.gz
+  else
+    need_cmd gzip
+    gzip -df hits.tsv.gz
+  fi
+  du -h hits.tsv
+  echo "fetch ok"
+}
+
+# Run one SQL statement; print elapsed seconds to stdout (ClickBench query contract).
+# Uses psql \timing; result rows discarded.
+psql_time_seconds() {
+  local sql=$1
+  local out time_ms
+  out=$(printf '\\timing on\n%s\n' "$sql" | "${TESTPSQL[@]}" -v ON_ERROR_STOP=1 -t 2>&1) || {
+    printf '%s\n' "$out" >&2
+    return 1
+  }
+  if printf '%s\n' "$out" | grep -qE '^ERROR:|psql: error'; then
+    printf '%s\n' "$out" >&2
+    return 1
+  fi
+  time_ms=$(printf '%s\n' "$out" | sed -n 's/^Time: \([0-9.]*\) ms.*/\1/p' | tail -n1)
+  if [ -z "$time_ms" ]; then
+    echo "error: no \\timing line in psql output" >&2
+    printf '%s\n' "$out" >&2
+    return 1
+  fi
+  awk -v ms="$time_ms" 'BEGIN { printf "%.3f\n", ms / 1000 }'
+}
+
+cmd_run() {
+  need_cmd psql
+  need_cmd awk
+  load_pg_config
+
+  local create="$CLICKBENCH_DIR/create.sql"
+  local queries="$CLICKBENCH_DIR/queries.sql"
+  local hits="$CLICKBENCH_DIR/hits.tsv"
+  for f in "$create" "$queries" "$hits"; do
+    if [ ! -f "$f" ]; then
+      echo "error: missing $f — run install and fetch first" >&2
+      exit 1
+    fi
+  done
+
+  echo "ClickBench run: db=${TESTDB} host=${TESTHOST} dir=${CLICKBENCH_DIR}" >&2
+  echo "commit $(cat "$CLICKBENCH_DIR/COMMIT" 2>/dev/null || echo unknown)" >&2
+
+  # Idempotent DB recreate (pgbent-style; no sudo -u postgres).
+  local createdb_args=(-U "$TESTUSER" "$TESTDB")
+  local dropdb_args=(-U "$TESTUSER" "$TESTDB")
+  if [ "${SOCKETS:-0}" != "1" ]; then
+    createdb_args=(-h "$TESTHOST" -p "$TESTPORT" -U "$TESTUSER" "$TESTDB")
+    dropdb_args=(-h "$TESTHOST" -p "$TESTPORT" -U "$TESTUSER" "$TESTDB")
+  fi
+  if "${TESTPSQL_MAINT[@]}" -Atqc "SELECT 1 FROM pg_database WHERE datname='${TESTDB}'" | grep -q 1; then
+    dropdb "${dropdb_args[@]}"
+  fi
+  createdb "${createdb_args[@]}"
+
+  "${TESTPSQL[@]}" -v ON_ERROR_STOP=1 -f "$create"
+
+  local load_start load_end load_s
+  load_start=$(date +%s)
+  # COPY FREEZE requires TRUNCATE/create in the same transaction.
+  (
+    cd "$CLICKBENCH_DIR"
+    "${TESTPSQL[@]}" -v ON_ERROR_STOP=1 <<EOF
+BEGIN;
+TRUNCATE TABLE hits;
+\\copy hits FROM 'hits.tsv' WITH FREEZE;
+COMMIT;
+EOF
+  )
+  "${TESTPSQL[@]}" -v ON_ERROR_STOP=1 -c 'VACUUM ANALYZE hits'
+  load_end=$(date +%s)
+  load_s=$((load_end - load_start))
+  echo "Load time: ${load_s}"
+
+  local data_bytes
+  data_bytes=$("${TESTPSQL[@]}" -Atqc "SELECT pg_database_size(current_database())")
+  echo "Data size: ${data_bytes}"
+
+  local qn=0
+  local line sql t i times
+  # One query per line in upstream queries.sql
+  while IFS= read -r line || [ -n "$line" ]; do
+    [ -z "$line" ] && continue
+    sql=$line
+    qn=$((qn + 1))
+    times=()
+    for i in $(seq 1 "$CLICKBENCH_TRIES"); do
+      t=$(psql_time_seconds "$sql")
+      times+=("$t")
+    done
+    # ClickBench report line: [try1, try2, try3],
+    printf '['
+    for i in "${!times[@]}"; do
+      if [ "$i" -gt 0 ]; then printf ', '; fi
+      printf '%s' "${times[$i]}"
+    done
+    printf '],\n'
+  done <"$queries"
+
+  echo "run ok (${qn} queries × ${CLICKBENCH_TRIES} tries)" >&2
+}
+
+main() {
+  [ $# -ge 1 ] || { usage; exit 1; }
+  case "$1" in
+    install) cmd_install ;;
+    fetch) cmd_fetch ;;
+    run) cmd_run ;;
+    -h|--help|help) usage; exit 0 ;;
+    *) echo "error: unknown command: $1" >&2; usage; exit 1 ;;
+  esac
+}
+
+main "$@"

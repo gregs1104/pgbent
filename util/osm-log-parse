@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # !!! WARNING !!!  This code is not active!
-# It's been integrated into pgbench-init-parse and that version is maintained.
+# It's been integrated into results-parse and that version is maintained.
 # This original code is here only as a simpler example.
 # It will return a blank input without the tweaks made to the live one.
 

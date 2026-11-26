@@ -1,0 +1,192 @@
+#!/usr/bin/env python3
+
+# Parse workload result logs into JSON for tests.artifacts (via art-import).
+# Paths:
+#   :-i*          — pgbench -i init timing (PG13+)
+#   osm2pgsql*    — osm2pgsql load summary
+#   clickbench*   — ClickBench-shaped Load time / Data size / [t1, t2, t3], lines
+#
+# Sample pgbench -i input:
+#   done in 17.24 s (drop tables 0.03 s, create tables 0.00 s, client-side generate 11.68 s, primary keys 5.52 s).
+# Sample output:
+# {"done": 17.24, "drop": 0.03, "create": 0.00, "clientside": 11.68, "primary": 5.52}
+
+import string
+import re
+import json
+import sys
+
+def parse_init_timing(filepath):
+    out = {}
+    with open(filepath, 'r') as f:
+        line = f.readline()
+        while line:
+            if line.startswith('done'):
+                # Standardize all delimiter punctuation into " s, "
+                l=line.replace(" s (" , " s, ")
+                l=l.replace(" s)" , " s, ")
+                keys=l.split(" s,")
+                for k in keys:
+                    text=k.translate(str.maketrans('', '', string.punctuation)).lstrip()
+                    try:
+                        text=text.split(maxsplit=1)[0]
+                        out[text]=float(re.findall(r'\d+.\d+$', k)[0])
+                    except:
+                        pass
+            line = f.readline()
+    return out
+
+# osm2pgsql parsing section.
+# Built these with the excellent https://regex101.com/
+gregexen_1_2 = {
+    'stats': re.compile(r'(?P<type>Node|Way|Relation) stats: total\((?P<total>\d*)\), max\((?P<max>\d*)\) in (?P<seconds>\d*)s'),
+    'indexes': re.compile(r'All indexes on (?P<index>\w*) created in (?P<seconds>\d*)s'),
+    'overall': re.compile(r'took (?P<overall>\d*)s overall'),
+    'hit': re.compile(r'hit rate: (?P<hit>\d*.\d*)%')
+}
+
+gregexen_1_6 = {
+    'stats': re.compile(r'Processed (?P<max>\d*) (?P<type>node|way|relation)s in (?P<seconds>\d*)s'),
+    'indexes': re.compile(r'All postprocessing on table \'(?P<index>\w*)\' done in (?P<seconds>\d*)s'),
+    'overall': re.compile(r'osm2pgsql took (?P<overall>\d*)s')
+}
+
+def check_line_1_2(line):
+    for key, gregex in gregexen_1_2.items():
+        match = gregex.search(line)
+        if match:
+            return key, match
+    return None, None
+
+def parse_osm_results_1_2(filepath):
+    out = {}
+    with open(filepath, 'r') as f:
+        line = f.readline()
+        while line:
+            key, match = check_line_1_2(line)
+            line = f.readline()
+
+            if key == 'stats':
+                type = str.lower(match.group('type'))
+                max = int(match.group('max'))
+                seconds = int(match.group('seconds'))
+
+                label="%s_%s" % (type,'seconds')
+                out[label] = seconds
+
+                label="%s_%s" % (type,'count')
+                out[label] = max
+
+            if key == 'indexes':
+                index = match.group('index')
+                seconds = int(match.group('seconds'))
+                out[index] = seconds
+
+            if key == 'hit':
+                out[key] = float(match.group('hit'))
+
+            if key == 'overall':
+                out[key] = int(match.group('overall'))
+                break
+
+    return out
+
+def check_line_1_6(line):
+    for key, gregex in gregexen_1_6.items():
+        match = gregex.search(line)
+        if match:
+            return key, match
+    return None, None
+
+def parse_osm_results_1_6(filepath):
+    out = {}
+    with open(filepath, 'r') as f:
+        line = f.readline()
+        while line:
+            key, match = check_line_1_6(line)
+            line = f.readline()
+
+            if key == 'stats':
+                type = str.lower(match.group('type'))
+                max = int(match.group('max'))
+                seconds = int(match.group('seconds'))
+
+                label="%s_%s" % (type,'seconds')
+                out[label] = seconds
+
+                label="%s_%s" % (type,'count')
+                out[label] = max
+
+            if key == 'indexes':
+                index = match.group('index')
+                seconds = int(match.group('seconds'))
+                out[index] = seconds
+
+            if key == 'hit':
+                out[key] = float(match.group('hit'))
+
+            if key == 'overall':
+                out[key] = int(match.group('overall'))
+                break
+
+    return out
+
+
+# ClickBench report lines from util/clickbench run (and upstream benchmark.sh):
+#   Load time: 335
+#   Data size: 72044272159
+#   [1.234, 5.678, 9.012],
+LOAD_TIME_RE = re.compile(r'^Load time:\s*([0-9]+(?:\.[0-9]+)?)\s*$')
+DATA_SIZE_RE = re.compile(r'^Data size:\s*([0-9]+)\s*$')
+QUERY_TRIES_RE = re.compile(
+    r'^\[([0-9]+(?:\.[0-9]+)?(?:\s*,\s*[0-9]+(?:\.[0-9]+)?)*)\],?\s*$'
+)
+
+
+def parse_clickbench(filepath):
+    """Return load_time, data_size, and queries (list of try-time lists)."""
+    out = {}
+    queries = []
+    with open(filepath, 'r', errors='replace') as f:
+        for line in f:
+            line = line.rstrip('\n')
+            m = LOAD_TIME_RE.match(line)
+            if m:
+                val = m.group(1)
+                out['load_time'] = float(val) if '.' in val else int(val)
+                continue
+            m = DATA_SIZE_RE.match(line)
+            if m:
+                out['data_size'] = int(m.group(1))
+                continue
+            m = QUERY_TRIES_RE.match(line)
+            if m:
+                tries = [float(x.strip()) for x in m.group(1).split(',')]
+                queries.append(tries)
+                continue
+    if queries:
+        out['queries'] = queries
+        out['query_count'] = len(queries)
+    return out
+
+
+if __name__ == '__main__':
+    if len(sys.argv) < 3:
+        print("usage:  results-parse <file> <script>", file=sys.stderr)
+        sys.exit(1)
+    script = sys.argv[2]
+    filepath = sys.argv[1]
+    d = {}
+
+    if script == "osm2pgsql" or script.startswith("osm2pgsql-1.2"):
+        d = parse_osm_results_1_2(filepath)
+    elif script.startswith("osm2pgsql-1.6") or script.startswith("osm2pgsql-1.7"):
+        d = parse_osm_results_1_6(filepath)
+    elif script.startswith("osm2pgsql"):
+        # Write an untested new version warning to stderr here?
+        d = parse_osm_results_1_6(filepath)
+    elif script.startswith("clickbench"):
+        d = parse_clickbench(filepath)
+    elif script.startswith(":-i"):
+        d = parse_init_timing(filepath)
+    print(json.dumps(d))
