@@ -426,8 +426,9 @@ if [[ "$SCRIPT" == osm* ]] && ! grep -a -q 'osm2pgsql took .* overall' results.t
 elif [[ "$SCRIPT" == clickbench-load* ]] && ! grep -a -q '^Load time:' results.txt ; then
   OSM_DONE=0
   echo "ClickBench load did not finish; leaving end_time and artifacts on test ${TEST} unchanged"
-elif [[ "$SCRIPT" == clickbench* ]] && ! grep -a -qE '^\[.*,.*,.*\],' results.txt ; then
-  # query (or legacy combined run): need at least one timing array line
+elif [[ "$SCRIPT" == clickbench* && "$SCRIPT" != clickbench-load* ]] && ! grep -a -qE '^\[.*,.*,.*\],' results.txt ; then
+  # query (or legacy combined run): need at least one timing array line.
+  # Exclude clickbench-load* — it also matches clickbench* and has no [t1,t2,t3], lines.
   OSM_DONE=0
   echo "ClickBench query did not finish; leaving end_time and artifacts on test ${TEST} unchanged"
 fi
