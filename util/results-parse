@@ -178,6 +178,8 @@ def parse_clickbench(filepath):
             out['hot_geomean'] = round(
                 math.exp(sum(math.log(t) for t in hots) / len(hots)), 6
             )
+            # Worst hot try — stamped into tests.max_latency (seconds).
+            out['hot_max'] = round(max(hots), 6)
     return out
 
 

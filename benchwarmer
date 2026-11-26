@@ -614,10 +614,16 @@ $RESULTPSQL -q -c "UPDATE tests SET tps=round((artifacts->>'data_size')::numeric
     AND artifacts ? 'data_size' AND artifacts ? 'load_time'
     AND (artifacts->>'load_time')::numeric > 0"
 
-# ClickBench query: TPS = 1000 / geomean(hot), hot = min(try2, try3) per query
-$RESULTPSQL -q -c "UPDATE tests SET tps=round(1000.0 / (artifacts->>'hot_geomean')::numeric)
+# ClickBench query: TPS = 1000 / geomean(hot), hot = min(try2, try3) per query.
+# max_latency = worst hot time in seconds (pgbench uses ms; this kit is seconds).
+$RESULTPSQL -q -c "UPDATE tests SET
+    tps=CASE WHEN tps=0 THEN round(1000.0 / (artifacts->>'hot_geomean')::numeric) ELSE tps END,
+    max_latency=CASE
+      WHEN artifacts ? 'hot_max' THEN (artifacts->>'hot_max')::float
+      ELSE max_latency
+    END
   WHERE server='${SERVERNAME}' AND test=$TEST
-    AND script like 'clickbench%' AND script not like 'clickbench-load%' AND tps=0
+    AND script like 'clickbench%' AND script not like 'clickbench-load%'
     AND artifacts ? 'hot_geomean'
     AND (artifacts->>'hot_geomean')::numeric > 0"
 

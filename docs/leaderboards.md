@@ -8,11 +8,11 @@ has_children: true
 
 # Leaderboards
 
-Public pgbench SELECT and OSM planet-load rankings from the pgbent server farm personally run by Greg Smith. Hardware detail for those CPUs is on [browser.geekbench.com/user/232126](https://browser.geekbench.com/user/232126) (historical GB6; GB7 from the OS wrap onward). This page is updated when there are interesting new cells.  It is not a live dashboard.  It is not an open submission program--at least not yet anyway.
+Public pgbench SELECT, OSM planet-load, and ClickBench rankings from the pgbent server farm personally run by Greg Smith. Hardware detail for those CPUs is on [browser.geekbench.com/user/232126](https://browser.geekbench.com/user/232126) (historical GB6; GB7 from the OS wrap onward). This page is updated when there are interesting new cells.  It is not a live dashboard.  It is not an open submission program--at least not yet anyway.
 
 Initial [PostgreSQL 19rc1 report]({{ '/results-summary/pg19/' | relative_url }}) shows PG19 (rc1 2026-10-15, catalog 20261006) took the top leaderboard spots with a tiny delta over 18.
 
-[pgbench SELECT](#pgbench-select) — [OSM](#osm) — [OSM History](#osm-history) — [OSM Disk](#osm-disk) — [OSM Detail Table](#osm-detail-table)
+[pgbench SELECT](#pgbench-select) — [OSM](#osm) — [OSM History](#osm-history) — [OSM Disk](#osm-disk) — [OSM Detail Table](#osm-detail-table) — [ClickBench](#clickbench)
 
 ## pgbench SELECT
 
@@ -93,3 +93,11 @@ _Query returned 23 rows._
 <!-- osm-leaderboard-table:end -->
 
 Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/osm-leaderboard.py --from-db` (runs `reports/osm-leaderboard.sql`). Disk and power studies: [OSM Leaders: Performance vs. Power]({{ '/leaderboards/osm-performance-power/' | relative_url }}). 19rc1 cells vs PG18 on the same CPUs: [OSM Leaderboard (PG19)]({{ '/results-summary/pg19/osm-leaderboard/' | relative_url }}). Previous cycle used a smaller Planet (~9.3B nodes): [OSM Leaderboard (PG18 snapshot)]({{ '/results-summary/pg18/osm-leaderboard/' | relative_url }}). Workload notes: [OSM]({{ '/workloads/osm' | relative_url }}).
+
+## ClickBench
+
+ClickBench load + 43-query hot score on the farm. Query **score** is `1000 / geomean(hot)`; load **tps** is MB/s. Starter board is court’s best finished pair.
+
+Detail and package power: [ClickBench Leaders: Performance vs. Power]({{ '/leaderboards/clickbench-performance-power/' | relative_url }}).
+
+Regenerate: `python3 reports/clickbench-leaderboard.py --from-db` (runs `reports/clickbench-leaderboard.sql`).
