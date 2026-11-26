@@ -182,18 +182,18 @@ cmd_run() {
   echo "ClickBench run: db=${TESTDB} host=${TESTHOST} dir=${CLICKBENCH_DIR}" >&2
   echo "commit $(cat "$CLICKBENCH_DIR/COMMIT" 2>/dev/null || echo unknown)" >&2
 
-  # Idempotent DB recreate (pgbent-style; no sudo -u postgres).
+  # Ensure DB exists. Do not dropdb — benchwarmer metric collectors already
+  # hold sessions on TESTDB (same pattern as osm/gis). Recreate hits in place.
   local createdb_args=(-U "$TESTUSER" "$TESTDB")
-  local dropdb_args=(-U "$TESTUSER" "$TESTDB")
   if [ "${SOCKETS:-0}" != "1" ]; then
     createdb_args=(-h "$TESTHOST" -p "$TESTPORT" -U "$TESTUSER" "$TESTDB")
-    dropdb_args=(-h "$TESTHOST" -p "$TESTPORT" -U "$TESTUSER" "$TESTDB")
   fi
-  if "${TESTPSQL_MAINT[@]}" -Atqc "SELECT 1 FROM pg_database WHERE datname='${TESTDB}'" | grep -q 1; then
-    dropdb "${dropdb_args[@]}"
+  if ! "${TESTPSQL_MAINT[@]}" -Atqc "SELECT 1 FROM pg_database WHERE datname='${TESTDB}'" | grep -q 1; then
+    createdb "${createdb_args[@]}"
   fi
-  createdb "${createdb_args[@]}"
-
+  "${TESTPSQL[@]}" -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements"
+  "${TESTPSQL[@]}" -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS pg_buffercache"
+  "${TESTPSQL[@]}" -v ON_ERROR_STOP=1 -c "DROP TABLE IF EXISTS hits"
   "${TESTPSQL[@]}" -v ON_ERROR_STOP=1 -f "$create"
 
   local load_start load_end load_s
