@@ -14,6 +14,7 @@
 import string
 import re
 import json
+import math
 import sys
 
 def parse_init_timing(filepath):
@@ -144,7 +145,12 @@ QUERY_TRIES_RE = re.compile(
 
 
 def parse_clickbench(filepath):
-    """Return load_time, data_size, and queries (list of try-time lists)."""
+    """Return load_time, data_size, queries, and hot_geomean when query tries exist.
+
+    hot_geomean is ClickBench's hot definition (min of try2/try3) averaged with
+    a geometric mean across queries. benchwarmer stamps
+    tps = round(1000 / hot_geomean) for query-phase rows.
+    """
     out = {}
     queries = []
     with open(filepath, 'r', errors='replace') as f:
@@ -167,6 +173,11 @@ def parse_clickbench(filepath):
     if queries:
         out['queries'] = queries
         out['query_count'] = len(queries)
+        hots = [min(t[1], t[2]) for t in queries if len(t) >= 3 and t[1] > 0 and t[2] > 0]
+        if hots:
+            out['hot_geomean'] = round(
+                math.exp(sum(math.log(t) for t in hots) / len(hots)), 6
+            )
     return out
 
 

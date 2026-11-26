@@ -608,6 +608,19 @@ $RESULTPSQL -q -c "UPDATE tests SET tps=round(dbsize / (1024*1024) / extract(epo
   WHERE server='${SERVERNAME}' AND test=$TEST AND script like ':-i%' AND tps=0
     AND (SELECT count(*) FROM jsonb_object_keys(artifacts))=6"
 
+# ClickBench load (and legacy combined runs): TPS = MB/s from artifacts
+$RESULTPSQL -q -c "UPDATE tests SET tps=round((artifacts->>'data_size')::numeric / (1024*1024) / (artifacts->>'load_time')::numeric)
+  WHERE server='${SERVERNAME}' AND test=$TEST AND script like 'clickbench%' AND tps=0
+    AND artifacts ? 'data_size' AND artifacts ? 'load_time'
+    AND (artifacts->>'load_time')::numeric > 0"
+
+# ClickBench query: TPS = 1000 / geomean(hot), hot = min(try2, try3) per query
+$RESULTPSQL -q -c "UPDATE tests SET tps=round(1000.0 / (artifacts->>'hot_geomean')::numeric)
+  WHERE server='${SERVERNAME}' AND test=$TEST
+    AND script like 'clickbench%' AND script not like 'clickbench-load%' AND tps=0
+    AND artifacts ? 'hot_geomean'
+    AND (artifacts->>'hot_geomean')::numeric > 0"
+
 cp $BASEDIR/config config
 cp $BASEDIR/params params
 cp $BASEDIR/templates/test-index.html index.html

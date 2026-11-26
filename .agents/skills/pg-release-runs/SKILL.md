@@ -1173,7 +1173,10 @@ still land in `tests` + `artifacts` like OSM. First example: **ClickBench**
      runs load then query in the same set (like `NEWINIT=1` then SELECT).
 5. **`util/results-parse`** (renamed from `pgbench-init-parse`; old name is a
    shim). Path keyed on `script` prefix (`clickbench*`) → JSON
-   (`load_time` / `data_size` and/or `queries` + `query_count`).
+   (`load_time` / `data_size` and/or `queries` + `query_count` +
+   `hot_geomean`). **`tps`:** load = MB/s (`data_size`/`load_time`);
+   query = `round(1000 / hot_geomean)` where hot is `min(try2,try3)` per
+   query (absolute higher-is-better take on ClickBench’s hot geomean).
 6. **Incomplete-run gate in `benchwarmer`.** `clickbench-load*` needs
    `Load time:`; other `clickbench*` needs a timing-array line. OSM still
    needs `osm2pgsql took … overall`.
