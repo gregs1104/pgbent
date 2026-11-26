@@ -63,16 +63,24 @@ download() {
 }
 
 load_pg_config() {
-  # Prefer cwd config (benchwarmer / farm), else repo-root config defaults.
-  # Env TESTDB/TESTPORT/... set before invoke win over config — do not drop pgbench.
+  # Prefer results-tree config/params (benchwarmer cwd), then repo root.
+  # Env TESTDB/TESTPORT/... set before invoke win — do not drop pgbench.
   local env_host="${TESTHOST-}"
   local env_port="${TESTPORT-}"
   local env_user="${TESTUSER-}"
   local env_db="${TESTDB-}"
   local env_sockets="${SOCKETS-}"
-  if [ -f ./config ]; then
+  local env_cbdir="${CLICKBENCH_DIR-}"
+  if [ -f ../../../config ]; then
+    # shellcheck disable=SC1091
+    . ../../../config
+    # shellcheck disable=SC1091
+    [ -f ../../../params ] && . ../../../params
+  elif [ -f ./config ]; then
     # shellcheck disable=SC1091
     . ./config
+    # shellcheck disable=SC1091
+    [ -f ./params ] && . ./params
   elif [ -f "$REPO_ROOT/config" ]; then
     # shellcheck disable=SC1091
     . "$REPO_ROOT/config"
@@ -83,6 +91,7 @@ load_pg_config() {
   # Default away from config's pgbench so run is safe on a farm box.
   TESTDB="${env_db:-clickbench}"
   SOCKETS="${env_sockets:-${SOCKETS:-0}}"
+  CLICKBENCH_DIR="${env_cbdir:-${CLICKBENCH_DIR:-$HOME/sources/clickbench}}"
   if [ "${SOCKETS}" = "1" ]; then
     TESTPSQL=(psql -U "$TESTUSER" -d "$TESTDB")
     TESTPSQL_MAINT=(psql -U "$TESTUSER" -d postgres)
@@ -233,13 +242,22 @@ EOF
 }
 
 main() {
-  [ $# -ge 1 ] || { usage; exit 1; }
-  case "$1" in
+  # benchwarmer invokes BENCHBIN with pgbench-style args; treat that as run.
+  local cmd=${1:-run}
+  case "$cmd" in
     install) cmd_install ;;
     fetch) cmd_fetch ;;
     run) cmd_run ;;
     -h|--help|help) usage; exit 0 ;;
-    *) echo "error: unknown command: $1" >&2; usage; exit 1 ;;
+    -*)
+      # e.g. -f tests/clickbench.sql … from benchwarmer
+      cmd_run
+      ;;
+    *)
+      echo "error: unknown command: $cmd" >&2
+      usage
+      exit 1
+      ;;
   esac
 }
 

@@ -416,13 +416,16 @@ if [ -n "$BLKTRACEPID" ] ; then
   pkill -P "$BLKTRACEPID" -x sleep 2>/dev/null
   wait "$BLKTRACEPID" 2>/dev/null
 fi
-# Incomplete OSM (killed / thermal trip) has no overall line. Closing the
-# row here used to stamp end_time=now() and then art-import {} onto the
-# last good test when max(test) was reused.
+# Incomplete OSM / ClickBench leaves no usable summary. Closing the row
+# here used to stamp end_time=now() and then art-import {} onto the last
+# good test when max(test) was reused.
 OSM_DONE=1
 if [[ "$SCRIPT" == osm* ]] && ! grep -a -q 'osm2pgsql took .* overall' results.txt ; then
   OSM_DONE=0
   echo "OSM load did not finish; leaving end_time and artifacts on test ${TEST} unchanged"
+elif [[ "$SCRIPT" == clickbench* ]] && ! grep -a -q '^Load time:' results.txt ; then
+  OSM_DONE=0
+  echo "ClickBench run did not finish; leaving end_time and artifacts on test ${TEST} unchanged"
 fi
 if [ "$OSM_DONE" -eq 1 ]; then
   $RESULTPSQL -q -c "UPDATE tests SET end_time=now() WHERE server='${SERVERNAME}' AND test='${TEST}'"

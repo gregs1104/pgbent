@@ -1,0 +1,30 @@
+#!/bin/bash -ex
+# ClickBench workload for pgbench-tools automation (pgbent 2.0).
+# SQL/dataset stay under CLICKBENCH_DIR (default ~/sources/clickbench);
+# util/clickbench fetches them — not vendored (CC BY-NC-SA 4.0).
+
+. ./config
+
+./pgsysinfo > params
+. ./params
+
+CLICKBENCH_DIR="${CLICKBENCH_DIR:-$HOME/sources/clickbench}"
+
+cat << EOF >> params
+SETCLIENTS="1"
+SETTIMES=1
+SCALES="1"
+SCALE="1"
+BENCHBIN=$BASEDIR/util/clickbench
+SCRIPT="clickbench"
+TESTDB="clickbench"
+SKIPINIT=1
+CLICKBENCH_DIR=${CLICKBENCH_DIR}
+EOF
+
+mkdir -p "$CLICKBENCH_DIR"
+CLICKBENCH_DIR="$CLICKBENCH_DIR" "$BASEDIR/util/clickbench" install
+CLICKBENCH_DIR="$CLICKBENCH_DIR" "$BASEDIR/util/clickbench" fetch
+
+./newset "ClickBench"
+#./runset
