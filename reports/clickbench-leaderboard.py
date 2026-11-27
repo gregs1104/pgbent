@@ -2,11 +2,14 @@
 """
 ClickBench leaderboard starter: Performance vs. Power.
 
-Writes court's best load+query pair (totals + phase breakdown) into
-docs/leaderboards/clickbench-performance-power.md.
+Writes court's best load+query pair (totals, phase breakdown, per-query
+table) into docs/leaderboards/clickbench-performance-power.md, plus:
+  - load-phase disk avg vs 1s max (OSM-style)
+  - query-phase vmstat runnable (`r`) avg vs 1s max — owned stand-in for
+    load average / parallelism on this farm
 
 Usage:
-    python3 reports/clickbench-leaderboard.py --from-db
+    MPLBACKEND=Agg python3 reports/clickbench-leaderboard.py --from-db
 """
 
 from __future__ import annotations
@@ -24,18 +27,31 @@ from pathlib import Path
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from metric_series import (
+    fetch_disk_avg_max,
+    fetch_metric_avg_max,
+    legend_avg_max,
+    plot_avg_max,
+)
+from pg18_style import use_pg18_style
 from release_paths import REPO_ROOT
 
 DEFAULT_CONN = "host=localhost dbname=results user=gsmith password=secret"
 SQL_PATH = REPO_ROOT / "reports" / "clickbench-leaderboard.sql"
 POWER_PAGE = REPO_ROOT / "docs" / "leaderboards" / "clickbench-performance-power.md"
+LOAD_DISK_IMAGE = REPO_ROOT / "docs" / "images" / "clickbench-leaderboard-load-disk.png"
+QUERY_RUNNABLE_IMAGE = (
+    REPO_ROOT / "docs" / "images" / "clickbench-leaderboard-query-runnable.png"
+)
 BLOCK_BEGIN = "<!-- clickbench-leaderboard:begin -->"
 BLOCK_END = "<!-- clickbench-leaderboard:end -->"
+# vmstat runnable processes — closest owned second-grain signal to loadavg.
+QUERY_PARALLEL_METRIC = "r"
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Write ClickBench Performance vs. Power leaderboard table"
+        description="Write ClickBench Performance vs. Power leaderboard + traces"
     )
     parser.add_argument(
         "--from-db",
@@ -44,7 +60,10 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--sql", type=Path, default=SQL_PATH)
     parser.add_argument("--page", type=Path, default=POWER_PAGE)
+    parser.add_argument("--load-disk-image", type=Path, default=LOAD_DISK_IMAGE)
+    parser.add_argument("--query-runnable-image", type=Path, default=QUERY_RUNNABLE_IMAGE)
     parser.add_argument("--conn", default=os.environ.get("RESULTS_CONN", DEFAULT_CONN))
+    parser.add_argument("--show", action="store_true")
     return parser.parse_args()
 
 
@@ -180,7 +199,104 @@ def short_disk(raw) -> str:
     return text
 
 
-def block_markdown(df: pd.DataFrame) -> str:
+def disk_title(cpu: str, disk: str, mode: str) -> str:
+    if not disk:
+        return f"{cpu} ClickBench load disk"
+    if mode == "combined":
+        return f"{cpu} ClickBench load disk · {disk}"
+    return f"{cpu} ClickBench load disk · {disk} read+write"
+
+
+def plot_phase_traces(
+    df: pd.DataFrame,
+    conn: str,
+    load_disk_path: Path,
+    query_runnable_path: Path,
+    show: bool = False,
+) -> tuple[str, str]:
+    """Plot load disk + query runnable traces. Returns (disk_label, disk_mode)."""
+    load = df[df["phase"] == "load"]
+    query = df[df["phase"] == "query"]
+    if query.empty:
+        raise SystemExit("No query-phase row for ClickBench traces")
+    cpu = str(df.iloc[0]["cpu"]).strip()
+    server = str(df.iloc[0]["server"]).strip()
+    disk_label, disk_mode = "", ""
+
+    if not load.empty:
+        load_test = int(load.iloc[0]["test"])
+        disk_df, disk_label, disk_mode = fetch_disk_avg_max(conn, server, load_test)
+        if disk_df.empty:
+            raise SystemExit(f"No disk series for {server} load test {load_test}")
+        avg_l, max_l = legend_avg_max(disk_df, "MB/s")
+        plot_avg_max(
+            disk_df,
+            load_disk_path,
+            title=disk_title(cpu, disk_label, disk_mode),
+            ylabel="MB/s",
+            avg_legend=avg_l,
+            max_legend=max_l,
+            show=show,
+        )
+
+    query_test = int(query.iloc[0]["test"])
+    run_df = fetch_metric_avg_max(
+        conn, server, query_test, QUERY_PARALLEL_METRIC, dbagg="minute"
+    )
+    if run_df.empty:
+        raise SystemExit(
+            f"No {QUERY_PARALLEL_METRIC!r} series for {server} query test {query_test}"
+        )
+    avg_l, max_l = legend_avg_max(run_df, "runnable", digits=1)
+    plot_avg_max(
+        run_df,
+        query_runnable_path,
+        title=f"{cpu} ClickBench query · vmstat runnable (r)",
+        ylabel="Runnable processes",
+        avg_legend=avg_l,
+        max_legend=max_l,
+        show=show,
+    )
+    return disk_label, disk_mode
+
+
+def traces_markdown(disk: str, mode: str) -> str:
+    if mode == "combined":
+        disk_note = (
+            f" Disk is Darwin combined throughput (`{disk}_MB/s`)."
+            if disk
+            else ""
+        )
+    else:
+        disk_note = (
+            f" Disk is combined read+write on data volume `{disk}`."
+            if disk
+            else ""
+        )
+    return (
+        "**Load disk** — minute buckets of the owned 1-second iostat collectors "
+        "on the COPY/`VACUUM` cell. Average is what a minute-grained sample would "
+        "report; Maximum is the peak 1-second reading in that minute."
+        + disk_note
+        + "\n\n"
+        "![ClickBench load disk average vs 1-second maximum]"
+        "({{ '/images/clickbench-leaderboard-load-disk.png' | relative_url }})\n\n"
+        "**Query parallelism** — minute buckets of vmstat **`r`** (runnable "
+        "processes) on the 43-query cell. That is the owned second-grain stand-in "
+        "for system load average on this farm (we do not yet store "
+        "`/proc/loadavg`); it is the familiar signal for whether gather workers "
+        "are filling the machine.\n\n"
+        "![ClickBench query runnable average vs 1-second maximum]"
+        "({{ '/images/clickbench-leaderboard-query-runnable.png' | relative_url }})\n"
+    )
+
+
+def block_markdown(
+    df: pd.DataFrame,
+    *,
+    disk_label: str = "",
+    disk_mode: str = "",
+) -> str:
     # One host for the starter board (SQL already filters to court).
     server = str(df.iloc[0]["server"])
     cpu = str(df.iloc[0]["cpu"])
@@ -299,6 +415,7 @@ def block_markdown(df: pd.DataFrame) -> str:
         if detail_rows
         else "_No per-query timings in artifacts._"
     )
+    traces_md = traces_markdown(disk_label, disk_mode)
 
     return (
         f"{BLOCK_BEGIN}\n\n"
@@ -313,6 +430,7 @@ def block_markdown(df: pd.DataFrame) -> str:
         f"1-second collectors (`PkgWatt` / Darwin / Spark `soc_pkg_power2_input`).\n\n"
         f"**Totals**\n\n{summary_md}\n\n"
         f"**Phase breakdown**\n\n{breakdown_md}\n\n"
+        f"{traces_md}\n"
         f"**Query runs** (seconds; **cold** = try1, **hot** = min(try2, try3))\n\n"
         f"{detail_md}\n\n"
         f"{BLOCK_END}"
@@ -336,8 +454,16 @@ def main() -> None:
     if not args.from_db:
         raise SystemExit("This starter board is generated with --from-db")
 
+    use_pg18_style()
     df = fetch_sql_table(args.sql, args.conn)
-    inner = block_markdown(df)
+    disk_label, disk_mode = plot_phase_traces(
+        df,
+        args.conn,
+        args.load_disk_image,
+        args.query_runnable_image,
+        show=args.show,
+    )
+    inner = block_markdown(df, disk_label=disk_label, disk_mode=disk_mode)
     if not args.page.exists():
         raise SystemExit(f"Missing page {args.page}")
     text = args.page.read_text(encoding="utf-8")

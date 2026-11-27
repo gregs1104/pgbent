@@ -10,7 +10,7 @@ nav_order: 3
 
 Totals and phase breakdown behind ClickBench runs on the pgbent farm. Query **score** is the absolute higher-is-better take on ClickBench’s hot geometric mean: `round(1000 / geomean(min(try2, try3)))` across the 43 queries. Load **tps** is MB/s from `data_size / load_time`. Methodology notes: [ClickBench README](https://github.com/ClickHouse/ClickBench/blob/main/README.md).
 
-Regenerate: `python3 reports/clickbench-leaderboard.py --from-db` (runs `reports/clickbench-leaderboard.sql`).
+Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/clickbench-leaderboard.py --from-db` (runs `reports/clickbench-leaderboard.sql`; load disk + query runnable traces).
 
 <!-- clickbench-leaderboard:begin -->
 
@@ -28,6 +28,14 @@ Starter board from **court** (NVIDIA P4242, 119 GB, Samsung MZAL), PostgreSQL 
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | load | 332 | 198 | MB/s | 350 | 21.6 | 26.7 | 7.6 | load_time 347s, data 67.1 GB |
 | query | 333 | 149 | 1000/geomean(hot) | 1,811 | 41.4 | 86 | 74.9 | hot_geomean 6.721s, cold_geomean 7s, queries 43 |
+
+**Load disk** — minute buckets of the owned 1-second iostat collectors on the COPY/`VACUUM` cell. Average is what a minute-grained sample would report; Maximum is the peak 1-second reading in that minute. Disk is combined read+write on data volume `nvme0n1`.
+
+![ClickBench load disk average vs 1-second maximum]({{ '/images/clickbench-leaderboard-load-disk.png' | relative_url }})
+
+**Query parallelism** — minute buckets of vmstat **`r`** (runnable processes) on the 43-query cell. That is the owned second-grain stand-in for system load average on this farm (we do not yet store `/proc/loadavg`); it is the familiar signal for whether gather workers are filling the machine.
+
+![ClickBench query runnable average vs 1-second maximum]({{ '/images/clickbench-leaderboard-query-runnable.png' | relative_url }})
 
 **Query runs** (seconds; **cold** = try1, **hot** = min(try2, try3))
 

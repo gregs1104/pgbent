@@ -115,6 +115,35 @@ ORDER BY 1
     return fetch_copy(conn, sql), disk, mode
 
 
+def fetch_metric_avg_max(
+    conn: str,
+    server: str,
+    test: int | str,
+    metric: str,
+    dbagg: str = "minute",
+) -> pd.DataFrame:
+    """Per-bucket average and 1-second maximum for one metric name."""
+    server = _ident_server(server)
+    test = _ident_test(test)
+    if not _SAFE_SERVER.match(metric):
+        raise SystemExit(f"Unsafe metric name: {metric!r}")
+    if dbagg not in ("second", "minute", "hour"):
+        raise SystemExit(f"Unsupported dbagg: {dbagg!r}")
+    sql = f"""
+SELECT
+  extract(epoch from date_trunc('{dbagg}', d.collected) - t.start_time) / 3600.0 AS hours,
+  avg(d.value) AS avg,
+  max(d.value) AS max
+FROM test_metrics_data d
+JOIN tests t ON t.server = d.server AND t.test = d.test
+WHERE d.server = '{server}' AND d.test = {test}
+  AND d.metric = '{metric}'
+GROUP BY date_trunc('{dbagg}', d.collected), t.start_time
+ORDER BY 1
+"""
+    return fetch_copy(conn, sql)
+
+
 def fetch_power_avg_max(
     conn: str, server: str, test: int | str, dbagg: str = "minute"
 ) -> pd.DataFrame:

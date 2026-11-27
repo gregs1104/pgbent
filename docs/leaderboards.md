@@ -100,4 +100,4 @@ ClickBench load + 43-query hot score on the farm. Query **score** is `1000 / geo
 
 Detail and package power: [ClickBench Leaders: Performance vs. Power]({{ '/leaderboards/clickbench-performance-power/' | relative_url }}).
 
-Regenerate: `python3 reports/clickbench-leaderboard.py --from-db` (runs `reports/clickbench-leaderboard.sql`).
+Regenerate: `MPLBACKEND=Agg MPLCONFIGDIR="$PWD/.matplotlib-cache" .venv-graph/bin/python reports/clickbench-leaderboard.py --from-db` (runs `reports/clickbench-leaderboard.sql`; load disk + query runnable traces).
